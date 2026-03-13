@@ -1,0 +1,10 @@
+services:
+  student-service:
+    build:
+      context: ./atomic-services/studentServicee
+    container_name: teamder-student-service
+    environment:
+      PORT: 3001
+      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student
+    ports:
+      - "3001:3001"
