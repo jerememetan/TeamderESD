@@ -2,6 +2,8 @@ import { RouterProvider, createBrowserRouter } from 'react-router'
 import AppShell from './app/layouts/AppShell'
 import HomePage from './pages/HomePage'
 import TestGalleryPage from './pages/TestGalleryPage'
+import InstructorDashboard from './pages/InstructorDashboard'
+import StudentDashBoard from './pages/StudentDashboard'
 
 const router = createBrowserRouter([
   {
@@ -16,6 +18,14 @@ const router = createBrowserRouter([
         path: 'test',
         element: <TestGalleryPage />,
       },
+      {
+        path: 'instructor',
+        element: <InstructorDashboard />,
+      },
+      {
+        path: 'student',
+        element: <StudentDashBoard />,
+      },      
     ],
   },
 ])
