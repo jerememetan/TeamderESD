@@ -30,9 +30,6 @@ function AppShell() {
               <h1 className="text-lg font-semibold leading-none">
                 TeamDer
               </h1>
-                <Button asChild>
-                <Link to="/test">Test</Link>
-                </Button>
             </div>
 
           <nav className="flex flex-wrap items-center gap-2">
