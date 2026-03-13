@@ -3,12 +3,28 @@ import { FileText, Users, ArrowRight, CheckCircle, Clock } from 'lucide-react';
 import { currentStudent, currentStudentTeam, mockForms } from "../app/data/mockData";
 
 function StudentDashBoard(){
+    // THESE ARE THE DATA THAT NEEDS TO BE TAKEN UP, CURRENTLY TAKEN FROM MOCK DATA
+    const studentProfile = currentStudent
+    const activeTeam = currentStudentTeam
+    const formMap = mockForms
+
+    const activeTeamCount = activeTeam ? 1 : 0
+    const completedFormsCount = Object.keys(formMap).length
+    const pendingRequestsCount = 0
+    const formHistoryItems = [
+      {
+        id: 'team-formation-fall-2026',
+        title: 'Team Formation Survey - Fall 2026',
+        completedAtLabel: 'Completed on March 5, 2026',
+        statusLabel: 'Completed',
+      },
+    ]
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Student Dashboard</h2>
-        <p className="text-gray-600">Welcome back, {currentStudent.name}!</p>
+        <p className="text-gray-600">Welcome back, {studentProfile.name}!</p>
       </div>
 
       {/* Quick Stats */}
@@ -17,7 +33,7 @@ function StudentDashBoard(){
           <div className="flex items-center justify-between mb-2">
             <Users className="w-8 h-8 text-blue-600" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">1</p>
+          <p className="text-2xl font-bold text-gray-900">{activeTeamCount}</p>
           <p className="text-sm text-gray-600">Active Team</p>
         </div>
 
@@ -25,7 +41,7 @@ function StudentDashBoard(){
           <div className="flex items-center justify-between mb-2">
             <FileText className="w-8 h-8 text-green-600" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">1</p>
+          <p className="text-2xl font-bold text-gray-900">{completedFormsCount}</p>
           <p className="text-sm text-gray-600">Forms Completed</p>
         </div>
 
@@ -33,7 +49,7 @@ function StudentDashBoard(){
           <div className="flex items-center justify-between mb-2">
             <Clock className="w-8 h-8 text-orange-600" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">0</p>
+          <p className="text-2xl font-bold text-gray-900">{pendingRequestsCount}</p>
           <p className="text-sm text-gray-600">Pending Requests</p>
         </div>
       </div>
@@ -75,16 +91,16 @@ function StudentDashBoard(){
         <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
           <div>
             <h4 className="font-semibold text-gray-900 text-lg mb-1">
-              {currentStudentTeam.name}
+              {activeTeam.name}
             </h4>
             <p className="text-sm text-gray-600">
-              {currentStudentTeam.members.length} members
+              {activeTeam.members.length} members
             </p>
           </div>
           <div className="flex items-center gap-6">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-900">
-                {currentStudentTeam.formationScore}
+                {activeTeam.formationScore}
               </p>
               <p className="text-xs text-gray-600">Team Score</p>
             </div>
@@ -97,22 +113,24 @@ function StudentDashBoard(){
         <h3 className="text-xl font-semibold text-gray-900 mb-6">Form History</h3>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+          {formHistoryItems.map((formItem) => (
+            <div key={formItem.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">
+                    {formItem.title}
+                  </h4>
+                  <p className="text-sm text-gray-600">{formItem.completedAtLabel}</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">
-                  Team Formation Survey - Fall 2026
-                </h4>
-                <p className="text-sm text-gray-600">Completed on March 5, 2026</p>
-              </div>
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                {formItem.statusLabel}
+              </span>
             </div>
-            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-              Completed
-            </span>
-          </div>
+          ))}
         </div>
       </div>
       </div>

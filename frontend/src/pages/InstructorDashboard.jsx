@@ -10,9 +10,22 @@ import {
 import { mockCourses, mockSwapRequests } from "../app/data/mockData";
 
 function InstructorDashboard() {
-  const pendingSwapRequests = mockSwapRequests.filter(
+    // THESE ARE THE DATA THAT NEEDS TO BE TAKEN UP, CURRENTLY TAKEN FROM MOCK DATA
+  const courseList = mockCourses;
+  const swapRequestList = mockSwapRequests;
+
+  const totalCourses = courseList.length;
+  const totalStudents = courseList.reduce(
+    (sum, course) => sum + course.studentsCount,
+    0,
+  );
+  const activeFormsCount = courseList.filter(
+    (course) => course.formStatus === "active",
+  ).length;
+  const pendingSwapRequests = swapRequestList.filter(
     (request) => request.status === "pending",
   ).length;
+  const recentCourses = courseList;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -30,9 +43,7 @@ function InstructorDashboard() {
           <div className="flex items-center justify-between mb-2">
             <BookOpen className="w-8 h-8 text-blue-600" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {mockCourses.length}
-          </p>
+          <p className="text-2xl font-bold text-gray-900">{totalCourses}</p>
           <p className="text-sm text-gray-600">Active Courses</p>
         </div>
 
@@ -40,9 +51,7 @@ function InstructorDashboard() {
           <div className="flex items-center justify-between mb-2">
             <Users className="w-8 h-8 text-green-600" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {mockCourses.reduce((sum, course) => sum + course.studentsCount, 0)}
-          </p>
+          <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
           <p className="text-sm text-gray-600">Total Students</p>
         </div>
 
@@ -50,9 +59,7 @@ function InstructorDashboard() {
           <div className="flex items-center justify-between mb-2">
             <FileText className="w-8 h-8 text-purple-600" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {mockCourses.filter((c) => c.formStatus === "active").length}
-          </p>
+          <p className="text-2xl font-bold text-gray-900">{activeFormsCount}</p>
           <p className="text-sm text-gray-600">Active Forms</p>
         </div>
 
@@ -138,7 +145,7 @@ function InstructorDashboard() {
         </div>
 
         <div className="space-y-4">
-          {mockCourses.map((course) => (
+          {recentCourses.map((course) => (
             <div
               key={course.id}
               className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
