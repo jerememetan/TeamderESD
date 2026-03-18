@@ -1,15 +1,17 @@
 import { Link } from 'react-router';
 import { FileText, Users, ArrowRight, CheckCircle, Clock } from 'lucide-react';
-import { currentStudent, currentStudentTeam, mockForms } from "../app/data/mockData";
+import { currentStudent, currentStudentTeam, mockForms } from "../../data/mockData";
 
 function StudentDashBoard(){
     // THESE ARE THE DATA THAT NEEDS TO BE TAKEN UP, CURRENTLY TAKEN FROM MOCK DATA
     const studentProfile = currentStudent
     const activeTeam = currentStudentTeam
     const formMap = mockForms
+    const availableFormList = Object.values(formMap)
+    const activeForm = availableFormList[0] || null
 
     const activeTeamCount = activeTeam ? 1 : 0
-    const completedFormsCount = Object.keys(formMap).length
+    const completedFormsCount = availableFormList.length
     const pendingRequestsCount = 0
     const formHistoryItems = [
       {
@@ -72,7 +74,15 @@ function StudentDashBoard(){
         <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
           <FileText className="w-10 h-10 text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Available Forms</h3>
-          <p className="text-sm text-gray-600 mb-4">No new forms at this time</p>
+          <p className="text-sm text-gray-600 mb-4">
+            Complete the active group formation form for your course.
+          </p>
+          <Link
+            to={activeForm ? `/student/form/${activeForm.id}` : "/student"}
+            className="inline-flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            Fill Form <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
         </div>
       </div>
 

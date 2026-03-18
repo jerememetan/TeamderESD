@@ -1,9 +1,16 @@
 import { RouterProvider, createBrowserRouter } from 'react-router'
 import AppShell from './app/layouts/AppShell'
-import HomePage from './pages/HomePage'
-import TestGalleryPage from './pages/TestGalleryPage'
-import InstructorDashboard from './pages/InstructorDashboard'
-import StudentDashBoard from './pages/StudentDashboard'
+import Analytics from './pages/instructor/Analytics'
+import CreateForm from './pages/instructor/CreateForm'
+import Courses from './pages/instructor/Courses'
+import InstructorDashboard from './pages/instructor/InstructorDashboard'
+import SwapRequests from './pages/instructor/SwapRequests'
+import Teams from './pages/instructor/Teams'
+import FillForm from './pages/student/FillForm'
+import MyTeam from './pages/student/MyTeam'
+import StudentDashBoard from './pages/student/StudentDashboard'
+import HomePage from './pages/shared/HomePage'
+import TestGalleryPage from './pages/shared/TestGalleryPage'
 
 const router = createBrowserRouter([
   {
@@ -25,7 +32,35 @@ const router = createBrowserRouter([
       {
         path: 'student',
         element: <StudentDashBoard />,
-      },      
+      },
+      {
+        path: 'instructor/courses',
+        element: <Courses />,
+      },
+      {
+        path: 'instructor/courses/:courseId/groups/:groupId/analytics',
+        element: <Analytics />,
+      },
+      {
+        path: 'instructor/courses/:courseId/create-form',
+        element: <CreateForm />,
+      },
+      {
+        path: 'instructor/courses/:courseId/teams',
+        element: <Teams />,
+      },
+      {
+        path: 'instructor/swap-requests',
+        element: <SwapRequests />,
+      },
+      {
+        path: 'student/form/:formId',
+        element: <FillForm />,
+      },
+      {
+        path: 'student/team',
+        element: <MyTeam />,
+      },
     ],
   },
 ])

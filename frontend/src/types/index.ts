@@ -1,11 +1,18 @@
+export interface CourseGroup {
+  id: string;
+  code: string;
+  label: string;
+  studentsCount: number;
+  teamsCount: number;
+  formStatus: 'draft' | 'active' | 'closed';
+}
+
 export interface Course {
   id: string;
   name: string;
   code: string;
   semester: string;
-  studentsCount: number;
-  teamsCount: number;
-  formStatus: 'draft' | 'active' | 'closed';
+  groups: CourseGroup[];
 }
 
 export interface FormCriteria {
@@ -22,6 +29,11 @@ export interface TeamForm {
   title: string;
   description: string;
   criteria: FormCriteria[];
+  groupSize: number;
+  minimumGroupSize?: number;
+  mixGender: boolean;
+  mixYear: boolean;
+  allowBuddy: boolean;
   status: 'draft' | 'active' | 'closed';
   createdAt: string;
   responseCount: number;
@@ -38,6 +50,7 @@ export interface Student {
 export interface Team {
   id: string;
   courseId: string;
+  groupId: string;
   name: string;
   members: Student[];
   formationScore: number;
@@ -56,8 +69,7 @@ export interface SwapRequest {
   studentName: string;
   currentTeamId: string;
   currentTeamName: string;
-  targetTeamId: string;
-  targetTeamName: string;
+  groupId?: string;
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;

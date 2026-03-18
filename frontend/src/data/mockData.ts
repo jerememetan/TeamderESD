@@ -1,4 +1,4 @@
-import { Course, TeamForm, Team, SwapRequest, Student } from '../types/index';
+import { Course, TeamForm, Team, SwapRequest, Student } from '../types';
 
 export const mockCourses: Course[] = [
   {
@@ -6,27 +6,72 @@ export const mockCourses: Course[] = [
     name: 'Software Engineering',
     code: 'CS3240',
     semester: 'Fall 2026',
-    studentsCount: 120,
-    teamsCount: 24,
-    formStatus: 'active',
+    groups: [
+      {
+        id: '1-g1',
+        code: 'CS3240G1',
+        label: 'Group 1',
+        studentsCount: 60,
+        teamsCount: 12,
+        formStatus: 'active',
+      },
+      {
+        id: '1-g2',
+        code: 'CS3240G2',
+        label: 'Group 2',
+        studentsCount: 60,
+        teamsCount: 12,
+        formStatus: 'active',
+      },
+    ],
   },
   {
     id: '2',
     name: 'Database Systems',
     code: 'CS4320',
     semester: 'Fall 2026',
-    studentsCount: 80,
-    teamsCount: 16,
-    formStatus: 'closed',
+    groups: [
+      {
+        id: '2-g1',
+        code: 'CS4320G1',
+        label: 'Group 1',
+        studentsCount: 40,
+        teamsCount: 8,
+        formStatus: 'closed',
+      },
+      {
+        id: '2-g2',
+        code: 'CS4320G2',
+        label: 'Group 2',
+        studentsCount: 40,
+        teamsCount: 8,
+        formStatus: 'active',
+      },
+    ],
   },
   {
     id: '3',
     name: 'Human-Computer Interaction',
     code: 'CS3250',
     semester: 'Fall 2026',
-    studentsCount: 60,
-    teamsCount: 12,
-    formStatus: 'draft',
+    groups: [
+      {
+        id: '3-g1',
+        code: 'CS3250G1',
+        label: 'Group 1',
+        studentsCount: 30,
+        teamsCount: 6,
+        formStatus: 'draft',
+      },
+      {
+        id: '3-g2',
+        code: 'CS3250G2',
+        label: 'Group 2',
+        studentsCount: 30,
+        teamsCount: 6,
+        formStatus: 'draft',
+      },
+    ],
   },
 ];
 
@@ -64,10 +109,15 @@ export const mockForms: Record<string, TeamForm> = {
         weight: 0.25,
       },
     ],
+    groupSize: 5,
+    minimumGroupSize: 4,
+    mixGender: true,
+    mixYear: true,
+    allowBuddy: true,
     status: 'active',
     createdAt: '2026-03-01T10:00:00Z',
     responseCount: 95,
-    totalStudents: 120,
+    totalStudents: 60,
   },
 };
 
@@ -79,10 +129,29 @@ export const mockStudents: Student[] = [
   { id: 's5', name: 'Emma Brown', email: 'emma@university.edu', studentId: 'STU005' },
 ];
 
+export const mockStudentStrengths: Record<string, string[]> = {
+  s1: ['Backend development', 'API integration'],
+  s2: ['Project coordination', 'Team communication'],
+  s3: ['UI design', 'User empathy'],
+  s4: ['Testing', 'Debugging'],
+  s5: ['Documentation', 'Presentation'],
+  s6: ['Database design', 'Query optimization'],
+  s7: ['Frontend implementation', 'Accessibility'],
+  s8: ['System architecture', 'Backend development'],
+  s9: ['Research', 'UX writing'],
+  s10: ['DevOps', 'Deployment'],
+  s11: ['Problem solving', 'Java'],
+  s12: ['Data modeling', 'SQL'],
+  s13: ['Wireframing', 'Figma prototyping'],
+  s14: ['Python', 'Automation'],
+  s15: ['Facilitation', 'Agile planning'],
+};
+
 export const mockTeams: Team[] = [
   {
     id: 't1',
     courseId: '1',
+    groupId: '1-g1',
     name: 'Team Alpha',
     members: [mockStudents[0], mockStudents[1], mockStudents[2], mockStudents[3], mockStudents[4]],
     formationScore: 92,
@@ -95,6 +164,7 @@ export const mockTeams: Team[] = [
   {
     id: 't2',
     courseId: '1',
+    groupId: '1-g1',
     name: 'Team Beta',
     members: [
       { id: 's6', name: 'Frank Miller', email: 'frank@university.edu', studentId: 'STU006' },
@@ -113,6 +183,7 @@ export const mockTeams: Team[] = [
   {
     id: 't3',
     courseId: '1',
+    groupId: '1-g2',
     name: 'Team Gamma',
     members: [
       { id: 's11', name: 'Kelly Martinez', email: 'kelly@university.edu', studentId: 'STU011' },
@@ -139,24 +210,22 @@ export const mockSwapRequests: SwapRequest[] = [
     studentName: 'Bob Smith',
     currentTeamId: 't1',
     currentTeamName: 'Team Alpha',
-    targetTeamId: 't2',
-    targetTeamName: 'Team Beta',
-    reason: 'I have a better skill match with Team Beta members and share similar project interests.',
+    groupId: '1-g1',
+    reason: 'I am having collaboration difficulties in my current team and would prefer to be reassigned if possible.',
     status: 'pending',
     createdAt: '2026-03-12T14:30:00Z',
   },
   {
     id: 'sr2',
-    courseId: '2',
-    courseName: 'Database Systems',
-    studentId: 's20',
-    studentName: 'Sarah Johnson',
-    currentTeamId: 't10',
-    currentTeamName: 'Team Delta',
-    targetTeamId: 't11',
-    targetTeamName: 'Team Epsilon',
-    reason: 'Schedule conflicts with current team meetings.',
-    status: 'pending',
+    courseId: '1',
+    courseName: 'Software Engineering',
+    studentId: 's11',
+    studentName: 'Kelly Martinez',
+    currentTeamId: 't3',
+    currentTeamName: 'Team Gamma',
+    groupId: '1-g2',
+    reason: 'My current team meeting schedule clashes with my part-time work, so I am requesting a team change.',
+    status: 'approved',
     createdAt: '2026-03-11T09:15:00Z',
   },
 ];
