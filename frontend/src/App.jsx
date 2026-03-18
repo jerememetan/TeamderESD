@@ -1,5 +1,7 @@
 import { RouterProvider, createBrowserRouter } from 'react-router'
 import AppShell from './app/layouts/AppShell'
+import Analytics from './pages/Analytics'
+import Courses from './pages/Courses'
 import HomePage from './pages/HomePage'
 import TestGalleryPage from './pages/TestGalleryPage'
 import InstructorDashboard from './pages/InstructorDashboard'
@@ -25,7 +27,15 @@ const router = createBrowserRouter([
       {
         path: 'student',
         element: <StudentDashBoard />,
-      },      
+      },
+      {
+        path: 'instructor/courses',
+        element: <Courses />,
+      },
+      {
+        path: 'instructor/courses/:courseId/groups/:groupId/analytics',
+        element: <Analytics />,
+      },
     ],
   },
 ])

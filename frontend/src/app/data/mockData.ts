@@ -6,27 +6,72 @@ export const mockCourses: Course[] = [
     name: 'Software Engineering',
     code: 'CS3240',
     semester: 'Fall 2026',
-    studentsCount: 120,
-    teamsCount: 24,
-    formStatus: 'active',
+    groups: [
+      {
+        id: '1-g1',
+        code: 'CS3240G1',
+        label: 'Group 1',
+        studentsCount: 60,
+        teamsCount: 12,
+        formStatus: 'active',
+      },
+      {
+        id: '1-g2',
+        code: 'CS3240G2',
+        label: 'Group 2',
+        studentsCount: 60,
+        teamsCount: 12,
+        formStatus: 'active',
+      },
+    ],
   },
   {
     id: '2',
     name: 'Database Systems',
     code: 'CS4320',
     semester: 'Fall 2026',
-    studentsCount: 80,
-    teamsCount: 16,
-    formStatus: 'closed',
+    groups: [
+      {
+        id: '2-g1',
+        code: 'CS4320G1',
+        label: 'Group 1',
+        studentsCount: 40,
+        teamsCount: 8,
+        formStatus: 'closed',
+      },
+      {
+        id: '2-g2',
+        code: 'CS4320G2',
+        label: 'Group 2',
+        studentsCount: 40,
+        teamsCount: 8,
+        formStatus: 'active',
+      },
+    ],
   },
   {
     id: '3',
     name: 'Human-Computer Interaction',
     code: 'CS3250',
     semester: 'Fall 2026',
-    studentsCount: 60,
-    teamsCount: 12,
-    formStatus: 'draft',
+    groups: [
+      {
+        id: '3-g1',
+        code: 'CS3250G1',
+        label: 'Group 1',
+        studentsCount: 30,
+        teamsCount: 6,
+        formStatus: 'draft',
+      },
+      {
+        id: '3-g2',
+        code: 'CS3250G2',
+        label: 'Group 2',
+        studentsCount: 30,
+        teamsCount: 6,
+        formStatus: 'draft',
+      },
+    ],
   },
 ];
 
@@ -67,7 +112,7 @@ export const mockForms: Record<string, TeamForm> = {
     status: 'active',
     createdAt: '2026-03-01T10:00:00Z',
     responseCount: 95,
-    totalStudents: 120,
+    totalStudents: 60,
   },
 };
 
@@ -83,6 +128,7 @@ export const mockTeams: Team[] = [
   {
     id: 't1',
     courseId: '1',
+    groupId: '1-g1',
     name: 'Team Alpha',
     members: [mockStudents[0], mockStudents[1], mockStudents[2], mockStudents[3], mockStudents[4]],
     formationScore: 92,
@@ -95,6 +141,7 @@ export const mockTeams: Team[] = [
   {
     id: 't2',
     courseId: '1',
+    groupId: '1-g1',
     name: 'Team Beta',
     members: [
       { id: 's6', name: 'Frank Miller', email: 'frank@university.edu', studentId: 'STU006' },
@@ -113,6 +160,7 @@ export const mockTeams: Team[] = [
   {
     id: 't3',
     courseId: '1',
+    groupId: '1-g2',
     name: 'Team Gamma',
     members: [
       { id: 's11', name: 'Kelly Martinez', email: 'kelly@university.edu', studentId: 'STU011' },

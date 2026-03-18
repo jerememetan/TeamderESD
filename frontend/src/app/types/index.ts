@@ -1,11 +1,18 @@
+export interface CourseGroup {
+  id: string;
+  code: string;
+  label: string;
+  studentsCount: number;
+  teamsCount: number;
+  formStatus: 'draft' | 'active' | 'closed';
+}
+
 export interface Course {
   id: string;
   name: string;
   code: string;
   semester: string;
-  studentsCount: number;
-  teamsCount: number;
-  formStatus: 'draft' | 'active' | 'closed';
+  groups: CourseGroup[];
 }
 
 export interface FormCriteria {
@@ -38,6 +45,7 @@ export interface Student {
 export interface Team {
   id: string;
   courseId: string;
+  groupId: string;
   name: string;
   members: Student[];
   formationScore: number;
