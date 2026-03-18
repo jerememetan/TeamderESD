@@ -29,6 +29,11 @@ export interface TeamForm {
   title: string;
   description: string;
   criteria: FormCriteria[];
+  groupSize: number;
+  minimumGroupSize?: number;
+  mixGender: boolean;
+  mixYear: boolean;
+  allowBuddy: boolean;
   status: 'draft' | 'active' | 'closed';
   createdAt: string;
   responseCount: number;

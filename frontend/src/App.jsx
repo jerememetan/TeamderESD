@@ -1,7 +1,9 @@
 import { RouterProvider, createBrowserRouter } from 'react-router'
 import AppShell from './app/layouts/AppShell'
 import Analytics from './pages/Analytics'
+import CreateForm from './pages/CreateForm'
 import Courses from './pages/Courses'
+import FillForm from './pages/FillForm'
 import HomePage from './pages/HomePage'
 import TestGalleryPage from './pages/TestGalleryPage'
 import InstructorDashboard from './pages/InstructorDashboard'
@@ -35,6 +37,14 @@ const router = createBrowserRouter([
       {
         path: 'instructor/courses/:courseId/groups/:groupId/analytics',
         element: <Analytics />,
+      },
+      {
+        path: 'instructor/courses/:courseId/create-form',
+        element: <CreateForm />,
+      },
+      {
+        path: 'student/form/:formId',
+        element: <FillForm />,
       },
     ],
   },
