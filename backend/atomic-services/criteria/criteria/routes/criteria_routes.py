@@ -11,13 +11,8 @@ many_response_schema = CriteriaResponseSchema(many=True)
 @criteria_bp.route("", methods=["GET"])
 def get_criteria():
     course_id = request.args.get("course_id")
-    section_id = request.args.get("section_id")
-    if course_id and section_id:
-        criteria = Criteria.query.filter_by(course_id=course_id, section_id=section_id).all()
-    elif course_id:
-        criteria = Criteria.query.filter_by(course_id=course_id).all()
-    elif section_id:
-        criteria = Criteria.query.filter_by(section_id=section_id).all()
+    if course_id:
+        criteria = Criteria.query.filter_by(course_id=course_id)
     else:
         criteria = Criteria.query.all()
     return jsonify({
@@ -31,7 +26,6 @@ def create_criteria():
     data = create_schema.load(payload)
     
     criteria = Criteria(
-        section_id=data["section_id"],
         course_id=data["course_id"],
         num_groups=data["num_groups"],
         school_weight=data["school_weight"],
