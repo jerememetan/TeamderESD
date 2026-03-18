@@ -5,6 +5,7 @@ import CreateForm from './pages/instructor/CreateForm'
 import Courses from './pages/instructor/Courses'
 import InstructorDashboard from './pages/instructor/InstructorDashboard'
 import FillForm from './pages/student/FillForm'
+import MyTeam from './pages/student/MyTeam'
 import StudentDashBoard from './pages/student/StudentDashboard'
 import HomePage from './pages/shared/HomePage'
 import TestGalleryPage from './pages/shared/TestGalleryPage'
@@ -45,6 +46,10 @@ const router = createBrowserRouter([
       {
         path: 'student/form/:formId',
         element: <FillForm />,
+      },
+      {
+        path: 'student/team',
+        element: <MyTeam />,
       },
     ],
   },

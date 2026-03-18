@@ -129,6 +129,24 @@ export const mockStudents: Student[] = [
   { id: 's5', name: 'Emma Brown', email: 'emma@university.edu', studentId: 'STU005' },
 ];
 
+export const mockStudentStrengths: Record<string, string[]> = {
+  s1: ['Backend development', 'API integration'],
+  s2: ['Project coordination', 'Team communication'],
+  s3: ['UI design', 'User empathy'],
+  s4: ['Testing', 'Debugging'],
+  s5: ['Documentation', 'Presentation'],
+  s6: ['Database design', 'Query optimization'],
+  s7: ['Frontend implementation', 'Accessibility'],
+  s8: ['System architecture', 'Backend development'],
+  s9: ['Research', 'UX writing'],
+  s10: ['DevOps', 'Deployment'],
+  s11: ['Problem solving', 'Java'],
+  s12: ['Data modeling', 'SQL'],
+  s13: ['Wireframing', 'Figma prototyping'],
+  s14: ['Python', 'Automation'],
+  s15: ['Facilitation', 'Agile planning'],
+};
+
 export const mockTeams: Team[] = [
   {
     id: 't1',
