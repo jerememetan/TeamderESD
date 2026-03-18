@@ -17,7 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { mockCourses, mockTeams } from "../app/data/mockData";
+import { mockCourses, mockTeams } from "../../data/mockData";
 
 function Analytics() {
   const { courseId, groupId } = useParams();

@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { FileText, Users, ArrowRight, CheckCircle, Clock } from 'lucide-react';
-import { currentStudent, currentStudentTeam, mockForms } from "../app/data/mockData";
+import { currentStudent, currentStudentTeam, mockForms } from "../../data/mockData";
 
 function StudentDashBoard(){
     // THESE ARE THE DATA THAT NEEDS TO BE TAKEN UP, CURRENTLY TAKEN FROM MOCK DATA

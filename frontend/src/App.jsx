@@ -1,13 +1,13 @@
 import { RouterProvider, createBrowserRouter } from 'react-router'
 import AppShell from './app/layouts/AppShell'
-import Analytics from './pages/Analytics'
-import CreateForm from './pages/CreateForm'
-import Courses from './pages/Courses'
-import FillForm from './pages/FillForm'
-import HomePage from './pages/HomePage'
-import TestGalleryPage from './pages/TestGalleryPage'
-import InstructorDashboard from './pages/InstructorDashboard'
-import StudentDashBoard from './pages/StudentDashboard'
+import Analytics from './pages/instructor/Analytics'
+import CreateForm from './pages/instructor/CreateForm'
+import Courses from './pages/instructor/Courses'
+import InstructorDashboard from './pages/instructor/InstructorDashboard'
+import FillForm from './pages/student/FillForm'
+import StudentDashBoard from './pages/student/StudentDashboard'
+import HomePage from './pages/shared/HomePage'
+import TestGalleryPage from './pages/shared/TestGalleryPage'
 
 const router = createBrowserRouter([
   {

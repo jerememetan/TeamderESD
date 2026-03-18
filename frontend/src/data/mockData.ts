@@ -1,4 +1,4 @@
-import { Course, TeamForm, Team, SwapRequest, Student } from '../types/index';
+import { Course, TeamForm, Team, SwapRequest, Student } from '../types';
 
 export const mockCourses: Course[] = [
   {

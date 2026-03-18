@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { BarChart3, FileText, Plus, Users } from "lucide-react";
-import { mockCourses } from "../app/data/mockData";
+import { mockCourses } from "../../data/mockData";
 
 function Courses() {
   const courseList = mockCourses;

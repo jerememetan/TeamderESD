@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { currentStudent, mockForms, mockStudents } from "../app/data/mockData";
+import { currentStudent, mockForms, mockStudents } from "../../data/mockData";
 
 function FillForm() {
   const { formId } = useParams();

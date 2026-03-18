@@ -7,7 +7,7 @@ import {
   FileText,
   Users,
 } from "lucide-react";
-import { mockCourses, mockSwapRequests } from "../app/data/mockData";
+import { mockCourses, mockSwapRequests } from "../../data/mockData";
 
 function InstructorDashboard() {
   // THESE ARE THE DATA THAT NEEDS TO BE TAKEN UP, CURRENTLY TAKEN FROM MOCK DATA
