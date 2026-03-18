@@ -1,4 +1,6 @@
 services:
+
+  # Atomic
   student-service:
     build:
       context: ./atomic-services/student
@@ -38,5 +40,22 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3004:3004"
+
+  # Composite
+
+  formation-setup-service:
+    build:
+      context: ./composite-services/formation-setup
+    container_name: teamder-formation-setup-service
+    ports:
+      - "3010:3010"
+    environment:
+      CRITERIA_URL: "http://criteria-service:3004/criteria"
+      TOPIC_URL: "http://topic-service:3003/topic"
+      SKILL_URL: "http://skill-service:3002/skill"
+    depends_on:
+      - criteria-service
+      - topic-service
+      - skill-service
 
 

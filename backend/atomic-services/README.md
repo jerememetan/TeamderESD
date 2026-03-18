@@ -9,51 +9,74 @@ This README provides simple instructions for calling the endpoints of the three 
 
 ### Endpoints
 - **GET /criteria**
-  - Query params: `course_id` (optional)
-  - Returns: List of criteria filtered by course
+  - Query params: `section_id` (recommended), `course_id` (optional)
+  - Returns: List of criteria filtered by section or course
   - Example:
     ```http
-    GET http://localhost:3004/criteria?course_id={uuid}
+    GET http://localhost:3004/criteria?section_id={uuid}
+    ```
+
+- **GET /criteria/{section_id}**
+  - Returns: Criteria for the given section_id
+  - Example:
+    ```http
+    GET http://localhost:3004/criteria/{section_id}
     ```
 
 - **POST /criteria**
-  - Body: JSON matching `CriteriaCreateSchema`
+  - Body: JSON matching `CriteriaCreateSchema` (must include `section_id` and `course_id`)
   - Example:
     ```http
     POST http://localhost:3004/criteria
     Content-Type: application/json
     {
+      "section_id": "...",
       "course_id": "...",
       "num_groups": ...,
       "school_weight": ...,
       "year_weight": ...,
       "gender_weight": ...,
-      "gpa_weight": ...
+      "gpa_weight": ...,
+      "reputation_weight": ...,
+      "mbti_weight": ...,
+      "buddy_weight": ...,
+      "topic_weight": ...,
+      "skill_weight": ...,
+      "randomness": ...
     }
     ```
 
 ---
 
 ## Project Topic Service
-- **Base URL:** `/topics` (default port: 3002)
+- **Base URL:** `/topic` (default port: 3003)
 
 ### Endpoints
-- **GET /topics**
-  - Query param: `course_id` (optional)
-  - Returns: List of topics filtered by course
+
+- **GET /topic**
+  - Query params: `section_id` (required)
+  - Returns: List of topics filtered by section
   - Example:
     ```http
-    GET http://localhost:3002/topics?course_id={uuid}
+    GET http://localhost:3003/topic?section_id={uuid}
     ```
 
-- **POST /topics**
-  - Body: JSON matching `TopicCreateSchema`
+- **GET /topic/{topic_id}**
+  - Returns: Topic with the given topic_id
   - Example:
     ```http
-    POST http://localhost:3002/topics
+    GET http://localhost:3003/topic/{topic_id}
+    ```
+
+
+- **POST /topic**
+  - Body: JSON matching `TopicCreateSchema` (must include `section_id` and `topic_label`)
+  - Example:
+    ```http
+    POST http://localhost:3003/topic
     Content-Type: application/json
     {
-      "course_id": "...",
+      "section_id": "...",
       "topic_label": "..."
     }
     ```
@@ -61,25 +84,34 @@ This README provides simple instructions for calling the endpoints of the three 
 ---
 
 ## Skill Service
-- **Base URL:** `/skills` (default port: 3001)
+- **Base URL:** `/skill` (default port: 3002)
 
 ### Endpoints
-- **GET /skills**
-  - Query param: `course_id` (optional)
-  - Returns: List of skills filtered by course
+
+- **GET /skill**
+  - Query params: `section_id` (required)
+  - Returns: List of skills filtered by section
   - Example:
     ```http
-    GET http://localhost:3001/skills?course_id={uuid}
+    GET http://localhost:3002/skill?section_id={uuid}
     ```
 
-- **POST /skills**
-  - Body: JSON matching `SkillCreateSchema`
+- **GET /skill/{skill_id}**
+  - Returns: Skill with the given skill_id
   - Example:
     ```http
-    POST http://localhost:3001/skills
+    GET http://localhost:3002/skill/{skill_id}
+    ```
+
+
+- **POST /skill**
+  - Body: JSON matching `SkillCreateSchema` (must include `section_id`, `skill_label`, and optionally `skill_importance`)
+  - Example:
+    ```http
+    POST http://localhost:3002/skill
     Content-Type: application/json
     {
-      "course_id": "...",
+      "section_id": "...",
       "skill_label": "...",
       "skill_importance": ...
     }

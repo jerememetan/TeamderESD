@@ -6,8 +6,9 @@ db = SQLAlchemy()
 class Criteria(db.Model):
     __tablename__ = "criteria"
     __table_args__ = {"schema": "criteria"}
-    
-    course_id = db.Column(db.Uuid, primary_key=True)
+
+    section_id = db.Column(db.Uuid, primary_key=True)
+    course_id = db.Column(db.Uuid, nullable=False)
     num_groups = db.Column(db.Integer, nullable=False)
     school_weight = db.Column(db.Float, nullable=False, default=0.0)
     year_weight = db.Column(db.Float, nullable=False, default=0.0)

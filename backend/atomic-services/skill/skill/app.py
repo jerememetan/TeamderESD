@@ -17,8 +17,8 @@ def create_app():
 
     db.init_app(app)
     from .models.skill_model import Skill
-    from .routes.skill_routes import skills_bp
-    app.register_blueprint(skills_bp, url_prefix="/skills")
+    from .routes.skill_routes import skill_bp
+    app.register_blueprint(skill_bp, url_prefix="/skill")
     
     return app
 

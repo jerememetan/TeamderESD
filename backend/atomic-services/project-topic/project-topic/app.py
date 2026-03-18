@@ -14,8 +14,8 @@ def create_app():
 
     db.init_app(app)
     from .models.topic_model import Topic
-    from .routes.topic_routes import topics_bp
-    app.register_blueprint(topics_bp, url_prefix="/topics")
+    from .routes.topic_routes import topic_bp
+    app.register_blueprint(topic_bp, url_prefix="/topic")
     
     return app
 
