@@ -26,6 +26,7 @@ export interface FormCriteria {
 export interface TeamForm {
   id: string;
   courseId: string;
+  groupId: string;
   title: string;
   description: string;
   criteria: FormCriteria[];

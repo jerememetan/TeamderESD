@@ -76,11 +76,12 @@ export const mockCourses: Course[] = [
 ];
 
 export const mockForms: Record<string, TeamForm> = {
-  '1': {
-    id: 'form-1',
+  '1-g1': {
+    id: 'form-1-g1',
     courseId: '1',
-    title: 'Team Formation Survey - Fall 2026',
-    description: 'Please answer the following questions to help us form balanced teams for your project.',
+    groupId: '1-g1',
+    title: 'Team Formation Survey - CS3240G1',
+    description: 'Please answer the following questions to help us form balanced teams for CS3240G1.',
     criteria: [
       {
         id: 'c1',
@@ -116,7 +117,51 @@ export const mockForms: Record<string, TeamForm> = {
     allowBuddy: true,
     status: 'active',
     createdAt: '2026-03-01T10:00:00Z',
-    responseCount: 95,
+    responseCount: 48,
+    totalStudents: 60,
+  },
+  '1-g2': {
+    id: 'form-1-g2',
+    courseId: '1',
+    groupId: '1-g2',
+    title: 'Team Formation Survey - CS3240G2',
+    description: 'Please answer the following questions to help us form balanced teams for CS3240G2.',
+    criteria: [
+      {
+        id: 'c1',
+        question: 'What is your experience in frontend development?',
+        type: 'multiple-choice',
+        options: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+        weight: 0.35,
+      },
+      {
+        id: 'c2',
+        question: 'Rate your teamwork skills (1-10)',
+        type: 'scale',
+        weight: 0.2,
+      },
+      {
+        id: 'c3',
+        question: 'What role do you naturally take in team projects?',
+        type: 'multiple-choice',
+        options: ['Planner', 'Builder', 'Tester', 'Flexible'],
+        weight: 0.2,
+      },
+      {
+        id: 'c4',
+        question: 'What strengths would you contribute to this group?',
+        type: 'text',
+        weight: 0.25,
+      },
+    ],
+    groupSize: 5,
+    minimumGroupSize: 4,
+    mixGender: true,
+    mixYear: true,
+    allowBuddy: true,
+    status: 'active',
+    createdAt: '2026-03-02T10:00:00Z',
+    responseCount: 47,
     totalStudents: 60,
   },
 };

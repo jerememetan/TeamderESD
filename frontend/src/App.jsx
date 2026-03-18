@@ -42,7 +42,7 @@ const router = createBrowserRouter([
         element: <Analytics />,
       },
       {
-        path: 'instructor/courses/:courseId/create-form',
+        path: 'instructor/courses/:courseId/groups/:groupId/create-form',
         element: <CreateForm />,
       },
       {

@@ -1,9 +1,10 @@
 import { Link } from "react-router";
 import { BarChart3, FileText, Plus, Users } from "lucide-react";
-import { mockCourses } from "../../data/mockData";
+import { mockCourses, mockForms } from "../../data/mockData";
 
 function Courses() {
   const courseList = mockCourses;
+  const formMap = mockForms;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -57,61 +58,63 @@ function Courses() {
               </div>
 
               <div className="mb-6 grid gap-3 md:grid-cols-2">
-                {course.groups.map((group) => (
-                  <div
-                    key={group.id}
-                    className="rounded-lg border border-gray-200 bg-gray-50 p-4"
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-gray-900">{group.code}</p>
-                        <p className="text-sm text-gray-600">{group.label}</p>
+                {course.groups.map((group) => {
+                  const existingForm = formMap[group.id];
+
+                  return (
+                    <div
+                      key={group.id}
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-gray-900">{group.code}</p>
+                          <p className="text-sm text-gray-600">{group.label}</p>
+                        </div>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            group.formStatus === "active"
+                              ? "bg-green-100 text-green-700"
+                              : group.formStatus === "closed"
+                                ? "bg-gray-100 text-gray-700"
+                                : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          Form {group.formStatus}
+                        </span>
                       </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          group.formStatus === "active"
-                            ? "bg-green-100 text-green-700"
-                            : group.formStatus === "closed"
-                              ? "bg-gray-100 text-gray-700"
-                              : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
-                        Form {group.formStatus}
-                      </span>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span>{group.studentsCount} students</span>
+                        <span>{group.teamsCount} teams</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        <Link
+                          to={`/instructor/courses/${course.id}/groups/${group.id}/create-form`}
+                          className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+                        >
+                          <FileText className="w-4 h-4" />
+                          {existingForm ? "Edit group form" : "Create group form"}
+                        </Link>
+                        <Link
+                          to={`/instructor/courses/${course.id}/groups/${group.id}/analytics`}
+                          className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                          View Group Analytics
+                        </Link>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>{group.studentsCount} students</span>
-                      <span>{group.teamsCount} teams</span>
-                    </div>
-                    <div className="mt-3">
-                      <Link
-                        to={`/instructor/courses/${course.id}/groups/${group.id}/analytics`}
-                        className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        View Group Analytics
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Link
-                  to={`/instructor/courses/${course.id}/create-form`}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  {course.groups.every((group) => group.formStatus === "draft")
-                    ? "Create Form"
-                    : "Edit Form"}
-                </Link>
                 <Link
                   to={`/instructor/courses/${course.id}/teams`}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
                 >
                   <Users className="w-4 h-4" />
-                  View Teams
+                  View All Teams
                 </Link>
               </div>
             </div>

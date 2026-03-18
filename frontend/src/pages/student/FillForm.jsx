@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { currentStudent, mockForms, mockStudents } from "../../data/mockData";
+import { currentStudent, currentStudentTeam, mockCourses, mockForms, mockStudents } from "../../data/mockData";
 
 function FillForm() {
   const { formId } = useParams();
@@ -9,6 +9,8 @@ function FillForm() {
 
   // THESE ARE THE DATA THAT NEED TO COME FROM BACKEND LATER
   const studentProfile = currentStudent;
+  const activeTeam = currentStudentTeam;
+  const courseList = mockCourses;
   const formMap = mockForms;
   const availableFormList = Object.values(formMap);
   const buddyCandidateList = mockStudents.filter(
@@ -21,6 +23,10 @@ function FillForm() {
     availableFormList[0];
   const [responses, setResponses] = useState({});
   const [buddyRequestStudentId, setBuddyRequestStudentId] = useState("");
+  const selectedCourse = courseList.find((course) => course.id === selectedForm?.courseId);
+  const selectedGroup = selectedCourse?.groups.find(
+    (group) => group.id === selectedForm?.groupId,
+  );
 
   if (!selectedForm) {
     return <div className="max-w-7xl mx-auto px-4 py-8">Form not found</div>;
@@ -58,7 +64,7 @@ function FillForm() {
           Group Formation Form
         </h2>
         <p className="text-gray-600">
-          Rate yourself from 1 to 5 for each criterion below.
+          {selectedGroup?.code || activeTeam.groupId} - rate yourself from 1 to 5 for each criterion below.
         </p>
       </div>
 
@@ -71,9 +77,9 @@ function FillForm() {
       <div className="mb-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
         <p className="font-medium text-slate-900">Backend data this page will eventually need</p>
         <p className="mt-2">
-          logged-in student profile, active published form, form criteria, buddy
-          candidate list, and the submit-form API to save responses and buddy
-          requests.
+          logged-in student profile, active published form for the student's
+          group, form criteria, buddy candidate list, and the submit-form API to
+          save responses and buddy requests.
         </p>
       </div>
 

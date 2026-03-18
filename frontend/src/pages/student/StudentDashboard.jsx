@@ -7,7 +7,9 @@ function StudentDashBoard(){
     const studentProfile = currentStudent
     const activeTeam = currentStudentTeam
     const formMap = mockForms
-    const availableFormList = Object.values(formMap)
+    const availableFormList = Object.values(formMap).filter(
+      (form) => form.groupId === activeTeam.groupId,
+    )
     const activeForm = availableFormList[0] || null
 
     const activeTeamCount = activeTeam ? 1 : 0
@@ -29,7 +31,6 @@ function StudentDashBoard(){
         <p className="text-gray-600">Welcome back, {studentProfile.name}!</p>
       </div>
 
-      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-2">
@@ -55,7 +56,7 @@ function StudentDashBoard(){
           <p className="text-sm text-gray-600">Pending Requests</p>
         </div>
       </div>
-       {/* Quick Actions */}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Link
           to="/student/team"
@@ -75,7 +76,7 @@ function StudentDashBoard(){
           <FileText className="w-10 h-10 text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Available Forms</h3>
           <p className="text-sm text-gray-600 mb-4">
-            Complete the active group formation form for your course.
+            Complete the active group formation form for your assigned group.
           </p>
           <Link
             to={activeForm ? `/student/form/${activeForm.id}` : "/student"}
@@ -86,7 +87,6 @@ function StudentDashBoard(){
         </div>
       </div>
 
-      {/* Current Team */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-semibold text-gray-900">Current Team</h3>
@@ -94,7 +94,7 @@ function StudentDashBoard(){
             to="/student/team"
             className="text-blue-600 hover:text-blue-700 text-sm font-medium"
           >
-            View Details →
+            View Details
           </Link>
         </div>
 
@@ -105,6 +105,9 @@ function StudentDashBoard(){
             </h4>
             <p className="text-sm text-gray-600">
               {activeTeam.members.length} members
+            </p>
+            <p className="text-xs text-gray-500">
+              Form linked to {activeForm?.groupId || activeTeam.groupId}
             </p>
           </div>
           <div className="flex items-center gap-6">
@@ -118,7 +121,6 @@ function StudentDashBoard(){
         </div>
       </div>
 
-      {/* Form History */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-6">Form History</h3>
 

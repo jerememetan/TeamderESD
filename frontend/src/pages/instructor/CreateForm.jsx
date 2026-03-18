@@ -4,14 +4,15 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { mockCourses, mockForms } from "../../data/mockData";
 
 function CreateForm() {
-  const { courseId } = useParams();
+  const { courseId, groupId } = useParams();
 
   // THESE ARE THE DATA THAT NEED TO COME FROM BACKEND LATER
   const courseList = mockCourses;
   const existingFormMap = mockForms;
 
   const selectedCourse = courseList.find((course) => course.id === courseId);
-  const existingForm = existingFormMap[courseId || ""] || existingFormMap["1"];
+  const selectedGroup = selectedCourse?.groups.find((group) => group.id === groupId);
+  const existingForm = existingFormMap[groupId || ""];
 
   const initialCriteria = useMemo(
     () =>
@@ -35,8 +36,8 @@ function CreateForm() {
   const [allowBuddy, setAllowBuddy] = useState(existingForm?.allowBuddy ?? true);
   const [criteria, setCriteria] = useState(initialCriteria);
 
-  if (!selectedCourse) {
-    return <div className="max-w-7xl mx-auto px-4 py-8">Course not found</div>;
+  if (!selectedCourse || !selectedGroup) {
+    return <div className="max-w-7xl mx-auto px-4 py-8">Course group not found</div>;
   }
 
   const addCriterion = () => {
@@ -81,22 +82,22 @@ function CreateForm() {
 
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Create Group Formation Form
+          {existingForm ? "Edit Group Formation Form" : "Create Group Formation Form"}
         </h2>
         <p className="text-gray-600">
-          {selectedCourse.code} - {selectedCourse.name}
+          {selectedGroup.code} - {selectedCourse.name}
         </p>
         <p className="mt-2 text-sm text-gray-500">
-          This form is course-wide. Students will later rate themselves from 1 to 5
-          for each criterion you define here.
+          This form belongs to one teaching group only. If the same course has
+          multiple groups, each group needs its own form.
         </p>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Group Setup Rules</h3>
         <p className="mb-4 text-sm text-gray-600">
-          Fields in this section should come from the course-wide team formation
-          settings that instructors save for the selected course.
+          These settings apply only to {selectedGroup.code}, so instructors can
+          create separate rules for each group under the same course.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -258,9 +259,9 @@ function CreateForm() {
       <div className="mb-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
         <p className="font-medium text-slate-900">Backend data this page will eventually need</p>
         <p className="mt-2">
-          `courseId`, course details, existing form settings, saved criteria,
-          current publish status, and later the create/update API endpoints for
-          saving draft vs publishing the form.
+          `courseId`, `groupId`, course-group details, existing form settings,
+          saved criteria, current publish status, and later the create/update API
+          endpoints for saving draft vs publishing the form.
         </p>
       </div>
 
