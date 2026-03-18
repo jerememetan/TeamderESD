@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router";
-import { ArrowLeft, Award, TrendingUp, Users } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -17,19 +17,18 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import GroupChip from "../../components/schematic/GroupChip";
+import ModuleBlock from "../../components/schematic/ModuleBlock";
+import SystemTag from "../../components/schematic/SystemTag";
 import { mockCourses, mockTeams } from "../../data/mockData";
+import styles from "./Analytics.module.css";
 
 function Analytics() {
   const { courseId, groupId } = useParams();
 
-  const courseList = mockCourses;
-  const teamList = mockTeams;
-
-  const selectedCourse = courseList.find((course) => course.id === courseId);
+  const selectedCourse = mockCourses.find((course) => course.id === courseId);
   const selectedGroup = selectedCourse?.groups.find((group) => group.id === groupId);
-  const groupTeams = teamList.filter(
-    (team) => team.courseId === courseId && team.groupId === groupId,
-  );
+  const groupTeams = mockTeams.filter((team) => team.courseId === courseId && team.groupId === groupId);
   const selectedCourseGroups = selectedCourse?.groups ?? [];
 
   const siblingGroupSummaryData = selectedCourseGroups.map((group) => ({
@@ -64,200 +63,126 @@ function Analytics() {
   ];
 
   if (!selectedCourse || !selectedGroup) {
-    return <div className="max-w-7xl mx-auto px-4 py-8">Course group not found</div>;
+    return <div className={styles.notFound}>Course group not found</div>;
   }
 
   const totalStudents = selectedGroup.studentsCount;
-  const averageTeamScore =
-    groupTeams.reduce((sum, team) => sum + team.formationScore, 0) /
-    (groupTeams.length || 1);
+  const averageTeamScore = groupTeams.reduce((sum, team) => sum + team.formationScore, 0) / (groupTeams.length || 1);
   const averageStudentsPerTeam = totalStudents / (groupTeams.length || 1);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <Link
-        to="/instructor/courses"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Courses
+    <div className={styles.page}>
+      <Link to="/instructor/courses" className={styles.backLink}>
+        <ArrowLeft className={styles.backIcon} /> Return to course matrix
       </Link>
 
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Analytics</h2>
-        <p className="text-gray-600">
-          {selectedGroup.code} - {selectedCourse.name}
-        </p>
-        <p className="mt-2 text-sm text-gray-500">
-          Course-wide form settings remain shared, but analytics here are specific to{" "}
-          {selectedGroup.code}. Other groups in this course:{" "}
-          {selectedCourseGroups
-            .filter((group) => group.id !== selectedGroup.id)
-            .map((group) => group.code)
-            .join(", ") || "none"}
-        </p>
-      </div>
+      <section className={styles.hero}>
+        <div>
+          <p className={styles.kicker}>[GROUP ANALYTICS CONSOLE]</p>
+          <h2 className={styles.title}>{selectedGroup.code} performance and formation telemetry</h2>
+          <p className={styles.subtitle}>{selectedCourse.name} :: compare this group against sibling clusters while keeping charts scoped to one unit.</p>
+        </div>
+        <GroupChip code={selectedGroup.code} meta={`${totalStudents} students · ${groupTeams.length} teams`} tone="green" />
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Award className="w-6 h-6 text-blue-600" />
-            </div>
-            <span className="text-sm text-gray-600">Average Team Score</span>
+      <section className={styles.statsGrid}>
+        <ModuleBlock componentId="MOD-A1" eyebrow="Score" title="Average Team Score" metric={averageTeamScore.toFixed(1)} metricLabel="Formation balance" />
+        <ModuleBlock componentId="MOD-A2" eyebrow="Capacity" title="Total Teams" metric={String(groupTeams.length).padStart(2, "0")} metricLabel={`${averageStudentsPerTeam.toFixed(1)} students per team`} accent="green" />
+        <ModuleBlock componentId="MOD-A3" eyebrow="Participation" title="Response Rate" metric="79%" metricLabel={`95 of ${totalStudents} students responded`} accent="orange" />
+      </section>
+
+      <section className={styles.chartGrid}>
+        <ModuleBlock componentId="MOD-A4" eyebrow="Comparison" title="Course Group Breakdown" className={styles.chartModule}>
+          <div className={styles.chartWrap}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={siblingGroupSummaryData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
+                <XAxis dataKey="name" stroke="#51606F" tick={{ fontSize: 12 }} />
+                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="students" fill="#0047AB" />
+                <Bar dataKey="teams" fill="#2ECC71" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <p className="text-3xl font-bold text-gray-900">
-            {averageTeamScore.toFixed(1)}
-          </p>
-          <p className="text-sm text-green-600 flex items-center gap-1 mt-1">
-            <TrendingUp className="w-4 h-4" />
-            +5% from last semester
-          </p>
-        </div>
+        </ModuleBlock>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Users className="w-6 h-6 text-green-600" />
-            </div>
-            <span className="text-sm text-gray-600">Total Teams</span>
+        <ModuleBlock componentId="MOD-A5" eyebrow="Team Index" title={`Formation Scores :: ${selectedGroup.code}`} className={styles.chartModule}>
+          <div className={styles.chartWrap}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={teamScoresData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
+                <XAxis dataKey="name" stroke="#51606F" tick={{ fontSize: 12 }} />
+                <YAxis domain={[0, 100]} stroke="#51606F" tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="score" fill="#0047AB" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{groupTeams.length}</p>
-          <p className="text-sm text-gray-600 mt-1">
-            {averageStudentsPerTeam.toFixed(1)} students per team
-          </p>
-        </div>
+        </ModuleBlock>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
-            </div>
-            <span className="text-sm text-gray-600">Response Rate</span>
+        <ModuleBlock componentId="MOD-A6" eyebrow="Balance Radar" title="Overall Team Quality" className={styles.chartModule}>
+          <div className={styles.chartWrap}>
+            <ResponsiveContainer width="100%" height={300}>
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="#B7C5D3" />
+                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: '#51606F' }} />
+                <PolarRadiusAxis domain={[0, 100]} tick={{ fill: '#51606F' }} />
+                <Radar name="Score" dataKey="value" stroke="#FF6B00" fill="#FF6B00" fillOpacity={0.28} />
+              </RadarChart>
+            </ResponsiveContainer>
           </div>
-          <p className="text-3xl font-bold text-gray-900">79%</p>
-          <p className="text-sm text-gray-600 mt-1">95 of {totalStudents} students responded</p>
-        </div>
-      </div>
+        </ModuleBlock>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Course Group Breakdown</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={siblingGroupSummaryData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="students" fill="#3B82F6" />
-              <Bar dataKey="teams" fill="#10B981" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Formation Scores For {selectedGroup.code}</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={teamScoresData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Bar dataKey="score" fill="#3B82F6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Overall Team Quality</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <RadarChart data={radarData}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="metric" />
-              <PolarRadiusAxis domain={[0, 100]} />
-              <Radar name="Score" dataKey="value" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.6} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Diversity Metrics by Team</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={diversityData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="metric" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="Team Alpha" fill="#3B82F6" />
-              <Bar dataKey="Team Beta" fill="#10B981" />
-              <Bar dataKey="Team Gamma" fill="#8B5CF6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Form Response Timeline</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={responseRateData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="week" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="responses" stroke="#10B981" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Insights</h3>
-        <div className="space-y-4">
-          <div className="flex gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
-                OK
-              </div>
-            </div>
-            <div>
-              <p className="font-medium text-gray-900">Excellent Team Balance</p>
-              <p className="text-sm text-gray-600">
-                This page now evaluates one teaching group at a time instead of mixing all groups together.
-              </p>
-            </div>
+        <ModuleBlock componentId="MOD-A7" eyebrow="Diversity" title="Metrics by Team" className={styles.chartModule}>
+          <div className={styles.chartWrap}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={diversityData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
+                <XAxis dataKey="metric" stroke="#51606F" tick={{ fontSize: 12 }} />
+                <YAxis domain={[0, 100]} stroke="#51606F" tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Team Alpha" fill="#0047AB" />
+                <Bar dataKey="Team Beta" fill="#2ECC71" />
+                <Bar dataKey="Team Gamma" fill="#FF6B00" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
+        </ModuleBlock>
 
-          <div className="flex gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                i
-              </div>
-            </div>
-            <div>
-              <p className="font-medium text-gray-900">Group-aware analytics</p>
-              <p className="text-sm text-gray-600">
-                You can compare {selectedGroup.code} against sibling groups while still keeping team-level charts focused on this group only.
-              </p>
-            </div>
+        <ModuleBlock componentId="MOD-A8" eyebrow="Timeline" title="Form Response Sequence" className={`${styles.chartModule} ${styles.fullSpan}`}>
+          <div className={styles.chartWrap}>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={responseRateData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
+                <XAxis dataKey="week" stroke="#51606F" tick={{ fontSize: 12 }} />
+                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="responses" stroke="#2ECC71" strokeWidth={2.5} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
+        </ModuleBlock>
+      </section>
 
-          <div className="flex gap-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">
-                !
-              </div>
-            </div>
-            <div>
-              <p className="font-medium text-gray-900">Next backend alignment</p>
-              <p className="text-sm text-gray-600">
-                The backend and future APIs should expose course-group data
-                explicitly, not just course totals.
-              </p>
-            </div>
+      <ModuleBlock componentId="MOD-A9" eyebrow="Signal Review" title="Operational Insights">
+        <div className={styles.insightList}>
+          <div className={styles.insightRow}>
+            <SystemTag tone="success">Stable balance</SystemTag>
+            <p className={styles.insightText}>This console evaluates one teaching group at a time instead of mixing all groups together.</p>
+          </div>
+          <div className={styles.insightRow}>
+            <SystemTag tone="neutral">Sibling comparison</SystemTag>
+            <p className={styles.insightText}>You can compare {selectedGroup.code} against sibling groups while keeping team-level charts focused on this group only.</p>
+          </div>
+          <div className={styles.insightRow}>
+            <SystemTag hazard>Backend alignment</SystemTag>
+            <p className={styles.insightText}>Future APIs should expose course-group analytics explicitly, not just course totals.</p>
           </div>
         </div>
-      </div>
+      </ModuleBlock>
     </div>
   );
 }

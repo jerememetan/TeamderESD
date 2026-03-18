@@ -1,68 +1,44 @@
-import { Link, Outlet, useLocation } from "react-router";
-import { GraduationCap, LayoutGrid, Users } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { cn } from "../../components/ui/utils";
+import { Outlet, useLocation } from 'react-router'
+import MechanicalSwitch from '../../components/schematic/MechanicalSwitch'
+import styles from './AppShell.module.css'
+import { themeVars } from '../../design/theme'
 
 const navItems = [
   {
-    to: "/instructor",
-    label: "Instructor",
-    icon: GraduationCap,
-    match: (pathname) => pathname === "/instructor",
+    to: '/instructor',
+    label: 'Instructor',
+    code: 'MODE-01',
+    match: (pathname) => pathname.startsWith('/instructor'),
   },
   {
-    to: "/student",
-    label: "Student",
-    icon: Users,
-    match: (pathname) => pathname.startsWith("/student"),
+    to: '/student',
+    label: 'Student',
+    code: 'MODE-02',
+    match: (pathname) => pathname.startsWith('/student'),
   },
-];
+]
 
 function AppShell() {
-  const location = useLocation();
+  const location = useLocation()
 
   return (
-    <div className="min-h-screen bg-muted/30 text-foreground">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-
-            <div>
-              <h1 className="text-lg font-semibold leading-none">
-                TeamDer
-              </h1>
-            </div>
-
-          <nav className="flex flex-wrap items-center gap-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = item.match(location.pathname);
-
-              return (
-                <Button
-                  key={item.to}
-                  asChild
-                  variant={active ? "default" : "outline"}
-                  size="sm"
-                  className={cn(
-                    "min-w-[8rem] justify-start",
-                    active && "shadow-sm",
-                  )}
-                >
-                  <Link to={item.to}>
-                    <Icon className="size-4" />
-                    {item.label}
-                  </Link>
-                </Button>
-              );
-            })}
-          </nav>
+    <div className={styles.shell} style={themeVars}>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <div className={styles.brandWrap}>
+            <p className={styles.brandCode}>[SYS-TEAMDER-CTRL]</p>
+            <h1 className={styles.brand}>Teamder</h1>
+            <p className={styles.subtitle}>Precision workspace for course-group team formation.</p>
+          </div>
+          <MechanicalSwitch items={navItems} activePath={location.pathname} />
         </div>
       </header>
 
-
-      <Outlet />
+      <main className={styles.main}>
+        <Outlet />
+      </main>
     </div>
-  );
+  )
 }
 
-export default AppShell;
+export default AppShell

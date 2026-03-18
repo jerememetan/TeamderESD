@@ -1,152 +1,114 @@
 import { Link } from 'react-router';
-import { FileText, Users, ArrowRight, CheckCircle, Clock } from 'lucide-react';
-import { currentStudent, currentStudentTeam, mockForms } from "../../data/mockData";
+import { FileText, Users, Clock } from 'lucide-react';
+import ModuleBlock from '../../components/schematic/ModuleBlock';
+import SystemTag from '../../components/schematic/SystemTag';
+import motionStyles from '../../components/schematic/motion.module.css';
+import { currentStudent, currentStudentTeam, mockForms } from '../../data/mockData';
+import styles from './StudentDashboard.module.css';
 
-function StudentDashBoard(){
-    // THESE ARE THE DATA THAT NEEDS TO BE TAKEN UP, CURRENTLY TAKEN FROM MOCK DATA
-    const studentProfile = currentStudent
-    const activeTeam = currentStudentTeam
-    const formMap = mockForms
-    const availableFormList = Object.values(formMap).filter(
-      (form) => form.groupId === activeTeam.groupId,
-    )
-    const activeForm = availableFormList[0] || null
+function StudentDashBoard() {
+  const studentProfile = currentStudent;
+  const activeTeam = currentStudentTeam;
+  const availableFormList = Object.values(mockForms).filter((form) => form.groupId === activeTeam.groupId);
+  const activeForm = availableFormList[0] || null;
 
-    const activeTeamCount = activeTeam ? 1 : 0
-    const completedFormsCount = availableFormList.length
-    const pendingRequestsCount = 0
-    const formHistoryItems = [
-      {
-        id: 'team-formation-fall-2026',
-        title: 'Team Formation Survey - Fall 2026',
-        completedAtLabel: 'Completed on March 5, 2026',
-        statusLabel: 'Completed',
-      },
-    ]
-
-    return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Student Dashboard</h2>
-        <p className="text-gray-600">Welcome back, {studentProfile.name}!</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <Users className="w-8 h-8 text-blue-600" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{activeTeamCount}</p>
-          <p className="text-sm text-gray-600">Active Team</p>
+  return (
+    <div className={`${styles.page} ${motionStyles.motionPage}`}>
+      <section className={`${styles.hero} ${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '0ms' }}>
+        <div>
+          <p className={styles.kicker}>[STUDENT TEAM STATION]</p>
+          <h2 className={styles.title}>Track your team assignment and complete your group form.</h2>
+          <p className={styles.subtitle}>Active team: {activeTeam.name} :: Group {activeTeam.groupId} :: Operator {studentProfile.studentId}</p>
         </div>
+        <SystemTag tone="success">Group link locked</SystemTag>
+      </section>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <FileText className="w-8 h-8 text-green-600" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{completedFormsCount}</p>
-          <p className="text-sm text-gray-600">Forms Completed</p>
-        </div>
+      <section className={styles.statsGrid}>
+        {[
+          { id: 'MOD-11', eyebrow: 'Assignment', title: 'Active Team', metric: '01', label: 'Current placement', accent: 'blue' },
+          { id: 'MOD-12', eyebrow: 'Form Access', title: 'Group Forms', metric: String(availableFormList.length).padStart(2, '0'), label: 'Visible to your group', accent: 'green' },
+          { id: 'MOD-13', eyebrow: 'Request Queue', title: 'Pending Swaps', metric: '00', label: 'Awaiting instructor action', accent: 'orange' },
+        ].map((item, index) => (
+          <ModuleBlock
+            key={item.id}
+            componentId={item.id}
+            eyebrow={item.eyebrow}
+            title={item.title}
+            metric={item.metric}
+            metricLabel={item.label}
+            accent={item.accent}
+            className={`${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
+            style={{ '--td-stagger-delay': `${(index + 1) * 50}ms` }}
+          />
+        ))}
+      </section>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <Clock className="w-8 h-8 text-orange-600" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{pendingRequestsCount}</p>
-          <p className="text-sm text-gray-600">Pending Requests</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Link
-          to="/student/team"
-          className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow group"
-        >
-          <Users className="w-10 h-10 text-blue-600 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">My Team</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            View your current team members and request team swaps
-          </p>
-          <div className="flex items-center text-blue-600 text-sm font-medium group-hover:gap-2 transition-all">
-            View Team <ArrowRight className="w-4 h-4 ml-1" />
-          </div>
-        </Link>
-
-        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-          <FileText className="w-10 h-10 text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Available Forms</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Complete the active group formation form for your assigned group.
-          </p>
+      <section className={styles.actionGrid}>
+        {[
+          {
+            to: '/student/team',
+            icon: <Users className={styles.actionIcon} />,
+            code: '[ACT-TEAM]',
+            title: 'Inspect Team Module',
+            text: 'Review teammates, strengths, and swap-request controls.',
+          },
+          {
+            to: activeForm ? `/student/form/${activeForm.id}` : '/student',
+            icon: <FileText className={styles.actionIcon} />,
+            code: '[ACT-FORM]',
+            title: 'Open Group Form',
+            text: 'Submit responses for the form linked specifically to your assigned group.',
+          },
+        ].map((action, index) => (
           <Link
-            to={activeForm ? `/student/form/${activeForm.id}` : "/student"}
-            className="inline-flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
+            key={action.code}
+            to={action.to}
+            className={`${styles.actionCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
+            style={{ '--td-stagger-delay': `${(index + 4) * 50}ms` }}
           >
-            Fill Form <ArrowRight className="w-4 h-4 ml-1" />
+            {action.icon}
+            <div>
+              <p className={styles.actionCode}>{action.code}</p>
+              <h3 className={styles.actionTitle}>{action.title}</h3>
+              <p className={styles.actionText}>{action.text}</p>
+            </div>
           </Link>
-        </div>
-      </div>
+        ))}
+      </section>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-gray-900">Current Team</h3>
-          <Link
-            to="/student/team"
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            View Details
-          </Link>
+      <ModuleBlock
+        componentId="MOD-14"
+        eyebrow="Current Linkage"
+        title={activeTeam.name}
+        metric={activeTeam.formationScore}
+        metricLabel="Formation score"
+        className={`${styles.teamModule} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
+        style={{ '--td-stagger-delay': '300ms' }}
+      >
+        <div className={styles.teamMeta}>
+          <p className={styles.metaLine}>Members :: {activeTeam.members.length}</p>
+          <p className={styles.metaLine}>Form linkage :: {activeForm?.groupId || activeTeam.groupId}</p>
+          <p className={styles.metaLine}>Availability :: {activeForm ? 'Published to group' : 'No form linked yet'}</p>
         </div>
+      </ModuleBlock>
 
-        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+      <ModuleBlock
+        componentId="MOD-15"
+        eyebrow="Historical Record"
+        title="Submission Timeline"
+        className={`${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
+        style={{ '--td-stagger-delay': '350ms' }}
+      >
+        <div className={styles.historyState}>
+          <Clock className={styles.historyIcon} />
           <div>
-            <h4 className="font-semibold text-gray-900 text-lg mb-1">
-              {activeTeam.name}
-            </h4>
-            <p className="text-sm text-gray-600">
-              {activeTeam.members.length} members
-            </p>
-            <p className="text-xs text-gray-500">
-              Form linked to {activeForm?.groupId || activeTeam.groupId}
-            </p>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">
-                {activeTeam.formationScore}
-              </p>
-              <p className="text-xs text-gray-600">Team Score</p>
-            </div>
+            <p className={styles.historyTitle}>Latest entry recorded</p>
+            <p className={styles.historyText}>Team Formation Survey completed on March 5, 2026.</p>
           </div>
         </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Form History</h3>
-
-        <div className="space-y-4">
-          {formHistoryItems.map((formItem) => (
-            <div key={formItem.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">
-                    {formItem.title}
-                  </h4>
-                  <p className="text-sm text-gray-600">{formItem.completedAtLabel}</p>
-                </div>
-              </div>
-              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                {formItem.statusLabel}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-      </div>
-    )
+      </ModuleBlock>
+    </div>
+  );
 }
 
-export default StudentDashBoard
+export default StudentDashBoard;

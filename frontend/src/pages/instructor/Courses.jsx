@@ -1,123 +1,78 @@
 import { Link } from "react-router";
-import { BarChart3, FileText, Plus, Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
+import GroupChip from "../../components/schematic/GroupChip";
+import ModuleBlock from "../../components/schematic/ModuleBlock";
+import SystemTag from "../../components/schematic/SystemTag";
+import motionStyles from "../../components/schematic/motion.module.css";
 import { mockCourses, mockForms } from "../../data/mockData";
+import styles from "./Courses.module.css";
 
 function Courses() {
   const courseList = mockCourses;
   const formMap = mockForms;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className={`${styles.page} ${motionStyles.motionPage}`}>
+      <section className={styles.header}>
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Courses</h2>
-          <p className="text-gray-600">
-            Manage courses, then work with each teaching group inside them
-          </p>
+          <p className={styles.kicker}>[COURSE MATRIX]</p>
+          <h2 className={styles.title}>Manage course groups as independent formation channels.</h2>
+          <p className={styles.subtitle}>Instructors now create a separate form for each teaching group under the same course.</p>
         </div>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-          <Plus className="w-4 h-4" />
+        <button className={styles.headerButton}>
+          <Plus className={styles.buttonIcon} />
           Add Course
         </button>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 gap-6">
-        {courseList.map((course) => {
-          const totalStudents = course.groups.reduce(
-            (sum, group) => sum + group.studentsCount,
-            0,
-          );
+      <div className={styles.courseList}>
+        {courseList.map((course, courseIndex) => {
+          const totalStudents = course.groups.reduce((sum, group) => sum + group.studentsCount, 0);
 
           return (
-            <div
+            <ModuleBlock
               key={course.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+              componentId={`MOD-C${courseIndex + 1}`}
+              eyebrow={course.code}
+              title={course.name}
+              metric={String(course.groups.length).padStart(2, '0')}
+              metricLabel={`Groups :: ${totalStudents} students`}
+              className={`${styles.courseBlock} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
+              style={{ '--td-stagger-delay': `${courseIndex * 50}ms` }}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      {course.code}
-                    </h3>
-                    <span className="text-gray-600">-</span>
-                    <span className="text-xl text-gray-900">{course.name}</span>
-                  </div>
-                  <p className="text-gray-600">{course.semester}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-6 mb-6 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  <span>{course.groups.length} groups</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  <span>{totalStudents} students</span>
-                </div>
-              </div>
-
-              <div className="mb-6 grid gap-3 md:grid-cols-2">
-                {course.groups.map((group) => {
+              <p className={styles.courseSemester}>{course.semester}</p>
+              <div className={styles.groupGrid}>
+                {course.groups.map((group, groupIndex) => {
                   const existingForm = formMap[group.id];
+                  const tone = group.formStatus === 'active' ? 'green' : group.formStatus === 'closed' ? 'orange' : 'blue';
 
                   return (
-                    <div
-                      key={group.id}
-                      className="rounded-lg border border-gray-200 bg-gray-50 p-4"
-                    >
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-gray-900">{group.code}</p>
-                          <p className="text-sm text-gray-600">{group.label}</p>
-                        </div>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            group.formStatus === "active"
-                              ? "bg-green-100 text-green-700"
-                              : group.formStatus === "closed"
-                                ? "bg-gray-100 text-gray-700"
-                                : "bg-yellow-100 text-yellow-700"
-                          }`}
-                        >
+                    <div key={group.id} className={`${styles.groupCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ '--td-stagger-delay': `${(courseIndex * 3 + groupIndex + 1) * 50}ms` }}>
+                      <div className={styles.groupHeader}>
+                        <GroupChip code={group.code} meta={`${group.studentsCount} students · ${group.teamsCount} teams`} tone={tone} className={motionStyles.magneticItem} />
+                        <SystemTag tone={group.formStatus === 'active' ? 'success' : group.formStatus === 'closed' ? 'alert' : 'neutral'}>
                           Form {group.formStatus}
-                        </span>
+                        </SystemTag>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span>{group.studentsCount} students</span>
-                        <span>{group.teamsCount} teams</span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-3">
-                        <Link
-                          to={`/instructor/courses/${course.id}/groups/${group.id}/create-form`}
-                          className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
-                        >
-                          <FileText className="w-4 h-4" />
-                          {existingForm ? "Edit group form" : "Create group form"}
+                      <div className={styles.groupActions}>
+                        <Link className={styles.inlineLink} to={`/instructor/courses/${course.id}/groups/${group.id}/create-form`}>
+                          {existingForm ? 'Edit group form' : 'Create group form'}
                         </Link>
-                        <Link
-                          to={`/instructor/courses/${course.id}/groups/${group.id}/analytics`}
-                          className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
-                        >
-                          <BarChart3 className="w-4 h-4" />
-                          View Group Analytics
+                        <Link className={styles.inlineLinkMuted} to={`/instructor/courses/${course.id}/groups/${group.id}/analytics`}>
+                          View analytics
                         </Link>
                       </div>
                     </div>
                   );
                 })}
               </div>
-
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  to={`/instructor/courses/${course.id}/teams`}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
+              <div className={styles.footerAction}>
+                <Link className={styles.teamsLink} to={`/instructor/courses/${course.id}/teams`}>
+                  <Users className={styles.buttonIcon} />
                   View All Teams
                 </Link>
               </div>
-            </div>
+            </ModuleBlock>
           );
         })}
       </div>

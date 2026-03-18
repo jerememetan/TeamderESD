@@ -1,0 +1,71 @@
+.motionPage {
+  animation: td-page-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.staggerItem {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0);
+  animation: td-fade-in-down 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--td-stagger-delay, 0ms);
+}
+
+.magneticItem {
+  will-change: transform, opacity;
+  transition:
+    transform var(--td-motion-spring),
+    opacity var(--td-motion-fast) ease,
+    box-shadow var(--td-motion-fast) ease,
+    border-color var(--td-motion-fast) ease,
+    background-color var(--td-motion-fast) ease;
+}
+
+.pulseWarning {
+  animation: td-system-pulse var(--td-motion-slow) ease-in-out infinite;
+}
+
+@keyframes td-page-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes td-fade-in-down {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes td-system-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motionPage,
+  .staggerItem,
+  .pulseWarning {
+    animation: none;
+  }
+
+  .magneticItem {
+    transition: none;
+  }
+}

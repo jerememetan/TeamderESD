@@ -1,0 +1,139 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-md);
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--td-space-md);
+  align-items: flex-start;
+}
+
+.kicker,
+.readTitle,
+.codePill {
+  font-family: var(--td-font-mono);
+  text-transform: uppercase;
+}
+
+.kicker {
+  margin: 0;
+  color: var(--td-color-primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+}
+
+.title {
+  margin: 8px 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.description,
+.sectionDescription,
+.readText,
+.usageItem,
+.cardCopy {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  line-height: 1.7;
+}
+
+.heroActions,
+.codeRow,
+.previewRow,
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  align-items: center;
+}
+
+.readGrid,
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--td-space-sm);
+}
+
+.grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.readCard,
+.switchPanel,
+.tabsContent {
+  padding: var(--td-space-sm);
+  border: 1px solid rgba(124, 145, 166, 0.45);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(240, 244, 248, 0.82);
+}
+
+.readTitle {
+  margin: 0 0 var(--td-space-xs);
+  color: var(--td-color-text);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+}
+
+.codePill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--td-color-text);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.usageList,
+.stack,
+.notesStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-xs);
+}
+
+.fieldStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-xs);
+}
+
+.switchPanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--td-space-sm);
+}
+
+.separator {
+  margin: var(--td-space-sm) 0;
+}
+
+.cardPreview {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+@media (max-width: 960px) {
+  .readGrid,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .hero,
+  .switchPanel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

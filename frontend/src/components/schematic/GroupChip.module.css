@@ -1,0 +1,72 @@
+.chip {
+  display: inline-flex;
+  align-items: stretch;
+  min-width: 180px;
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+  transition:
+    transform var(--td-motion-spring),
+    box-shadow var(--td-motion-fast) ease,
+    border-color var(--td-motion-fast) ease;
+}
+
+.chip:hover {
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 10px 20px rgba(6, 28, 61, 0.12);
+}
+
+.bar {
+  width: 8px;
+  background: var(--td-color-primary);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+}
+
+.code {
+  margin: 0;
+  color: var(--td-color-text);
+  font-family: var(--td-font-mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.meta {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.green .bar {
+  background: var(--td-color-success);
+}
+
+.orange .bar {
+  background: var(--td-color-alert);
+  animation: td-system-pulse var(--td-motion-slow) ease-in-out infinite;
+}
+
+.blue .bar {
+  background: var(--td-color-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip,
+  .orange .bar {
+    transition: none;
+    animation: none;
+  }
+
+  .chip:hover {
+    transform: none;
+  }
+}

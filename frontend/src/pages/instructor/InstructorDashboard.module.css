@@ -1,0 +1,150 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-md);
+}
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--td-space-md);
+}
+
+.kicker,
+.actionCode,
+.courseCode,
+.inlineLink {
+  margin: 0;
+  font-family: var(--td-font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kicker {
+  color: var(--td-color-primary);
+  font-size: 0.75rem;
+}
+
+.title {
+  margin: 8px 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 72ch;
+  color: var(--td-color-text-muted);
+  line-height: 1.7;
+}
+
+.statsGrid,
+.actionsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--td-space-sm);
+}
+
+.actionsGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.actionCard {
+  display: flex;
+  gap: var(--td-space-sm);
+  padding: var(--td-space-sm);
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-panel);
+  color: var(--td-color-text);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 24px var(--td-color-shadow);
+}
+
+.actionTitle,
+.courseName {
+  margin: 6px 0;
+  font-size: 1.1rem;
+}
+
+.actionText,
+.courseSubline {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  line-height: 1.6;
+}
+
+.actionCode,
+.inlineLink {
+  color: var(--td-color-text-muted);
+  font-size: 0.72rem;
+}
+
+.actionIcon,
+.actionIconAlert {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--td-color-primary);
+}
+
+.actionIconAlert {
+  color: var(--td-color-alert);
+}
+
+.courseModule {
+  gap: var(--td-space-md);
+}
+
+.courseList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-sm);
+}
+
+.courseRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-sm);
+  padding: var(--td-space-sm);
+  border: 1px solid rgba(124, 145, 166, 0.4);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(240, 244, 248, 0.74);
+}
+
+.groupRow,
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  align-items: center;
+}
+
+.inlineLink {
+  color: var(--td-color-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 1000px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .actionsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .hero {
+    flex-direction: column;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}

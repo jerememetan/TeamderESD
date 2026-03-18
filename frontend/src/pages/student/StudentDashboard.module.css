@@ -1,0 +1,111 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-md);
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--td-space-md);
+  align-items: flex-start;
+}
+
+.kicker,
+.actionCode,
+.metaLine {
+  margin: 0;
+  font-family: var(--td-font-mono);
+  text-transform: uppercase;
+}
+
+.kicker {
+  color: var(--td-color-primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+}
+
+.title {
+  margin: 8px 0;
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.subtitle,
+.actionText,
+.historyText {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  line-height: 1.6;
+}
+
+.statsGrid,
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--td-space-sm);
+}
+
+.actionGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.actionCard {
+  display: flex;
+  gap: var(--td-space-sm);
+  padding: var(--td-space-sm);
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-panel);
+  background: rgba(255,255,255,0.88);
+  color: var(--td-color-text);
+  text-decoration: none;
+  box-shadow: 0 10px 24px var(--td-color-shadow);
+}
+
+.actionIcon,
+.historyIcon {
+  width: 24px;
+  height: 24px;
+  color: var(--td-color-primary);
+  flex-shrink: 0;
+}
+
+.actionCode,
+.metaLine {
+  color: var(--td-color-text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+}
+
+.actionTitle,
+.historyTitle {
+  margin: 6px 0;
+  font-size: 1.06rem;
+}
+
+.teamMeta,
+.historyState {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-xs);
+}
+
+.historyState {
+  flex-direction: row;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .statsGrid,
+  .actionGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .hero {
+    flex-direction: column;
+  }
+}

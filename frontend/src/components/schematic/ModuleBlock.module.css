@@ -1,0 +1,121 @@
+.block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-sm);
+  padding: var(--td-space-sm);
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-panel);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 244, 248, 0.88));
+  box-shadow: 0 10px 24px var(--td-color-shadow);
+  transition:
+    transform var(--td-motion-spring),
+    box-shadow var(--td-motion-fast) ease,
+    border-color var(--td-motion-fast) ease;
+}
+
+.block:hover {
+  transform: translate3d(0, -2px, 0);
+  box-shadow: 0 16px 30px rgba(6, 28, 61, 0.16);
+}
+
+.block::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-top: 3px solid var(--td-color-primary);
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+
+.blue::before {
+  border-top-color: var(--td-color-primary);
+}
+
+.orange::before {
+  border-top-color: var(--td-color-alert);
+  animation: td-system-pulse var(--td-motion-slow) ease-in-out infinite;
+}
+
+.green::before {
+  border-top-color: var(--td-color-success);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--td-space-sm);
+}
+
+.eyebrow {
+  margin: 0 0 var(--td-space-xs);
+  color: var(--td-color-text-muted);
+  font-family: var(--td-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--td-color-text);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.componentId {
+  color: var(--td-color-text-muted);
+  font-family: var(--td-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.metricWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-xxs);
+}
+
+.metric {
+  margin: 0;
+  color: var(--td-color-text);
+  font-family: var(--td-font-mono);
+  font-size: clamp(1.9rem, 2vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.metricLabel {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block,
+  .orange::before {
+    transition: none;
+    animation: none;
+  }
+
+  .block:hover {
+    transform: none;
+  }
+}
