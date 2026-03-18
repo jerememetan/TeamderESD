@@ -9,8 +9,11 @@ def create_app():
     
     app = Flask(__name__)
     
+    
+    
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SUPABASE_URL")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    print(app.config["SQLALCHEMY_DATABASE_URI"])
 
     db.init_app(app)
     from .models.skill_model import Skill
@@ -21,4 +24,5 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(host='0.0.0.0', port=5000)
+    PORT = os.getenv("PORT", 3001)
+    app.run(host='0.0.0.0', port=PORT, debug=False)
