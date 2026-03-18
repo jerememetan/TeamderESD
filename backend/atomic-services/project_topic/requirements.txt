@@ -1,0 +1,6 @@
+flask
+flask_sqlalchemy
+marshmallow
+dotenv
+sqlalchemy
+psycopg2
