@@ -69,8 +69,7 @@ export interface SwapRequest {
   studentName: string;
   currentTeamId: string;
   currentTeamName: string;
-  targetTeamId: string;
-  targetTeamName: string;
+  groupId?: string;
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;

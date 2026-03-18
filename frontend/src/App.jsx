@@ -4,6 +4,8 @@ import Analytics from './pages/instructor/Analytics'
 import CreateForm from './pages/instructor/CreateForm'
 import Courses from './pages/instructor/Courses'
 import InstructorDashboard from './pages/instructor/InstructorDashboard'
+import SwapRequests from './pages/instructor/SwapRequests'
+import Teams from './pages/instructor/Teams'
 import FillForm from './pages/student/FillForm'
 import MyTeam from './pages/student/MyTeam'
 import StudentDashBoard from './pages/student/StudentDashboard'
@@ -42,6 +44,14 @@ const router = createBrowserRouter([
       {
         path: 'instructor/courses/:courseId/create-form',
         element: <CreateForm />,
+      },
+      {
+        path: 'instructor/courses/:courseId/teams',
+        element: <Teams />,
+      },
+      {
+        path: 'instructor/swap-requests',
+        element: <SwapRequests />,
       },
       {
         path: 'student/form/:formId',

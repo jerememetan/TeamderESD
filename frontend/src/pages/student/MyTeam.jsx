@@ -1,29 +1,25 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, Mail, RefreshCw, Users as UsersIcon } from "lucide-react";
+import { ArrowLeft, Mail, RefreshCw } from "lucide-react";
 import {
   currentStudent,
   currentStudentTeam,
   mockCourses,
   mockStudentStrengths,
-  mockTeams,
 } from "../../data/mockData";
 
 function MyTeam() {
   // THESE ARE THE DATA THAT NEED TO COME FROM BACKEND LATER
   const studentProfile = currentStudent;
   const activeTeam = currentStudentTeam;
-  const teamList = mockTeams;
   const strengthMap = mockStudentStrengths;
   const courseList = mockCourses;
 
   const [showSwapModal, setShowSwapModal] = useState(false);
-  const [selectedTargetTeam, setSelectedTargetTeam] = useState("");
   const [swapReason, setSwapReason] = useState("");
 
   const selectedCourse = courseList.find((course) => course.id === activeTeam.courseId);
   const selectedGroup = selectedCourse?.groups.find((group) => group.id === activeTeam.groupId);
-  const otherTeams = teamList.filter((team) => team.id !== activeTeam.id);
 
   const getStrongestCriteria = (studentId) =>
     strengthMap[studentId] || ["Teamwork", "General contribution"];
@@ -32,12 +28,12 @@ function MyTeam() {
     event.preventDefault();
     console.log("Swap request:", {
       currentTeamId: activeTeam.id,
-      targetTeamId: selectedTargetTeam,
+      courseId: activeTeam.courseId,
+      groupId: activeTeam.groupId,
       reason: swapReason,
     });
     alert("Swap request submitted successfully!");
     setShowSwapModal(false);
-    setSelectedTargetTeam("");
     setSwapReason("");
   };
 
@@ -79,7 +75,7 @@ function MyTeam() {
           <p className="font-medium text-slate-900">Backend data this page will eventually need</p>
           <p className="mt-2">
             current team details, member list, each student's strongest criteria,
-            course and group context, available swap targets, and the swap-request API.
+            course and group context, and the swap-request API.
           </p>
         </div>
 
@@ -166,51 +162,11 @@ function MyTeam() {
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-900">Request Team Swap</h3>
               <p className="text-sm text-gray-600 mt-1">
-                Submit a request to move from {activeTeam.name} to another team in the same course.
+                Submit your reason for requesting a team change. The instructor will decide the reassignment.
               </p>
             </div>
 
             <form onSubmit={handleSubmitSwapRequest} className="p-6">
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Target Team
-                </label>
-                <div className="space-y-2">
-                  {otherTeams.map((team) => (
-                    <label
-                      key={team.id}
-                      className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
-                        selectedTargetTeam === team.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:bg-gray-50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="targetTeam"
-                          value={team.id}
-                          checked={selectedTargetTeam === team.id}
-                          onChange={(event) => setSelectedTargetTeam(event.target.value)}
-                          className="w-4 h-4 text-blue-600"
-                          required
-                        />
-                        <div>
-                          <p className="font-medium text-gray-900">{team.name}</p>
-                          <p className="text-sm text-gray-600">
-                            {team.members.length} members
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <UsersIcon className="w-4 h-4" />
-                        <span className="text-sm">{team.groupId}</span>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Reason for Swap Request
@@ -240,7 +196,6 @@ function MyTeam() {
                   type="button"
                   onClick={() => {
                     setShowSwapModal(false);
-                    setSelectedTargetTeam("");
                     setSwapReason("");
                   }}
                   className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
