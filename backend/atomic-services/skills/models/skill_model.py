@@ -5,6 +5,7 @@ db = SQLAlchemy()
 
 class Skill(db.Model):
     __tablename__ = "skills"
+    __table_args__ = {"schema": "skills"}
     
     skill_id = db.Column(db.Uuid, primary_key=True)
     course_id = db.Column(db.Uuid, nullable=False)

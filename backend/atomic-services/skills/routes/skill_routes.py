@@ -11,7 +11,11 @@ many_response_schema = SkillResponseSchema(many=True)
 
 @skills_bp.route("", methods=["GET"])
 def get_skills():
-    skills = Skill.query.all()
+    course_id = request.args.get("course_id")
+    if course_id:
+        skills = Skill.query.filter_by(course_id=course_id).all()
+    else:
+        skills = Skill.query.all()
     return jsonify({
      "code": 200,
      "data": many_response_schema.dump(skills)   
@@ -35,3 +39,10 @@ def create_skill():
         "code": 201,
         "data": response_schema.dump(skill)
     }), 201
+    
+@skills_bp.route("/<uuid:skill_id>", methods=["GET"])
+def get_skill_by_id(skill_id):
+    skill = Skill.query.get(skill_id)
+    if not skill:
+        return jsonify({"code": 404, "message": "Skill not found"}), 404
+    return jsonify({"code": 200, "data": response_schema.dump(skill)}, 200)
