@@ -79,6 +79,15 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3008:3008"
+  
+  student-topic-preference:
+    build: ./atomic-services/student-topic-preference
+    container_name: teamder-student-topic-preference-service
+    environment:
+      PORT: 3009
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3009:3009"
 
   # Composite
 
