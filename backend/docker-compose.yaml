@@ -89,6 +89,15 @@ services:
     ports:
       - "3009:3009"
 
+  student-form-data:
+    build: ./atomic-services/student-form-data
+    container_name: teamder-student-form-data-service
+    environment:
+      PORT: 3010
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3010:3010"
+
   # Composite
 
   formation-setup-service:
@@ -96,7 +105,7 @@ services:
       context: ./composite-services/formation-setup
     container_name: teamder-formation-setup-service
     ports:
-      - "3010:3010"
+      - "4000:4000"
     environment:
       CRITERIA_URL: "http://criteria-service:3004/criteria"
       TOPIC_URL: "http://topic-service:3003/topic"

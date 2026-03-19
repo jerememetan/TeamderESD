@@ -107,4 +107,4 @@ def aggregate_get():
     return jsonify(result), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 3010)), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 4000)), debug=True)
