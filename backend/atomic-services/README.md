@@ -27,9 +27,7 @@ This README provides simple instructions for calling the endpoints of the three 
 - **POST /criteria**
   - Body: JSON matching `CriteriaCreateSchema` (must include `section_id` and `course_id`)
   - Example:
-    ```http
-    POST http://localhost:3004/criteria
-    Content-Type: application/json
+    ```json
     {
       "section_id": "...",
       "course_id": "...",
@@ -73,9 +71,7 @@ This README provides simple instructions for calling the endpoints of the three 
 - **POST /topic**
   - Body: JSON matching `TopicCreateSchema` (must include `section_id` and `topic_label`)
   - Example:
-    ```http
-    POST http://localhost:3003/topic
-    Content-Type: application/json
+    ```json
     {
       "section_id": "...",
       "topic_label": "..."
@@ -108,9 +104,7 @@ This README provides simple instructions for calling the endpoints of the three 
 - **POST /skill**
   - Body: JSON matching `SkillCreateSchema` (must include `section_id`, `skill_label`, and optionally `skill_importance`)
   - Example:
-    ```http
-    POST http://localhost:3002/skill
-    Content-Type: application/json
+    ```json
     {
       "section_id": "...",
       "skill_label": "...",
@@ -231,9 +225,7 @@ This README provides simple instructions for calling the endpoints of the three 
   - Body: JSON with `section_id` and a `teams` array. Each team must have a `team_id` (UUID) and a list of `students` (each with `student_id`).
   - On POST, all existing teams for the section are deleted and replaced with the new teams.
   - Example:
-    ```http
-    POST http://localhost:3007/team
-    Content-Type: application/json
+    ```json
     {
       "section_id": "11111111-1111-1111-1111-111111111111",
       "teams": [
@@ -292,7 +284,7 @@ This microservice manages student competences (skills and levels) for sections. 
 - `GET /competence/` — Query competences by any combination of `skill_id`, `section_id`, `student_id` as query parameters.
 
 ### Example POST Body
-```
+```json
 {
   "section_id": "11111111-1111-1111-1111-111111111111",
   "student_id": 101,
@@ -329,9 +321,7 @@ This microservice manages student topic preferences for sections. It is implemen
   - Body: JSON matching `TopicPreferenceCreateSchema` (must include `section_id`, `student_id`, and a `preferences` array of topic IDs in ranked order)
   - On POST, previous preferences for the student in the section are replaced.
   - Example:
-    ```http
-    POST http://localhost:3006/topic-preference
-    Content-Type: application/json
+    ```json
     {
       "section_id": "11111111-1111-1111-1111-111111111111",
       "student_id": 101,
@@ -363,9 +353,7 @@ This microservice manages student form data (buddy, MBTI, etc.) for a section. I
   - Body: JSON matching `FormDataCreateSchema` (must include `section_id`, `student_id`, and optionally `buddy_id`, `mbti`)
   - On POST, previous form data for the student in the section is replaced.
   - Example:
-    ```http
-    POST http://localhost:3008/form-data
-    Content-Type: application/json
+    ```json
     {
       "section_id": "123e4567-e89b-12d3-a456-426614174000",
       "student_id": 42,
