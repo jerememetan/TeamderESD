@@ -119,3 +119,23 @@ This README provides simple instructions for calling the endpoints of the three 
 
 ---
 
+## Enrollment Service
+- **Base URL:** `/enrollment` (default port: 3001)
+
+### Endpoints
+
+- **GET /enrollment**
+  - Query params: `section_id` (optional)
+  - Returns: List of enrollments, optionally filtered by section
+  - Example:
+    ```http
+    GET http://localhost:3001/enrollment?section_id={uuid}
+    ```
+
+- **GET /enrollment**
+  - Returns: All enrollments
+  - Example:
+    ```http
+    GET http://localhost:3001/enrollment
+    ```
+
