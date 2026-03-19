@@ -71,6 +71,15 @@ services:
     ports:
       - "3007:3007"
 
+  student-competence:
+    build: ./atomic-services/student-competence
+    container_name: teamder-student-competence-service
+    environment:
+      PORT: 3008
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3008:3008"
+
   # Composite
 
   formation-setup-service:

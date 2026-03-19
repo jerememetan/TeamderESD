@@ -281,3 +281,30 @@ This README provides simple instructions for calling the endpoints of the three 
       }
     }
     ```
+
+## Student Competence Microservice
+
+This microservice manages student competences (skills and levels) for sections. It is implemented in Flask and follows the structure of the skill atomic microservice.
+
+### Endpoints
+
+- `POST /competence/` — Bulk insert or update competences for a student in a section. Accepts a JSON object with `section_id`, `student_id`, and a `competences` array of objects with `skill_id` and `skill_level`.
+- `GET /competence/` — Query competences by any combination of `skill_id`, `section_id`, `student_id` as query parameters.
+
+### Example POST Body
+```
+{
+  "section_id": "11111111-1111-1111-1111-111111111111",
+  "student_id": 101,
+  "competences": [
+    {
+      "skill_id": "3b4e4a20-9e8a-4f5b-9d7b-1234567890ab",
+      "skill_level": 3
+    },
+    {
+      "skill_id": "3b4e4a20-9e8a-4f5b-9d7b-1234567890ac",
+      "skill_level": 4
+    }
+  ]
+}
+```
