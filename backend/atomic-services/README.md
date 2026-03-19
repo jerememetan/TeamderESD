@@ -139,3 +139,36 @@ This README provides simple instructions for calling the endpoints of the three 
     GET http://localhost:3001/enrollment
     ```
 
+---
+
+## Reputation Service
+- **Base URL:** `/reputation` (default port: 3001)
+
+### Endpoints
+
+- **GET /reputation**
+  - Returns: List of all student reputations
+  - Example:
+    ```http
+    GET http://localhost:3001/reputation
+    ```
+
+- **GET /reputation/{student_id}**
+  - Returns: Reputation for the given student_id
+  - Example:
+    ```http
+    GET http://localhost:3001/reputation/{student_id}
+    ```
+
+- **PUT /reputation/{student_id}**
+  - Body: JSON with a `delta` integer (positive or negative) to increment/decrement the student's reputation score
+  - Example:
+    ```http
+    PUT http://localhost:3001/reputation/{student_id}
+    Content-Type: application/json
+    {
+      "delta": 5
+    }
+    ```
+  - Response: Updated reputation object
+

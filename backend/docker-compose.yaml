@@ -51,6 +51,16 @@ services:
     ports:
       - "3005:3005"
 
+  reputation-service:
+    build:
+      context: ./atomic-services/reputation
+    container_name: teamder-reputation-service
+    environment:
+      PORT: 3006
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3006:3006"
+
   # Composite
 
   formation-setup-service:
