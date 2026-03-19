@@ -1,4 +1,9 @@
-import { Course, TeamForm, Team, SwapRequest, Student } from '../types';
+import { Course, TeamForm, Team, SwapRequest, Student, TeamMember } from '../types';
+
+const withStatus = (student: Student, confirmationStatus: 'confirmed' | 'pending'): TeamMember => ({
+  ...student,
+  confirmationStatus,
+});
 
 export const mockCourses: Course[] = [
   {
@@ -164,6 +169,50 @@ export const mockForms: Record<string, TeamForm> = {
     responseCount: 47,
     totalStudents: 60,
   },
+  '2-g2': {
+    id: 'form-2-g2',
+    courseId: '2',
+    groupId: '2-g2',
+    title: 'Team Formation Survey - CS4320G2',
+    description: 'Please answer the following questions to help us form balanced teams for CS4320G2.',
+    criteria: [
+      {
+        id: 'c1',
+        question: 'How confident are you with SQL and schema design?',
+        type: 'multiple-choice',
+        options: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+        weight: 0.35,
+      },
+      {
+        id: 'c2',
+        question: 'Rate your debugging skills (1-10)',
+        type: 'scale',
+        weight: 0.2,
+      },
+      {
+        id: 'c3',
+        question: 'Which role do you usually take in a database project?',
+        type: 'multiple-choice',
+        options: ['Designer', 'Builder', 'Tester', 'Flexible'],
+        weight: 0.2,
+      },
+      {
+        id: 'c4',
+        question: 'What strengths would you bring to this database group?',
+        type: 'text',
+        weight: 0.25,
+      },
+    ],
+    groupSize: 5,
+    minimumGroupSize: 4,
+    mixGender: true,
+    mixYear: true,
+    allowBuddy: true,
+    status: 'active',
+    createdAt: '2026-03-04T10:00:00Z',
+    responseCount: 28,
+    totalStudents: 40,
+  },
 };
 
 export const mockStudents: Student[] = [
@@ -172,6 +221,21 @@ export const mockStudents: Student[] = [
   { id: 's3', name: 'Carol Davis', email: 'carol@university.edu', studentId: 'STU003' },
   { id: 's4', name: 'David Wilson', email: 'david@university.edu', studentId: 'STU004' },
   { id: 's5', name: 'Emma Brown', email: 'emma@university.edu', studentId: 'STU005' },
+  { id: 's6', name: 'Frank Miller', email: 'frank@university.edu', studentId: 'STU006' },
+  { id: 's7', name: 'Grace Lee', email: 'grace@university.edu', studentId: 'STU007' },
+  { id: 's8', name: 'Henry Chen', email: 'henry@university.edu', studentId: 'STU008' },
+  { id: 's9', name: 'Iris Wang', email: 'iris@university.edu', studentId: 'STU009' },
+  { id: 's10', name: 'Jack Taylor', email: 'jack@university.edu', studentId: 'STU010' },
+  { id: 's11', name: 'Kelly Martinez', email: 'kelly@university.edu', studentId: 'STU011' },
+  { id: 's12', name: 'Leo Anderson', email: 'leo@university.edu', studentId: 'STU012' },
+  { id: 's13', name: 'Maya Patel', email: 'maya@university.edu', studentId: 'STU013' },
+  { id: 's14', name: 'Nathan Kim', email: 'nathan@university.edu', studentId: 'STU014' },
+  { id: 's15', name: 'Olivia Garcia', email: 'olivia@university.edu', studentId: 'STU015' },
+  { id: 's16', name: 'Paul Young', email: 'paul@university.edu', studentId: 'STU016' },
+  { id: 's17', name: 'Queenie Lim', email: 'queenie@university.edu', studentId: 'STU017' },
+  { id: 's18', name: 'Ryan Ho', email: 'ryan@university.edu', studentId: 'STU018' },
+  { id: 's19', name: 'Sophia Ng', email: 'sophia@university.edu', studentId: 'STU019' },
+  { id: 's20', name: 'Theo Tan', email: 'theo@university.edu', studentId: 'STU020' },
 ];
 
 export const mockStudentStrengths: Record<string, string[]> = {
@@ -190,6 +254,11 @@ export const mockStudentStrengths: Record<string, string[]> = {
   s13: ['Wireframing', 'Figma prototyping'],
   s14: ['Python', 'Automation'],
   s15: ['Facilitation', 'Agile planning'],
+  s16: ['SQL optimisation', 'Database modeling'],
+  s17: ['Testing', 'Team coordination'],
+  s18: ['Backend APIs', 'Documentation'],
+  s19: ['Data cleaning', 'Presentation'],
+  s20: ['Query tuning', 'Communication'],
 };
 
 export const mockTeams: Team[] = [
@@ -198,7 +267,13 @@ export const mockTeams: Team[] = [
     courseId: '1',
     groupId: '1-g1',
     name: 'Team Alpha',
-    members: [mockStudents[0], mockStudents[1], mockStudents[2], mockStudents[3], mockStudents[4]],
+    members: [
+      withStatus(mockStudents[0], 'pending'),
+      withStatus(mockStudents[1], 'confirmed'),
+      withStatus(mockStudents[2], 'confirmed'),
+      withStatus(mockStudents[3], 'pending'),
+      withStatus(mockStudents[4], 'confirmed'),
+    ],
     formationScore: 92,
     diversity: {
       skillLevel: 0.85,
@@ -212,11 +287,11 @@ export const mockTeams: Team[] = [
     groupId: '1-g1',
     name: 'Team Beta',
     members: [
-      { id: 's6', name: 'Frank Miller', email: 'frank@university.edu', studentId: 'STU006' },
-      { id: 's7', name: 'Grace Lee', email: 'grace@university.edu', studentId: 'STU007' },
-      { id: 's8', name: 'Henry Chen', email: 'henry@university.edu', studentId: 'STU008' },
-      { id: 's9', name: 'Iris Wang', email: 'iris@university.edu', studentId: 'STU009' },
-      { id: 's10', name: 'Jack Taylor', email: 'jack@university.edu', studentId: 'STU010' },
+      withStatus(mockStudents[5], 'pending'),
+      withStatus(mockStudents[6], 'pending'),
+      withStatus(mockStudents[7], 'confirmed'),
+      withStatus(mockStudents[8], 'confirmed'),
+      withStatus(mockStudents[9], 'pending'),
     ],
     formationScore: 88,
     diversity: {
@@ -231,17 +306,36 @@ export const mockTeams: Team[] = [
     groupId: '1-g2',
     name: 'Team Gamma',
     members: [
-      { id: 's11', name: 'Kelly Martinez', email: 'kelly@university.edu', studentId: 'STU011' },
-      { id: 's12', name: 'Leo Anderson', email: 'leo@university.edu', studentId: 'STU012' },
-      { id: 's13', name: 'Maya Patel', email: 'maya@university.edu', studentId: 'STU013' },
-      { id: 's14', name: 'Nathan Kim', email: 'nathan@university.edu', studentId: 'STU014' },
-      { id: 's15', name: 'Olivia Garcia', email: 'olivia@university.edu', studentId: 'STU015' },
+      withStatus(mockStudents[10], 'confirmed'),
+      withStatus(mockStudents[11], 'confirmed'),
+      withStatus(mockStudents[12], 'confirmed'),
+      withStatus(mockStudents[13], 'confirmed'),
+      withStatus(mockStudents[14], 'confirmed'),
     ],
     formationScore: 95,
     diversity: {
       skillLevel: 0.93,
       background: 0.87,
       workStyle: 0.95,
+    },
+  },
+  {
+    id: 't4',
+    courseId: '2',
+    groupId: '2-g2',
+    name: 'Team Delta',
+    members: [
+      withStatus(mockStudents[0], 'confirmed'),
+      withStatus(mockStudents[15], 'confirmed'),
+      withStatus(mockStudents[16], 'confirmed'),
+      withStatus(mockStudents[17], 'confirmed'),
+      withStatus(mockStudents[18], 'confirmed'),
+    ],
+    formationScore: 90,
+    diversity: {
+      skillLevel: 0.88,
+      background: 0.84,
+      workStyle: 0.89,
     },
   },
 ];
@@ -275,7 +369,6 @@ export const mockSwapRequests: SwapRequest[] = [
   },
 ];
 
-// Mock current student (for student view)
 export const currentStudent: Student = {
   id: 's1',
   name: 'Alice Johnson',
@@ -283,4 +376,8 @@ export const currentStudent: Student = {
   studentId: 'STU001',
 };
 
-export const currentStudentTeam = mockTeams[0];
+export const currentStudentTeams = mockTeams.filter((team) =>
+  team.members.some((member) => member.id === currentStudent.id),
+);
+
+export const currentStudentTeam = currentStudentTeams[0];

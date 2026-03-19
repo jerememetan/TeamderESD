@@ -54,6 +54,14 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.12);
+}
+
+.headerButton:hover,
+.teamsLink:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(6, 28, 61, 0.16);
 }
 
 .buttonIcon {
@@ -109,10 +117,16 @@
 .inlineLinkMuted {
   text-decoration: none;
   font-weight: 700;
+  cursor: pointer;
 }
 
 .inlineLink {
   color: var(--td-color-primary);
+}
+
+.inlineLink:hover,
+.inlineLinkMuted:hover {
+  text-decoration: underline;
 }
 
 .inlineLinkMuted {

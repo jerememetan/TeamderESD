@@ -67,6 +67,14 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.12);
+}
+
+.primaryAction:hover,
+.secondaryAction:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(6, 28, 61, 0.16);
 }
 
 .primaryAction {

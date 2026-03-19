@@ -53,15 +53,35 @@
 }
 
 .actionCard {
+  position: relative;
   display: flex;
   gap: var(--td-space-sm);
   padding: var(--td-space-sm);
   border: 1px solid var(--td-color-border-strong);
   border-radius: var(--td-radius-panel);
-  background: rgba(255,255,255,0.88);
+  background: rgba(255,255,255,0.92);
   color: var(--td-color-text);
   text-decoration: none;
   box-shadow: 0 10px 24px var(--td-color-shadow);
+  cursor: pointer;
+}
+
+.actionCard:hover {
+  border-color: var(--td-color-primary);
+  box-shadow: 0 16px 30px rgba(6, 28, 61, 0.16);
+}
+
+.actionCard::after {
+  content: 'Click to open';
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  color: var(--td-color-primary);
+  font-family: var(--td-font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .actionIcon,
@@ -107,5 +127,11 @@
 @media (max-width: 700px) {
   .hero {
     flex-direction: column;
+  }
+
+  .actionCard::after {
+    position: static;
+    display: block;
+    margin-top: 10px;
   }
 }

@@ -16,18 +16,18 @@ function StudentDashBoard() {
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
       <section className={`${styles.hero} ${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '0ms' }}>
         <div>
-          <p className={styles.kicker}>[STUDENT TEAM STATION]</p>
-          <h2 className={styles.title}>Track your team assignment and complete your group form.</h2>
-          <p className={styles.subtitle}>Active team: {activeTeam.name} :: Group {activeTeam.groupId} :: Operator {studentProfile.studentId}</p>
+          <p className={styles.kicker}>[STUDENT HOME]</p>
+          <h2 className={styles.title}>See your team and complete your form.</h2>
+          <p className={styles.subtitle}>Welcome back, {studentProfile.name}. You are in {activeTeam.name} for group {activeTeam.groupId}.</p>
         </div>
-        <SystemTag tone="success">Group link locked</SystemTag>
+        <SystemTag tone="success">Form ready for your group</SystemTag>
       </section>
 
       <section className={styles.statsGrid}>
         {[
-          { id: 'MOD-11', eyebrow: 'Assignment', title: 'Active Team', metric: '01', label: 'Current placement', accent: 'blue' },
-          { id: 'MOD-12', eyebrow: 'Form Access', title: 'Group Forms', metric: String(availableFormList.length).padStart(2, '0'), label: 'Visible to your group', accent: 'green' },
-          { id: 'MOD-13', eyebrow: 'Request Queue', title: 'Pending Swaps', metric: '00', label: 'Awaiting instructor action', accent: 'orange' },
+          { id: 'MOD-11', eyebrow: 'Overview', title: 'My Team', metric: '01', label: 'Current team', accent: 'blue' },
+          { id: 'MOD-12', eyebrow: 'Overview', title: 'Available Forms', metric: String(availableFormList.length).padStart(2, '0'), label: 'Forms you can fill in', accent: 'green' },
+          { id: 'MOD-13', eyebrow: 'Attention', title: 'Pending Swaps', metric: '00', label: 'Requests still waiting', accent: 'orange' },
         ].map((item, index) => (
           <ModuleBlock
             key={item.id}
@@ -48,20 +48,20 @@ function StudentDashBoard() {
           {
             to: '/student/team',
             icon: <Users className={styles.actionIcon} />,
-            code: '[ACT-TEAM]',
-            title: 'Inspect Team Module',
-            text: 'Review teammates, strengths, and swap-request controls.',
+            code: 'Quick Link',
+            title: 'View My Team',
+            text: 'Open your team page to see teammates and request a swap if needed.',
           },
           {
             to: activeForm ? `/student/form/${activeForm.id}` : '/student',
             icon: <FileText className={styles.actionIcon} />,
-            code: '[ACT-FORM]',
-            title: 'Open Group Form',
-            text: 'Submit responses for the form linked specifically to your assigned group.',
+            code: 'Quick Link',
+            title: 'Fill In My Form',
+            text: 'Open the form for your group and submit your answers.',
           },
         ].map((action, index) => (
           <Link
-            key={action.code}
+            key={action.code + index}
             to={action.to}
             className={`${styles.actionCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
             style={{ '--td-stagger-delay': `${(index + 4) * 50}ms` }}
@@ -78,31 +78,31 @@ function StudentDashBoard() {
 
       <ModuleBlock
         componentId="MOD-14"
-        eyebrow="Current Linkage"
+        eyebrow="Details"
         title={activeTeam.name}
         metric={activeTeam.formationScore}
-        metricLabel="Formation score"
+        metricLabel="Team score"
         className={`${styles.teamModule} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
         style={{ '--td-stagger-delay': '300ms' }}
       >
         <div className={styles.teamMeta}>
           <p className={styles.metaLine}>Members :: {activeTeam.members.length}</p>
-          <p className={styles.metaLine}>Form linkage :: {activeForm?.groupId || activeTeam.groupId}</p>
-          <p className={styles.metaLine}>Availability :: {activeForm ? 'Published to group' : 'No form linked yet'}</p>
+          <p className={styles.metaLine}>Form for :: {activeForm?.groupId || activeTeam.groupId}</p>
+          <p className={styles.metaLine}>{activeForm ? 'You can submit your form now' : 'No form is linked yet'}</p>
         </div>
       </ModuleBlock>
 
       <ModuleBlock
         componentId="MOD-15"
-        eyebrow="Historical Record"
-        title="Submission Timeline"
+        eyebrow="Recent Activity"
+        title="Form History"
         className={`${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
         style={{ '--td-stagger-delay': '350ms' }}
       >
         <div className={styles.historyState}>
           <Clock className={styles.historyIcon} />
           <div>
-            <p className={styles.historyTitle}>Latest entry recorded</p>
+            <p className={styles.historyTitle}>Latest submission</p>
             <p className={styles.historyText}>Team Formation Survey completed on March 5, 2026.</p>
           </div>
         </div>

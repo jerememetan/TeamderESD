@@ -48,12 +48,16 @@ export interface Student {
   studentId: string;
 }
 
+export interface TeamMember extends Student {
+  confirmationStatus: 'confirmed' | 'pending';
+}
+
 export interface Team {
   id: string;
   courseId: string;
   groupId: string;
   name: string;
-  members: Student[];
+  members: TeamMember[];
   formationScore: number;
   diversity: {
     skillLevel: number;

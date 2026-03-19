@@ -26,9 +26,9 @@ function AppShell() {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div className={styles.brandWrap}>
-            <p className={styles.brandCode}>[SYS-TEAMDER-CTRL]</p>
+            <p className={styles.brandCode}>[TEAMDER]</p>
             <h1 className={styles.brand}>Teamder</h1>
-            <p className={styles.subtitle}>Precision workspace for course-group team formation.</p>
+            <p className={styles.subtitle}>Create fair student teams, one group at a time.</p>
           </div>
           <MechanicalSwitch items={navItems} activePath={location.pathname} />
         </div>
