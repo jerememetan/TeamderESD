@@ -1,5 +1,8 @@
 @custom-variant dark (&:is(.dark *));
-
+/* We’re moving to a Grid-First, Monospaced-Data aesthetic. 
+Every component needs its own localized stylesheet referencing our central theme variables. 
+Think 'AutoCAD meets Modern Dashboard.' 
+Use Framer Motion for layout transitions so the team-sorting feels physically calculated. */
 :root {
   --font-size: 16px;
   --background: #ffffff;
