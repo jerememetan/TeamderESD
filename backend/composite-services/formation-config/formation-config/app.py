@@ -28,10 +28,6 @@ def aggregate():
     criteria_data = payload.get("criteria")
     if not criteria_data or not isinstance(criteria_data, dict):
         return jsonify({"error": "Missing or invalid criteria. Please provide a valid criteria object."}), 400
-    if "course_id" not in criteria_data:
-        criteria_data["course_id"] = course_id
-    if "section_id" not in criteria_data:
-        criteria_data["section_id"] = section_id
     resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
     if resp.status_code == 200 and resp.json()["data"]:
         put_resp = requests.put(CRITERIA_URL + f"?section_id={section_id}", json=criteria_data)
@@ -77,6 +73,8 @@ def aggregate_get():
         if crit_json.get("data"):
             crit_data = crit_json["data"][0] if isinstance(crit_json["data"], list) and crit_json["data"] else crit_json["data"]
             course_id = crit_data.get("course_id")
+            crit_data.pop("course_id", None)
+            crit_data.pop("section_id", None)
 
     # --- Topics ---
     topic_resp = requests.get(TOPIC_URL, params={"section_id": section_id})

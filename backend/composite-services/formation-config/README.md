@@ -1,12 +1,12 @@
-# Formation-Setup Composite Service
+# Formation-Config Composite Service
 
-This service orchestrates the creation and retrieval of team formation data by aggregating and distributing data to the atomic microservices: criteria, project-topic, and skill.
+This service orchestrates the creation and retrieval of team formation configuration data by aggregating and distributing data to the atomic microservices: criteria, project-topic, and skill.
 
 ---
 
 ## Base URL
 
-- Default: `/` (port: 3010)
+- Default: `/` (port: 4000)
 
 ---
 

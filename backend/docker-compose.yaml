@@ -100,10 +100,10 @@ services:
 
   # Composite
 
-  formation-setup-service:
+  formation-config-service:
     build:
-      context: ./composite-services/formation-setup
-    container_name: teamder-formation-setup-service
+      context: ./composite-services/formation-config
+    container_name: teamder-formation-config-service
     ports:
       - "4000:4000"
     environment:
