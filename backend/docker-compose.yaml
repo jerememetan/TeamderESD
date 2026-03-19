@@ -71,7 +71,7 @@ services:
     ports:
       - "3007:3007"
 
-  student-competence:
+  student-competence-service:
     build: ./atomic-services/student-competence
     container_name: teamder-student-competence-service
     environment:
@@ -80,7 +80,7 @@ services:
     ports:
       - "3008:3008"
   
-  student-topic-preference:
+  student-topic-preference-service:
     build: ./atomic-services/student-topic-preference
     container_name: teamder-student-topic-preference-service
     environment:
@@ -89,7 +89,7 @@ services:
     ports:
       - "3009:3009"
 
-  student-form-data:
+  student-form-data-service:
     build: ./atomic-services/student-form-data
     container_name: teamder-student-form-data-service
     environment:
@@ -115,4 +115,22 @@ services:
       - topic-service
       - skill-service
 
-
+  student-profile-service:
+    build:
+      context: ./composite-services/student-profile
+    container_name: teamder-student-profile-service
+    ports:
+      - "4001:4001"
+    environment:
+      OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
+      ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
+      FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
+      REPUTATION_URL: "http://reputation-service:3006/reputation"
+      TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
+      COMPETENCE_URL: "http://student-competence-service:3008/competence"
+    depends_on:
+      - enrollment-service
+      - student-form-data-service
+      - student-topic-preference-service
+      - reputation-service
+      - student-competence-service
