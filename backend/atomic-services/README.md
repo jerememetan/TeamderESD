@@ -308,3 +308,68 @@ This microservice manages student competences (skills and levels) for sections. 
   ]
 }
 ```
+
+---
+
+## Student Topic Preference Microservice
+
+This microservice manages student topic preferences for sections. It is implemented in Flask and follows the atomic microservice pattern.
+
+### Endpoints
+
+- **GET /topic-preference**
+  - Query params: `section_id` (required), `student_id` (required)
+  - Returns: Topic preferences for a student in a section
+  - Example:
+    ```http
+    GET http://localhost:3006/topic-preference?section_id={uuid}&student_id={id}
+    ```
+
+- **POST /topic-preference**
+  - Body: JSON matching `TopicPreferenceCreateSchema` (must include `section_id`, `student_id`, and a `preferences` array of topic IDs in ranked order)
+  - On POST, previous preferences for the student in the section are replaced.
+  - Example:
+    ```http
+    POST http://localhost:3006/topic-preference
+    Content-Type: application/json
+    {
+      "section_id": "11111111-1111-1111-1111-111111111111",
+      "student_id": 101,
+      "preferences": [
+        "topic-uuid-1",
+        "topic-uuid-2",
+        "topic-uuid-3"
+      ]
+    }
+    ```
+
+---
+
+## Student Form Data Microservice
+
+This microservice manages student form data (buddy, MBTI, etc.) for a section. It is implemented in Flask and follows the atomic microservice pattern.
+
+### Endpoints
+
+- **GET /form-data**
+  - Query params: `section_id` (required), `student_id` (required)
+  - Returns: Form data for a student in a section
+  - Example:
+    ```http
+    GET http://localhost:3008/form-data?section_id={uuid}&student_id={id}
+    ```
+
+- **POST /form-data**
+  - Body: JSON matching `FormDataCreateSchema` (must include `section_id`, `student_id`, and optionally `buddy_id`, `mbti`)
+  - On POST, previous form data for the student in the section is replaced.
+  - Example:
+    ```http
+    POST http://localhost:3008/form-data
+    Content-Type: application/json
+    {
+      "section_id": "123e4567-e89b-12d3-a456-426614174000",
+      "student_id": 42,
+      "buddy_id": 99,
+      "mbti": "INTJ"
+    }
+    ```
