@@ -12,9 +12,9 @@
 }
 
 .kicker,
-.inlineLink,
-.inlineLinkMuted,
-.courseSemester {
+.courseSemester,
+.groupNote,
+.groupActionButton {
   margin: 0;
   font-family: var(--td-font-mono);
   text-transform: uppercase;
@@ -39,8 +39,7 @@
   color: var(--td-color-text-muted);
 }
 
-.headerButton,
-.teamsLink {
+.headerButton {
   display: inline-flex;
   align-items: center;
   gap: var(--td-space-xs);
@@ -58,8 +57,7 @@
   box-shadow: 0 8px 18px rgba(6, 28, 61, 0.12);
 }
 
-.headerButton:hover,
-.teamsLink:hover {
+.headerButton:hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 24px rgba(6, 28, 61, 0.16);
 }
@@ -80,11 +78,15 @@
 }
 
 .courseSemester,
-.inlineLink,
-.inlineLinkMuted {
-  color: var(--td-color-text-muted);
+.groupNote,
+.groupActionButton {
   font-size: 0.72rem;
   letter-spacing: 0.12em;
+}
+
+.courseSemester,
+.groupNote {
+  color: var(--td-color-text-muted);
 }
 
 .groupGrid {
@@ -104,8 +106,7 @@
 }
 
 .groupHeader,
-.groupActions,
-.footerAction {
+.groupMetaRow {
   display: flex;
   flex-wrap: wrap;
   gap: var(--td-space-xs);
@@ -113,28 +114,40 @@
   justify-content: space-between;
 }
 
-.inlineLink,
-.inlineLinkMuted {
+.groupActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  align-items: stretch;
+}
+
+.groupActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--td-color-text);
   text-decoration: none;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
-.inlineLink {
+.groupActionButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 71, 171, 0.4);
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 10px 18px rgba(6, 28, 61, 0.08);
+}
+
+.groupActionPrimary {
+  background: linear-gradient(180deg, rgba(0, 71, 171, 0.14), rgba(0, 71, 171, 0.08));
   color: var(--td-color-primary);
-}
-
-.inlineLink:hover,
-.inlineLinkMuted:hover {
-  text-decoration: underline;
-}
-
-.inlineLinkMuted {
-  color: var(--td-color-text);
-}
-
-.footerAction {
-  justify-content: flex-start;
+  border-color: rgba(0, 71, 171, 0.35);
 }
 
 @media (max-width: 900px) {
@@ -146,5 +159,9 @@
 @media (max-width: 700px) {
   .header {
     flex-direction: column;
+  }
+
+  .groupActionButton {
+    width: 100%;
   }
 }

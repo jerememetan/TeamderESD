@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
-import { ArrowLeft, CheckCircle, Mail, Users, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Mail, XCircle } from "lucide-react";
 import GroupChip from "../../components/schematic/GroupChip";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
@@ -9,22 +9,24 @@ import { mockCourses, mockSwapRequests, mockTeams } from "../../data/mockData";
 import styles from "./Teams.module.css";
 
 function Teams() {
-  const { courseId } = useParams();
+  const { courseId, groupId } = useParams();
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [swapRequestList, setSwapRequestList] = useState(mockSwapRequests);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
   const selectedCourse = mockCourses.find((course) => course.id === courseId);
-  const courseTeams = mockTeams.filter((team) => team.courseId === courseId);
-  const selectedTeam = courseTeams.find((team) => team.id === selectedTeamId) || courseTeams[0] || null;
+  const selectedGroup = selectedCourse?.groups.find((group) => group.id === groupId) ?? null;
+  const visibleTeams = mockTeams.filter((team) => team.courseId === courseId && (!groupId || team.groupId === groupId));
+  const selectedTeam = visibleTeams.find((team) => team.id === selectedTeamId) || visibleTeams[0] || null;
+  const visibleSwapRequests = swapRequestList.filter((request) => request.courseId === courseId && (!groupId || request.groupId === groupId));
 
   const pendingRequestMap = useMemo(
     () => Object.fromEntries(
-      swapRequestList
+      visibleSwapRequests
         .filter((request) => request.status === "pending")
         .map((request) => [request.studentId, request]),
     ),
-    [swapRequestList],
+    [visibleSwapRequests],
   );
 
   if (!selectedCourse) {
@@ -41,23 +43,29 @@ function Teams() {
     setSelectedRequest((currentRequest) => currentRequest?.id === requestId ? { ...currentRequest, status: "rejected" } : currentRequest);
   };
 
+  const heroTitle = selectedGroup ? `${selectedGroup.code} teams` : `${selectedCourse.code} teams`;
+  const heroSubtitle = selectedGroup
+    ? `Review the teams for ${selectedGroup.label}, check who has confirmed, and handle swap requests for this group.`
+    : "See every team in this course, check whether students have confirmed, and review swap requests.";
+  const backLink = "/instructor/courses";
+
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
-      <Link to="/instructor/courses" className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to course matrix</Link>
+      <Link to={backLink} className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to course matrix</Link>
 
       <section className={styles.hero}>
         <div>
           <p className={styles.kicker}>[TEAM VIEW]</p>
-          <h2 className={styles.title}>{selectedCourse.code} teams</h2>
-          <p className={styles.subtitle}>See each team, check whether students have confirmed, and review swap requests.</p>
+          <h2 className={styles.title}>{heroTitle}</h2>
+          <p className={styles.subtitle}>{heroSubtitle}</p>
         </div>
-        <SystemTag hazard>{swapRequestList.filter((request) => request.status === 'pending').length} pending interventions</SystemTag>
+        <SystemTag hazard>{visibleSwapRequests.filter((request) => request.status === 'pending').length} pending interventions</SystemTag>
       </section>
 
       <div className={styles.layout}>
-        <ModuleBlock componentId="MOD-T1" eyebrow="Teams" title={`All Teams :: ${courseTeams.length}`} className={`${styles.sideModule} ${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '0ms' }}>
+        <ModuleBlock componentId="MOD-T1" eyebrow="Teams" title={`Visible Teams :: ${visibleTeams.length}`} className={`${styles.sideModule} ${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '0ms' }}>
           <div className={styles.teamList}>
-            {courseTeams.map((team, index) => {
+            {visibleTeams.map((team, index) => {
               const hasPendingRequest = team.members.some((member) => pendingRequestMap[member.id]);
               const isTeamConfirmed = team.members.every((member) => member.confirmationStatus === 'confirmed');
               return (
@@ -88,7 +96,7 @@ function Teams() {
               style={{ '--td-stagger-delay': '100ms' }}
             >
               <div className={styles.teamSummary}>
-                <GroupChip code={selectedTeam.groupId} meta={`${selectedTeam.members.length} members`} tone={selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'green' : 'orange'} className={motionStyles.magneticItem} />
+                <GroupChip code={selectedGroup?.code || selectedTeam.groupId} meta={`${selectedTeam.members.length} members`} tone={selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'green' : 'orange'} className={motionStyles.magneticItem} />
                 <SystemTag tone={selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'success' : 'alert'}>
                   {selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'Team confirmed' : 'Waiting for confirmations'}
                 </SystemTag>

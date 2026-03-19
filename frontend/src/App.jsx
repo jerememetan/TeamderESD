@@ -50,6 +50,10 @@ const router = createBrowserRouter([
         element: <Teams />,
       },
       {
+        path: 'instructor/courses/:courseId/groups/:groupId/teams',
+        element: <Teams />,
+      },
+      {
         path: 'instructor/swap-requests',
         element: <SwapRequests />,
       },

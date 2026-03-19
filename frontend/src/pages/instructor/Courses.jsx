@@ -1,10 +1,10 @@
 import { Link } from "react-router";
-import { Plus, Users } from "lucide-react";
+import { Plus } from "lucide-react";
 import GroupChip from "../../components/schematic/GroupChip";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
-import { mockCourses, mockForms } from "../../data/mockData";
+import { mockCourses, mockForms, mockTeams } from "../../data/mockData";
 import styles from "./Courses.module.css";
 
 function Courses() {
@@ -17,7 +17,7 @@ function Courses() {
         <div>
           <p className={styles.kicker}>[COURSE MATRIX]</p>
           <h2 className={styles.title}>Manage course groups as independent formation channels.</h2>
-          <p className={styles.subtitle}>Instructors now create a separate form for each teaching group under the same course.</p>
+          <p className={styles.subtitle}>Each teaching group has its own form, analytics view, and team list.</p>
         </div>
         <button className={styles.headerButton}>
           <Plus className={styles.buttonIcon} />
@@ -45,6 +45,7 @@ function Courses() {
                 {course.groups.map((group, groupIndex) => {
                   const existingForm = formMap[group.id];
                   const tone = group.formStatus === 'active' ? 'green' : group.formStatus === 'closed' ? 'orange' : 'blue';
+                  const groupTeams = mockTeams.filter((team) => team.groupId === group.id);
 
                   return (
                     <div key={group.id} className={`${styles.groupCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ '--td-stagger-delay': `${(courseIndex * 3 + groupIndex + 1) * 50}ms` }}>
@@ -54,23 +55,23 @@ function Courses() {
                           Form {group.formStatus}
                         </SystemTag>
                       </div>
+                      <div className={styles.groupMetaRow}>
+                        <p className={styles.groupNote}>{group.label} :: {groupTeams.length} formed teams</p>
+                      </div>
                       <div className={styles.groupActions}>
-                        <Link className={styles.inlineLink} to={`/instructor/courses/${course.id}/groups/${group.id}/create-form`}>
+                        <Link className={`${styles.groupActionButton} ${styles.groupActionPrimary}`} to={`/instructor/courses/${course.id}/groups/${group.id}/create-form`}>
                           {existingForm ? 'Edit group form' : 'Create group form'}
                         </Link>
-                        <Link className={styles.inlineLinkMuted} to={`/instructor/courses/${course.id}/groups/${group.id}/analytics`}>
+                        <Link className={styles.groupActionButton} to={`/instructor/courses/${course.id}/groups/${group.id}/analytics`}>
                           View analytics
+                        </Link>
+                        <Link className={styles.groupActionButton} to={`/instructor/courses/${course.id}/groups/${group.id}/teams`}>
+                          View teams
                         </Link>
                       </div>
                     </div>
                   );
                 })}
-              </div>
-              <div className={styles.footerAction}>
-                <Link className={styles.teamsLink} to={`/instructor/courses/${course.id}/teams`}>
-                  <Users className={styles.buttonIcon} />
-                  View All Teams
-                </Link>
               </div>
             </ModuleBlock>
           );
