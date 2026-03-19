@@ -47,25 +47,29 @@ function Teams() {
 
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[TEAM ALLOCATION CONSOLE]</p>
-          <h2 className={styles.title}>{selectedCourse.code} team roster and swap control</h2>
-          <p className={styles.subtitle}>Inspect teams, members, and intervention requests without leaving the course workspace.</p>
+          <p className={styles.kicker}>[TEAM VIEW]</p>
+          <h2 className={styles.title}>{selectedCourse.code} teams</h2>
+          <p className={styles.subtitle}>See each team, check whether students have confirmed, and review swap requests.</p>
         </div>
         <SystemTag hazard>{swapRequestList.filter((request) => request.status === 'pending').length} pending interventions</SystemTag>
       </section>
 
       <div className={styles.layout}>
-        <ModuleBlock componentId="MOD-T1" eyebrow="Roster Index" title={`All Teams :: ${courseTeams.length}`} className={`${styles.sideModule} ${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '0ms' }}>
+        <ModuleBlock componentId="MOD-T1" eyebrow="Teams" title={`All Teams :: ${courseTeams.length}`} className={`${styles.sideModule} ${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '0ms' }}>
           <div className={styles.teamList}>
             {courseTeams.map((team, index) => {
               const hasPendingRequest = team.members.some((member) => pendingRequestMap[member.id]);
+              const isTeamConfirmed = team.members.every((member) => member.confirmationStatus === 'confirmed');
               return (
                 <button key={team.id} onClick={() => setSelectedTeamId(team.id)} className={`${styles.teamSelect} ${selectedTeam?.id === team.id ? styles.teamSelectActive : ''} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ '--td-stagger-delay': `${index * 50}ms` }}>
                   <div className={styles.teamSelectHeader}>
-                    <p className={styles.teamCode}>{team.name}</p>
-                    {hasPendingRequest ? <SystemTag hazard>Pending</SystemTag> : null}
+                    <p className={`${styles.teamCode} ${isTeamConfirmed ? styles.teamCodeConfirmed : styles.teamCodePending}`}>{team.name}</p>
+                    {hasPendingRequest ? <SystemTag hazard>Pending swap</SystemTag> : null}
                   </div>
                   <p className={styles.teamMeta}>{team.groupId} :: {team.members.length} members</p>
+                  <SystemTag tone={isTeamConfirmed ? 'success' : 'alert'}>
+                    {isTeamConfirmed ? 'All members confirmed' : 'Waiting for confirmations'}
+                  </SystemTag>
                 </button>
               )
             })}
@@ -74,9 +78,20 @@ function Teams() {
 
         <div className={styles.mainColumn}>
           {selectedTeam ? (
-            <ModuleBlock componentId="MOD-T2" eyebrow="Selected Team" title={selectedTeam.name} metric={selectedTeam.members.length} metricLabel="Members in current allocation" className={`${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '100ms' }}>
+            <ModuleBlock
+              componentId="MOD-T2"
+              eyebrow="Selected Team"
+              title={<span className={selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? styles.teamCodeConfirmed : styles.teamCodePending}>{selectedTeam.name}</span>}
+              metric={selectedTeam.members.length}
+              metricLabel="Members in this team"
+              className={`${motionStyles.staggerItem}`}
+              style={{ '--td-stagger-delay': '100ms' }}
+            >
               <div className={styles.teamSummary}>
-                <GroupChip code={selectedTeam.groupId} meta={`${selectedTeam.members.length} members`} tone="green" className={motionStyles.magneticItem} />
+                <GroupChip code={selectedTeam.groupId} meta={`${selectedTeam.members.length} members`} tone={selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'green' : 'orange'} className={motionStyles.magneticItem} />
+                <SystemTag tone={selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'success' : 'alert'}>
+                  {selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'Team confirmed' : 'Waiting for confirmations'}
+                </SystemTag>
               </div>
               <div className={styles.memberList}>
                 {selectedTeam.members.map((member, index) => {
@@ -87,11 +102,14 @@ function Teams() {
                       <div className={styles.memberIdentity}>
                         <div className={styles.memberAvatar}>{member.name.charAt(0)}</div>
                         <div>
-                          <p className={styles.memberName}>{member.name}</p>
+                          <p className={`${styles.memberName} ${member.confirmationStatus === 'confirmed' ? styles.memberNameConfirmed : styles.memberNamePending}`}>{member.name}</p>
                           <p className={styles.memberMeta}>{member.studentId}</p>
                         </div>
                       </div>
                       <div className={styles.memberActions}>
+                        <SystemTag tone={member.confirmationStatus === 'confirmed' ? 'success' : 'alert'}>
+                          {member.confirmationStatus === 'confirmed' ? 'Confirmed' : 'Pending'}
+                        </SystemTag>
                         <div className={styles.mailLine}><Mail className={styles.mailIcon} /> <span>{member.email}</span></div>
                         {pendingRequest ? <button onClick={() => setSelectedRequest(pendingRequest)} className={`${styles.alertButton} ${motionStyles.pulseWarning}`}>See swap request</button> : null}
                       </div>
@@ -111,13 +129,13 @@ function Teams() {
           <div className={`${styles.modalCard} ${motionStyles.motionPage}`}>
             <div className={styles.modalHeader}>
               <div>
-                <p className={styles.modalCode}>[INTERVENTION DETAIL]</p>
+                <p className={styles.modalCode}>[SWAP REQUEST]</p>
                 <h3 className={styles.modalTitle}>{selectedRequest.studentName} from {selectedRequest.currentTeamName}</h3>
               </div>
-              {selectedRequest.status === 'pending' ? <SystemTag hazard>Pending intervention</SystemTag> : selectedRequest.status === 'approved' ? <SystemTag tone="success">Approved</SystemTag> : <SystemTag tone="alert">Rejected</SystemTag>}
+              {selectedRequest.status === 'pending' ? <SystemTag hazard>Pending review</SystemTag> : selectedRequest.status === 'approved' ? <SystemTag tone="success">Approved</SystemTag> : <SystemTag tone="alert">Rejected</SystemTag>}
             </div>
             <div className={styles.reasonBox}>
-              <p className={styles.reasonLabel}>Operator statement</p>
+              <p className={styles.reasonLabel}>Reason</p>
               <p className={styles.reasonText}>{selectedRequest.reason}</p>
             </div>
             <div className={styles.modalActions}>

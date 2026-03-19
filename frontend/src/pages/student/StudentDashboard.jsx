@@ -3,31 +3,32 @@ import { FileText, Users, Clock } from 'lucide-react';
 import ModuleBlock from '../../components/schematic/ModuleBlock';
 import SystemTag from '../../components/schematic/SystemTag';
 import motionStyles from '../../components/schematic/motion.module.css';
-import { currentStudent, currentStudentTeam, mockForms } from '../../data/mockData';
+import { currentStudent, currentStudentTeams, mockCourses, mockForms } from '../../data/mockData';
 import styles from './StudentDashboard.module.css';
 
 function StudentDashBoard() {
   const studentProfile = currentStudent;
-  const activeTeam = currentStudentTeam;
-  const availableFormList = Object.values(mockForms).filter((form) => form.groupId === activeTeam.groupId);
-  const activeForm = availableFormList[0] || null;
+  const teamAssignments = currentStudentTeams;
+  const groupIds = new Set(teamAssignments.map((team) => team.groupId));
+  const availableFormList = Object.values(mockForms).filter((form) => groupIds.has(form.groupId));
+  const nextForm = availableFormList[0] || null;
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
       <section className={`${styles.hero} ${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '0ms' }}>
         <div>
           <p className={styles.kicker}>[STUDENT HOME]</p>
-          <h2 className={styles.title}>See your team and complete your form.</h2>
-          <p className={styles.subtitle}>Welcome back, {studentProfile.name}. You are in {activeTeam.name} for group {activeTeam.groupId}.</p>
+          <h2 className={styles.title}>See your teams and complete your forms.</h2>
+          <p className={styles.subtitle}>Welcome back, {studentProfile.name}. You are currently assigned to {teamAssignments.length} course group{teamAssignments.length > 1 ? 's' : ''}.</p>
         </div>
-        <SystemTag tone="success">Form ready for your group</SystemTag>
+        <SystemTag tone="success">Assignments ready to review</SystemTag>
       </section>
 
       <section className={styles.statsGrid}>
         {[
-          { id: 'MOD-11', eyebrow: 'Overview', title: 'My Team', metric: '01', label: 'Current team', accent: 'blue' },
+          { id: 'MOD-11', eyebrow: 'Overview', title: 'My Teams', metric: String(teamAssignments.length).padStart(2, '0'), label: 'One team per course group', accent: 'blue' },
           { id: 'MOD-12', eyebrow: 'Overview', title: 'Available Forms', metric: String(availableFormList.length).padStart(2, '0'), label: 'Forms you can fill in', accent: 'green' },
-          { id: 'MOD-13', eyebrow: 'Attention', title: 'Pending Swaps', metric: '00', label: 'Requests still waiting', accent: 'orange' },
+          { id: 'MOD-13', eyebrow: 'Attention', title: 'Pending Confirmations', metric: String(teamAssignments.filter((team) => team.members.some((member) => member.id === studentProfile.id && member.confirmationStatus === 'pending')).length).padStart(2, '0'), label: 'Teams waiting for your confirmation', accent: 'orange' },
         ].map((item, index) => (
           <ModuleBlock
             key={item.id}
@@ -49,15 +50,15 @@ function StudentDashBoard() {
             to: '/student/team',
             icon: <Users className={styles.actionIcon} />,
             code: 'Quick Link',
-            title: 'View My Team',
-            text: 'Open your team page to see teammates and request a swap if needed.',
+            title: 'View My Teams',
+            text: 'See every team you have been assigned to and confirm your place.',
           },
           {
-            to: activeForm ? `/student/form/${activeForm.id}` : '/student',
+            to: nextForm ? `/student/form/${nextForm.id}` : '/student',
             icon: <FileText className={styles.actionIcon} />,
             code: 'Quick Link',
-            title: 'Fill In My Form',
-            text: 'Open the form for your group and submit your answers.',
+            title: 'Fill In A Form',
+            text: 'Open one of your group forms and submit your answers.',
           },
         ].map((action, index) => (
           <Link
@@ -78,17 +79,26 @@ function StudentDashBoard() {
 
       <ModuleBlock
         componentId="MOD-14"
-        eyebrow="Details"
-        title={activeTeam.name}
-        metric={activeTeam.formationScore}
-        metricLabel="Team score"
+        eyebrow="Assignments"
+        title="Current Team Assignments"
         className={`${styles.teamModule} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
         style={{ '--td-stagger-delay': '300ms' }}
       >
-        <div className={styles.teamMeta}>
-          <p className={styles.metaLine}>Members :: {activeTeam.members.length}</p>
-          <p className={styles.metaLine}>Form for :: {activeForm?.groupId || activeTeam.groupId}</p>
-          <p className={styles.metaLine}>{activeForm ? 'You can submit your form now' : 'No form is linked yet'}</p>
+        <div className={styles.assignmentList}>
+          {teamAssignments.map((team) => {
+            const course = mockCourses.find((item) => item.id === team.courseId);
+            const currentMember = team.members.find((member) => member.id === studentProfile.id);
+
+            return (
+              <div key={team.id} className={styles.assignmentRow}>
+                <p className={styles.assignmentTitle}>You have been assigned to {team.name}.</p>
+                <p className={styles.metaLine}>{course?.code} :: {team.groupId} :: {team.members.length} members</p>
+                <SystemTag tone={currentMember?.confirmationStatus === 'confirmed' ? 'success' : 'alert'}>
+                  {currentMember?.confirmationStatus === 'confirmed' ? 'Confirmed' : 'Waiting for your confirmation'}
+                </SystemTag>
+              </div>
+            );
+          })}
         </div>
       </ModuleBlock>
 

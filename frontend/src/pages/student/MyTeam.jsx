@@ -1,30 +1,57 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, Mail, RefreshCw } from "lucide-react";
 import GroupChip from "../../components/schematic/GroupChip";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
-import { currentStudent, currentStudentTeam, mockCourses, mockStudentStrengths } from "../../data/mockData";
+import { currentStudent, currentStudentTeams, mockCourses, mockStudentStrengths } from "../../data/mockData";
 import styles from "./MyTeam.module.css";
 
 function MyTeam() {
   const studentProfile = currentStudent;
-  const activeTeam = currentStudentTeam;
+  const [teamAssignments, setTeamAssignments] = useState(currentStudentTeams);
+  const [selectedTeamId, setSelectedTeamId] = useState(currentStudentTeams[0]?.id ?? null);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapReason, setSwapReason] = useState("");
 
-  const selectedCourse = mockCourses.find((course) => course.id === activeTeam.courseId);
-  const selectedGroup = selectedCourse?.groups.find((group) => group.id === activeTeam.groupId);
+  const selectedTeam = useMemo(
+    () => teamAssignments.find((team) => team.id === selectedTeamId) || teamAssignments[0] || null,
+    [selectedTeamId, teamAssignments],
+  );
+
+  const selectedCourse = mockCourses.find((course) => course.id === selectedTeam?.courseId);
+  const selectedGroup = selectedCourse?.groups.find((group) => group.id === selectedTeam?.groupId);
 
   const getStrongestCriteria = (studentId) => mockStudentStrengths[studentId] || ["Teamwork", "General contribution"];
 
+  const handleConfirmTeam = () => {
+    if (!selectedTeam) return;
+
+    setTeamAssignments((currentTeams) =>
+      currentTeams.map((team) =>
+        team.id !== selectedTeam.id
+          ? team
+          : {
+              ...team,
+              members: team.members.map((member) =>
+                member.id === studentProfile.id
+                  ? { ...member, confirmationStatus: 'confirmed' }
+                  : member,
+              ),
+            },
+      ),
+    );
+  };
+
   const handleSubmitSwapRequest = (event) => {
     event.preventDefault();
+    if (!selectedTeam) return;
+
     console.log("Swap request:", {
-      currentTeamId: activeTeam.id,
-      courseId: activeTeam.courseId,
-      groupId: activeTeam.groupId,
+      currentTeamId: selectedTeam.id,
+      courseId: selectedTeam.courseId,
+      groupId: selectedTeam.groupId,
       reason: swapReason,
     });
     alert("Swap request submitted successfully!");
@@ -32,24 +59,31 @@ function MyTeam() {
     setSwapReason("");
   };
 
+  if (!selectedTeam) {
+    return <div className={styles.page}>No team assignments found.</div>;
+  }
+
+  const currentMember = selectedTeam.members.find((member) => member.id === studentProfile.id);
+  const isConfirmed = currentMember?.confirmationStatus === 'confirmed';
+
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
-      <Link to="/student" className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to student console</Link>
+      <Link to="/student" className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to student home</Link>
 
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[TEAM MEMBER CONSOLE]</p>
-          <h2 className={styles.title}>{activeTeam.name} assignment and teammate signals</h2>
-          <p className={styles.subtitle}>{selectedCourse?.name} :: {selectedGroup?.code || 'Unassigned group'} :: use this screen to understand current team composition.</p>
+          <p className={styles.kicker}>[MY TEAMS]</p>
+          <h2 className={styles.title}>Your team assignments</h2>
+          <p className={styles.subtitle}>You can be in more than one course group, but only one team in each group.</p>
         </div>
         <button onClick={() => setShowSwapModal(true)} className={styles.primaryButton}><RefreshCw className={styles.buttonIcon} /> Request team swap</button>
       </section>
 
       <section className={styles.statsGrid}>
         {[
-          { id: 'MOD-M1', eyebrow: 'Group', title: 'Teaching Group', metric: selectedGroup?.code || 'NA', label: 'Linked group context', accent: 'blue' },
-          { id: 'MOD-M2', eyebrow: 'Roster', title: 'Team Members', metric: activeTeam.members.length, label: 'Students in current team', accent: 'green' },
-          { id: 'MOD-M3', eyebrow: 'Course', title: 'Course Code', metric: selectedCourse?.code || 'UNK', label: 'Owning course container', accent: 'blue' },
+          { id: 'MOD-M1', eyebrow: 'Overview', title: 'Course Groups', metric: String(teamAssignments.length).padStart(2, '0'), label: 'Active team assignments', accent: 'blue' },
+          { id: 'MOD-M2', eyebrow: 'Overview', title: 'Selected Team', metric: selectedTeam.members.length, label: 'Members in this team', accent: 'green' },
+          { id: 'MOD-M3', eyebrow: 'Status', title: 'My Confirmation', metric: isConfirmed ? 'YES' : 'PEND', label: isConfirmed ? 'You have confirmed' : 'Waiting for your confirmation', accent: isConfirmed ? 'green' : 'orange' },
         ].map((item, index) => (
           <ModuleBlock
             key={item.id}
@@ -65,30 +99,69 @@ function MyTeam() {
         ))}
       </section>
 
-      <ModuleBlock componentId="MOD-M4" eyebrow="Team Identity" title={activeTeam.name} metric={activeTeam.formationScore} metricLabel="Formation score" className={motionStyles.staggerItem} style={{ '--td-stagger-delay': '150ms' }}>
-        <div className={styles.teamHeader}>
-          <GroupChip code={selectedGroup?.code || activeTeam.groupId} meta={`${activeTeam.members.length} members`} tone="green" className={motionStyles.magneticItem} />
-          <SystemTag tone="success">Stable assignment</SystemTag>
+      <ModuleBlock componentId="MOD-M4" eyebrow="Assignments" title="Assigned Teams" className={`${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ '--td-stagger-delay': '150ms' }}>
+        <div className={styles.assignmentStack}>
+          {teamAssignments.map((team, index) => {
+            const course = mockCourses.find((item) => item.id === team.courseId);
+            const member = team.members.find((item) => item.id === studentProfile.id);
+            const confirmed = member?.confirmationStatus === 'confirmed';
+
+            return (
+              <button
+                key={team.id}
+                onClick={() => setSelectedTeamId(team.id)}
+                className={`${styles.assignmentCard} ${selectedTeam.id === team.id ? styles.assignmentCardActive : ''} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
+                style={{ '--td-stagger-delay': `${(index + 1) * 50}ms` }}
+              >
+                <div className={styles.assignmentHeader}>
+                  <p className={styles.assignmentTitle}>You have been assigned to {team.name}</p>
+                  <SystemTag tone={confirmed ? 'success' : 'alert'}>
+                    {confirmed ? 'Confirmed' : 'Pending'}
+                  </SystemTag>
+                </div>
+                <p className={styles.assignmentMeta}>{course?.code} :: {team.groupId} :: {team.members.length} members</p>
+              </button>
+            );
+          })}
         </div>
+      </ModuleBlock>
+
+      <ModuleBlock componentId="MOD-M5" eyebrow="Selected Team" title={selectedTeam.name} className={`${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ '--td-stagger-delay': '200ms' }}>
+        <div className={styles.teamHeader}>
+          <GroupChip code={selectedGroup?.code || selectedTeam.groupId} meta={`${selectedTeam.members.length} members`} tone={selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'green' : 'orange'} className={motionStyles.magneticItem} />
+          <div className={styles.teamActions}>
+            <SystemTag tone={isConfirmed ? 'success' : 'alert'}>
+              {isConfirmed ? 'You have confirmed this team' : 'Please confirm this team'}
+            </SystemTag>
+            {!isConfirmed ? <button onClick={handleConfirmTeam} className={styles.confirmButton}>Confirm my team</button> : null}
+          </div>
+        </div>
+
         <div className={styles.memberList}>
-          {activeTeam.members.map((member, index) => {
+          {selectedTeam.members.map((member, index) => {
             const strongestCriteria = getStrongestCriteria(member.id);
             const isCurrentUser = member.id === studentProfile.id;
+            const confirmed = member.confirmationStatus === 'confirmed';
 
             return (
               <div key={member.id} className={`${styles.memberCard} ${isCurrentUser ? styles.memberCardActive : ''} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ '--td-stagger-delay': `${index * 50}ms` }}>
                 <div className={styles.memberIdentity}>
                   <div className={styles.memberAvatar}>{member.name.charAt(0)}</div>
                   <div>
-                    <p className={styles.memberName}>{member.name} {isCurrentUser ? <span className={styles.youTag}>[YOU]</span> : null}</p>
+                    <p className={`${styles.memberName} ${confirmed ? styles.memberNameConfirmed : styles.memberNamePending}`}>
+                      {member.name} {isCurrentUser ? <span className={styles.youTag}>[YOU]</span> : null}
+                    </p>
                     <p className={styles.memberMeta}>{member.studentId}</p>
                   </div>
                 </div>
                 <div className={styles.memberDetail}>
+                  <SystemTag tone={confirmed ? 'success' : 'alert'}>
+                    {confirmed ? 'Confirmed' : 'Pending'}
+                  </SystemTag>
                   <div className={styles.mailLine}><Mail className={styles.mailIcon} /> <span>{member.email}</span></div>
                   <div className={styles.tagRow}>
-                    {strongestCriteria.map((criterion, tagIndex) => (
-                      <SystemTag key={criterion} tone="neutral" className={motionStyles.staggerItem} style={{ '--td-stagger-delay': `${(index + tagIndex) * 50}ms` }}>{criterion}</SystemTag>
+                    {strongestCriteria.map((criterion) => (
+                      <SystemTag key={criterion} tone="neutral">{criterion}</SystemTag>
                     ))}
                   </div>
                 </div>
@@ -103,20 +176,20 @@ function MyTeam() {
           <div className={`${styles.modalCard} ${motionStyles.motionPage}`}>
             <div className={styles.modalHeader}>
               <div>
-                <p className={styles.modalCode}>[SWAP REQUEST CHANNEL]</p>
-                <h3 className={styles.modalTitle}>Request team reassignment</h3>
+                <p className={styles.modalCode}>[SWAP REQUEST]</p>
+                <h3 className={styles.modalTitle}>Request a team change</h3>
               </div>
               <SystemTag hazard>Instructor review required</SystemTag>
             </div>
             <form onSubmit={handleSubmitSwapRequest} className={styles.modalForm}>
               <label className={styles.field}>
-                <span className={styles.fieldLabel}>Reason for intervention</span>
+                <span className={styles.fieldLabel}>Reason</span>
                 <textarea
                   value={swapReason}
                   onChange={(event) => setSwapReason(event.target.value)}
                   rows={5}
                   className={styles.textarea}
-                  placeholder="Explain why you would like to swap teams..."
+                  placeholder="Explain why you would like to change teams..."
                   required
                 />
               </label>

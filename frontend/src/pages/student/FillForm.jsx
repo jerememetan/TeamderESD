@@ -3,14 +3,14 @@ import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
-import { currentStudent, currentStudentTeam, mockCourses, mockForms, mockStudents } from "../../data/mockData";
+import { currentStudent, currentStudentTeams, mockCourses, mockForms, mockStudents } from "../../data/mockData";
 import styles from "./FillForm.module.css";
 
 function FillForm() {
   const { formId } = useParams();
   const navigate = useNavigate();
   const studentProfile = currentStudent;
-  const activeTeam = currentStudentTeam;
+  const teamAssignments = currentStudentTeams;
   const availableFormList = Object.values(mockForms);
   const buddyCandidateList = mockStudents.filter((student) => student.id !== studentProfile.id);
   const selectedForm = availableFormList.find((form) => form.id === formId) || mockForms[formId || ""] || availableFormList[0];
@@ -18,6 +18,7 @@ function FillForm() {
   const [buddyRequestStudentId, setBuddyRequestStudentId] = useState("");
   const selectedCourse = mockCourses.find((course) => course.id === selectedForm?.courseId);
   const selectedGroup = selectedCourse?.groups.find((group) => group.id === selectedForm?.groupId);
+  const activeTeam = teamAssignments.find((team) => team.groupId === selectedForm?.groupId) || teamAssignments[0];
 
   if (!selectedForm) {
     return <div className={styles.notFound}>Form not found</div>;
@@ -40,11 +41,11 @@ function FillForm() {
       <Link to="/student" className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to student console</Link>
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[GROUP FORM TERMINAL]</p>
-          <h2 className={styles.title}>{selectedGroup?.code || activeTeam.groupId} response sequence</h2>
-          <p className={styles.subtitle}>Rate yourself against the configured criteria for your assigned teaching group.</p>
+          <p className={styles.kicker}>[GROUP FORM]</p>
+          <h2 className={styles.title}>{selectedGroup?.code || activeTeam?.groupId} form</h2>
+          <p className={styles.subtitle}>Complete this form for your team in {selectedGroup?.code || activeTeam?.groupId}.</p>
         </div>
-        <SystemTag tone="success">Secure group channel</SystemTag>
+        <SystemTag tone="success">Form open</SystemTag>
       </section>
 
       <form onSubmit={handleSubmit} className={styles.form}>
@@ -71,7 +72,7 @@ function FillForm() {
         ))}
 
         {selectedForm.allowBuddy ? (
-          <ModuleBlock componentId="MOD-RB" eyebrow="Pairing Request" title="Buddy linkage">
+          <ModuleBlock componentId="MOD-RB" eyebrow="Pairing Request" title="Buddy request">
             <select value={buddyRequestStudentId} onChange={(event) => setBuddyRequestStudentId(event.target.value)} className={styles.select}>
               <option value="">No buddy request</option>
               {buddyCandidateList.map((student) => (

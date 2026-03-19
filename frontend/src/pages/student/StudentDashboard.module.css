@@ -13,7 +13,9 @@
 
 .kicker,
 .actionCode,
-.metaLine {
+.metaLine,
+.assignmentTitle,
+.assignmentMeta {
   margin: 0;
   font-family: var(--td-font-mono);
   text-transform: uppercase;
@@ -57,6 +59,7 @@
   display: flex;
   gap: var(--td-space-sm);
   padding: var(--td-space-sm);
+  padding-bottom: calc(var(--td-space-sm) + 28px);
   border: 1px solid var(--td-color-border-strong);
   border-radius: var(--td-radius-panel);
   background: rgba(255,255,255,0.92);
@@ -93,7 +96,8 @@
 }
 
 .actionCode,
-.metaLine {
+.metaLine,
+.assignmentMeta {
   color: var(--td-color-text-muted);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
@@ -106,10 +110,27 @@
 }
 
 .teamMeta,
-.historyState {
+.historyState,
+.assignmentList {
   display: flex;
   flex-direction: column;
   gap: var(--td-space-xs);
+}
+
+.assignmentRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-xs);
+  padding: var(--td-space-sm);
+  border: 1px solid rgba(124, 145, 166, 0.45);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(240, 244, 248, 0.82);
+}
+
+.assignmentTitle {
+  color: var(--td-color-text);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
 }
 
 .historyState {
@@ -133,5 +154,9 @@
     position: static;
     display: block;
     margin-top: 10px;
+  }
+
+  .actionCard {
+    padding-bottom: var(--td-space-sm);
   }
 }

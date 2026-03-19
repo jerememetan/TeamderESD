@@ -1,28 +1,344 @@
-.page { display:flex; flex-direction:column; gap: var(--td-space-md); }
-.backLink,.kicker,.memberMeta,.modalCode,.fieldLabel,.youTag { font-family: var(--td-font-mono); text-transform: uppercase; }
-.backLink { display:inline-flex; align-items:center; gap: var(--td-space-xs); color: var(--td-color-primary); text-decoration:none; font-size:0.72rem; letter-spacing:0.12em; }
-.backIcon,.mailIcon,.buttonIcon { width:18px; height:18px; }
-.hero { display:flex; justify-content:space-between; gap: var(--td-space-md); align-items:flex-start; }
-.kicker,.modalCode { margin:0; color: var(--td-color-primary); font-size:0.75rem; letter-spacing:0.18em; }
-.title { margin:8px 0; font-size:clamp(1.9rem,4vw,3rem); line-height:1; font-weight:800; text-transform:uppercase; }
-.subtitle,.mailLine { margin:0; color: var(--td-color-text-muted); line-height:1.7; }
-.statsGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap: var(--td-space-sm); }
-.teamHeader,.tagRow,.modalHeader,.modalActions { display:flex; flex-wrap:wrap; gap: var(--td-space-xs); align-items:center; justify-content:space-between; }
-.memberList { display:flex; flex-direction:column; gap: var(--td-space-sm); }
-.memberCard { display:flex; flex-wrap:wrap; justify-content:space-between; gap: var(--td-space-sm); padding: var(--td-space-sm); border:1px solid rgba(124,145,166,0.45); border-radius: var(--td-radius-sharp); background: rgba(240,244,248,0.82); }
-.memberCardActive { border-color: var(--td-color-primary); background: rgba(0,71,171,0.08); }
-.memberIdentity,.memberDetail { display:flex; flex-direction:column; gap: var(--td-space-xs); }
-.memberIdentity { flex-direction:row; align-items:flex-start; }
-.memberAvatar { width:40px; height:40px; display:flex; align-items:center; justify-content:center; border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-sharp); background: rgba(255,255,255,0.92); color: var(--td-color-primary); font-family: var(--td-font-mono); font-weight:700; }
-.memberName,.modalTitle,.fieldLabel { margin:0; color: var(--td-color-text); }
-.memberMeta,.modalCode,.fieldLabel,.youTag { font-size:0.72rem; letter-spacing:0.12em; color: var(--td-color-text-muted); }
-.youTag { color: var(--td-color-primary); }
-.primaryButton,.secondaryButton { display:inline-flex; align-items:center; gap: var(--td-space-xs); min-height:40px; padding:0 14px; border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-sharp); font-family: var(--td-font-mono); font-size:0.74rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
-.primaryButton { color: var(--td-color-surface); background: linear-gradient(180deg,var(--td-color-primary),var(--td-color-primary-strong)); }
-.secondaryButton { color: var(--td-color-text); background: rgba(255,255,255,0.9); }
-.modalOverlay { position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; padding: var(--td-space-sm); background: rgba(20,34,53,0.52); }
-.modalCard { width:min(760px,100%); display:flex; flex-direction:column; gap: var(--td-space-sm); padding: var(--td-space-md); border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-panel); background: var(--td-color-surface); box-shadow: 0 20px 40px var(--td-color-shadow); }
-.modalForm,.field { display:flex; flex-direction:column; gap: var(--td-space-sm); }
-.textarea { width:100%; min-height:140px; padding:12px; border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-sharp); background: rgba(255,255,255,0.92); color: var(--td-color-text); }
-@media (max-width: 900px) { .statsGrid { grid-template-columns:1fr; } }
-@media (max-width: 700px) { .hero { flex-direction:column; } .memberCard,.modalHeader,.modalActions { flex-direction:column; align-items:flex-start; } }
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-md);
+}
+
+.backLink,
+.kicker,
+.memberMeta,
+.modalCode,
+.fieldLabel,
+.youTag,
+.assignmentMeta {
+  font-family: var(--td-font-mono);
+  text-transform: uppercase;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--td-space-xs);
+  width: fit-content;
+  color: var(--td-color-primary);
+  text-decoration: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+}
+
+.backIcon,
+.mailIcon,
+.buttonIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--td-space-md);
+  align-items: flex-start;
+}
+
+.kicker,
+.modalCode {
+  margin: 0;
+  color: var(--td-color-primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+}
+
+.title {
+  margin: 8px 0;
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.subtitle,
+.mailLine {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  line-height: 1.7;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--td-space-sm);
+}
+
+.assignmentStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-sm);
+  align-items: stretch;
+}
+
+.assignmentCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-xs);
+  width: 100%;
+  padding: var(--td-space-sm);
+  border: 1px solid rgba(124, 145, 166, 0.45);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(240, 244, 248, 0.82);
+  text-align: left;
+  cursor: pointer;
+}
+
+.assignmentCardActive {
+  border-color: var(--td-color-primary);
+  background: rgba(0, 71, 171, 0.08);
+}
+
+.assignmentHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.assignmentTitle {
+  margin: 0;
+  max-width: 100%;
+  color: var(--td-color-text);
+  font-size: 0.96rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.assignmentMeta,
+.memberMeta,
+.modalCode,
+.fieldLabel,
+.youTag {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--td-color-text-muted);
+}
+
+.assignmentMeta,
+.memberMeta {
+  word-break: break-word;
+}
+
+.primaryButton,
+.secondaryButton,
+.confirmButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--td-space-xs);
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-sharp);
+  font-family: var(--td-font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.primaryButton {
+  color: var(--td-color-surface);
+  background: linear-gradient(180deg, var(--td-color-primary), var(--td-color-primary-strong));
+}
+
+.confirmButton {
+  color: #0c6b36;
+  background: rgba(46, 204, 113, 0.16);
+}
+
+.secondaryButton {
+  color: var(--td-color-text);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.teamHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-sm);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.teamActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.memberList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-sm);
+}
+
+.memberCard {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--td-space-sm);
+  padding: var(--td-space-sm);
+  border: 1px solid rgba(124, 145, 166, 0.45);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(240, 244, 248, 0.82);
+}
+
+.memberCardActive {
+  border-color: var(--td-color-primary);
+  background: rgba(0, 71, 171, 0.08);
+}
+
+.memberIdentity,
+.memberDetail {
+  display: flex;
+  gap: var(--td-space-xs);
+}
+
+.memberIdentity {
+  flex: 1 1 220px;
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.memberDetail {
+  flex: 1 1 260px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.memberAvatar {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--td-color-primary);
+  font-family: var(--td-font-mono);
+  font-weight: 700;
+}
+
+.memberName,
+.modalTitle,
+.fieldLabel {
+  margin: 0;
+}
+
+.memberNameConfirmed {
+  color: #0c6b36;
+}
+
+.memberNamePending {
+  color: #b7791f;
+}
+
+.youTag {
+  color: var(--td-color-primary);
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  align-items: center;
+}
+
+.mailLine {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--td-space-sm);
+  background: rgba(20, 34, 53, 0.52);
+}
+
+.modalCard {
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-sm);
+  padding: var(--td-space-md);
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-panel);
+  background: var(--td-color-surface);
+  box-shadow: 0 20px 40px var(--td-color-shadow);
+}
+
+.modalHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalForm,
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-sm);
+}
+
+.modalActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 12px;
+  border: 1px solid var(--td-color-border-strong);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--td-color-text);
+}
+
+@media (max-width: 900px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .hero,
+  .assignmentHeader,
+  .modalHeader,
+  .modalActions,
+  .memberCard,
+  .teamHeader,
+  .teamActions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .primaryButton,
+  .secondaryButton,
+  .confirmButton {
+    width: 100%;
+  }
+}

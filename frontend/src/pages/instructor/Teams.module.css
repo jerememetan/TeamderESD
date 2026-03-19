@@ -11,9 +11,11 @@
 .teamList,.memberList { display:flex; flex-direction:column; gap: var(--td-space-xs); }
 .teamSelect { display:flex; flex-direction:column; gap: var(--td-space-xs); padding: var(--td-space-sm); border:1px solid rgba(124,145,166,0.45); border-radius: var(--td-radius-sharp); background: rgba(240,244,248,0.82); text-align:left; }
 .teamSelectActive { border-color: var(--td-color-primary); background: rgba(0,71,171,0.08); }
-.teamSelectHeader,.memberCard,.memberIdentity,.memberActions,.modalHeader,.modalActions { display:flex; gap: var(--td-space-xs); }
-.teamSelectHeader,.modalHeader { justify-content:space-between; align-items:center; flex-wrap:wrap; }
-.teamCode,.memberName,.modalTitle,.reasonLabel { margin:0; color: var(--td-color-text); }
+.teamSelectHeader,.memberCard,.memberIdentity,.memberActions,.modalHeader,.modalActions,.teamSummary { display:flex; gap: var(--td-space-xs); }
+.teamSelectHeader,.modalHeader,.teamSummary { justify-content:space-between; align-items:center; flex-wrap:wrap; }
+.teamCode,.memberName,.modalTitle,.reasonLabel { margin:0; }
+.teamCodeConfirmed,.memberNameConfirmed { color:#0c6b36; }
+.teamCodePending,.memberNamePending { color:#b7791f; }
 .teamMeta,.memberMeta,.modalCode,.reasonLabel { font-size:0.72rem; letter-spacing:0.12em; color: var(--td-color-text-muted); }
 .memberCard { justify-content:space-between; align-items:center; flex-wrap:wrap; padding: var(--td-space-sm); border:1px solid rgba(124,145,166,0.45); border-radius: var(--td-radius-sharp); background: rgba(240,244,248,0.82); }
 .memberCardAlert { border-color: rgba(255,107,0,0.6); background: rgba(255,107,0,0.08); }
