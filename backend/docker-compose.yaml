@@ -41,6 +41,16 @@ services:
     ports:
       - "3004:3004"
 
+  enrollment-service:
+    build:
+      context: ./atomic-services/enrollment
+    container_name: teamder-enrollment-service
+    environment:
+      PORT: 3005
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3005:3005"
+
   # Composite
 
   formation-setup-service:
