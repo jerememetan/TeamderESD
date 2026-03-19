@@ -1,3 +1,4 @@
+
 # Microservice API Documentation
 
 This README provides simple instructions for calling the endpoints of the three atomic microservices: **criteria**, **project-topic**, and **skill**. All services are Flask-based and expose REST endpoints.
@@ -172,3 +173,111 @@ This README provides simple instructions for calling the endpoints of the three 
     ```
   - Response: Updated reputation object
 
+## Team Service
+- **Base URL:** `/team` (default port: 3007)
+
+### Endpoints
+
+- **GET /team?section_id={section_id}**
+  - Query params: `section_id` (required)
+  - Returns: All teams for the given section, grouped by section_id
+  - Example:
+    ```http
+    GET http://localhost:3007/team?section_id=11111111-1111-1111-1111-111111111111
+    ```
+    **Response:**
+    ```json
+    {
+      "code": 200,
+      "data": {
+        "section_id": "11111111-1111-1111-1111-111111111111",
+        "teams": [
+          {
+            "team_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "team_number": 1,
+            "students": [
+              { "student_id": 101 },
+              { "student_id": 102 }
+            ]
+          },
+          ...
+        ]
+      }
+    }
+    ```
+
+- **GET /team/{team_id}**
+  - Returns: Team with the given team_id
+  - Example:
+    ```http
+    GET http://localhost:3007/team/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+    ```
+    **Response:**
+    ```json
+    {
+      "code": 200,
+      "data": {
+        "team_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "team_number": 1,
+        "students": [
+          { "student_id": 101 },
+          { "student_id": 102 }
+        ]
+      }
+    }
+    ```
+
+- **POST /team**
+  - Body: JSON with `section_id` and a `teams` array. Each team must have a `team_id` (UUID) and a list of `students` (each with `student_id`).
+  - On POST, all existing teams for the section are deleted and replaced with the new teams.
+  - Example:
+    ```http
+    POST http://localhost:3007/team
+    Content-Type: application/json
+    {
+      "section_id": "11111111-1111-1111-1111-111111111111",
+      "teams": [
+        {
+          "team_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          "students": [
+            { "student_id": 101 },
+            { "student_id": 102 }
+          ]
+        },
+        {
+          "team_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "students": [
+            { "student_id": 103 },
+            { "student_id": 104 }
+          ]
+        }
+      ]
+    }
+    ```
+    **Response:**
+    ```json
+    {
+      "code": 201,
+      "data": {
+        "section_id": "11111111-1111-1111-1111-111111111111",
+        "teams": [
+          {
+            "team_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "team_number": 1,
+            "students": [
+              { "student_id": 101 },
+              { "student_id": 102 }
+            ]
+          },
+          {
+            "team_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            "team_number": 2,
+            "students": [
+              { "student_id": 103 },
+              { "student_id": 104 }
+            ]
+          }
+        ]
+      }
+    }
+    ```

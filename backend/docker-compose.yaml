@@ -60,6 +60,16 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3006:3006"
+  
+  team-service:
+    build:
+      context: ./atomic-services/team
+    container_name: teamder-team-service
+    environment:
+      PORT: 3007
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3007:3007"
 
   # Composite
 
