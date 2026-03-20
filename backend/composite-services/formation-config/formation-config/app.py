@@ -15,7 +15,7 @@ CRITERIA_URL = os.getenv("CRITERIA_URL", "http://localhost:3004/criteria")
 TOPIC_URL = os.getenv("TOPIC_URL", "http://localhost:3003/topic")
 SKILL_URL = os.getenv("SKILL_URL", "http://localhost:3002/skill")
 
-@app.route("/", methods=["POST"])
+@app.route("/formation-config", methods=["POST"])
 def aggregate():
     payload = request.get_json()
     if not payload or "course_id" not in payload or "section_id" not in payload:
@@ -58,7 +58,7 @@ def aggregate():
 
     return jsonify(results), 200
 
-@app.route("/", methods=["GET"])
+@app.route("/formation-config", methods=["GET"])
 def aggregate_get():
     section_id = request.args.get("section_id")
     if not section_id:
