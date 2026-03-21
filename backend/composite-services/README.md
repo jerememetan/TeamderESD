@@ -6,7 +6,7 @@ This service orchestrates the creation and retrieval of team formation configura
 
 ## Base URL
 
-- Default: `/` (port: 4000)
+- Default: `/formation-config` (port: 4000)
 
 ---
 
@@ -32,9 +32,7 @@ Aggregate and distribute formation data to atomic services.
 - `skills` (optional): Array of skill objects `{ "skill_label": "...", "skill_importance": <float> }`
 
 #### Example
-```
-POST http://localhost:3010/
-Content-Type: application/json
+```json
 {
   "course_id": "11111111-1111-1111-1111-111111111111",
   "section_id": "22222222-2222-2222-2222-222222222211",

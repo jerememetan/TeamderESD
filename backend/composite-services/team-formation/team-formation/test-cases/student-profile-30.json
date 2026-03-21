@@ -1,0 +1,918 @@
+{
+    "code":  200,
+    "data":  {
+                 "section_id":  "22222222-2222-2222-2222-222222222222",
+                 "students":  [
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "INTJ",
+                                                      "buddy_id":  2,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  3,
+                                                      "year":  1,
+                                                      "name":  "Student 1",
+                                                      "gpa":  2.7,
+                                                      "gender":  "M",
+                                                      "school":  "SCIS",
+                                                      "email":  "student1@smu.edu.sg"
+                                                  },
+                                      "student_id":  1
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ENFP",
+                                                      "buddy_id":  1,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  6,
+                                                      "year":  2,
+                                                      "name":  "Student 2",
+                                                      "gpa":  3.4,
+                                                      "gender":  "F",
+                                                      "school":  "Business",
+                                                      "email":  "student2@smu.edu.sg"
+                                                  },
+                                      "student_id":  2
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "ISTP",
+                                                      "buddy_id":  4,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  9,
+                                                      "year":  3,
+                                                      "name":  "Student 3",
+                                                      "gpa":  4.1,
+                                                      "gender":  "M",
+                                                      "school":  "Law",
+                                                      "email":  "student3@smu.edu.sg"
+                                                  },
+                                      "student_id":  3
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "ESFJ",
+                                                      "buddy_id":  3,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  1,
+                                                      "year":  4,
+                                                      "name":  "Student 4",
+                                                      "gpa":  2.4,
+                                                      "gender":  "F",
+                                                      "school":  "SOSS",
+                                                      "email":  "student4@smu.edu.sg"
+                                                  },
+                                      "student_id":  4
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ENTJ",
+                                                      "buddy_id":  6,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  4,
+                                                      "year":  1,
+                                                      "name":  "Student 5",
+                                                      "gpa":  3.1,
+                                                      "gender":  "M",
+                                                      "school":  "SCIS",
+                                                      "email":  "student5@smu.edu.sg"
+                                                  },
+                                      "student_id":  5
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "INFJ",
+                                                      "buddy_id":  5,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  7,
+                                                      "year":  2,
+                                                      "name":  "Student 6",
+                                                      "gpa":  3.8,
+                                                      "gender":  "F",
+                                                      "school":  "Business",
+                                                      "email":  "student6@smu.edu.sg"
+                                                  },
+                                      "student_id":  6
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "ESTP",
+                                                      "buddy_id":  8,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  10,
+                                                      "year":  3,
+                                                      "name":  "Student 7",
+                                                      "gpa":  2.1,
+                                                      "gender":  "M",
+                                                      "school":  "Law",
+                                                      "email":  "student7@smu.edu.sg"
+                                                  },
+                                      "student_id":  7
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ISFP",
+                                                      "buddy_id":  7,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  2,
+                                                      "year":  4,
+                                                      "name":  "Student 8",
+                                                      "gpa":  2.8,
+                                                      "gender":  "F",
+                                                      "school":  "SOSS",
+                                                      "email":  "student8@smu.edu.sg"
+                                                  },
+                                      "student_id":  8
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "ENTP",
+                                                      "buddy_id":  10,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  5,
+                                                      "year":  1,
+                                                      "name":  "Student 9",
+                                                      "gpa":  3.5,
+                                                      "gender":  "M",
+                                                      "school":  "SCIS",
+                                                      "email":  "student9@smu.edu.sg"
+                                                  },
+                                      "student_id":  9
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "ISFJ",
+                                                      "buddy_id":  9,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  8,
+                                                      "year":  2,
+                                                      "name":  "Student 10",
+                                                      "gpa":  4.2,
+                                                      "gender":  "F",
+                                                      "school":  "Business",
+                                                      "email":  "student10@smu.edu.sg"
+                                                  },
+                                      "student_id":  10
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ESTJ",
+                                                      "buddy_id":  12,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  0,
+                                                      "year":  3,
+                                                      "name":  "Student 11",
+                                                      "gpa":  2.5,
+                                                      "gender":  "M",
+                                                      "school":  "Law",
+                                                      "email":  "student11@smu.edu.sg"
+                                                  },
+                                      "student_id":  11
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "INFP",
+                                                      "buddy_id":  11,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  3,
+                                                      "year":  4,
+                                                      "name":  "Student 12",
+                                                      "gpa":  3.2,
+                                                      "gender":  "F",
+                                                      "school":  "SOSS",
+                                                      "email":  "student12@smu.edu.sg"
+                                                  },
+                                      "student_id":  12
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "INTJ",
+                                                      "buddy_id":  14,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  6,
+                                                      "year":  1,
+                                                      "name":  "Student 13",
+                                                      "gpa":  3.9,
+                                                      "gender":  "M",
+                                                      "school":  "SCIS",
+                                                      "email":  "student13@smu.edu.sg"
+                                                  },
+                                      "student_id":  13
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ENFP",
+                                                      "buddy_id":  13,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  9,
+                                                      "year":  2,
+                                                      "name":  "Student 14",
+                                                      "gpa":  2.2,
+                                                      "gender":  "F",
+                                                      "school":  "Business",
+                                                      "email":  "student14@smu.edu.sg"
+                                                  },
+                                      "student_id":  14
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "ISTP",
+                                                      "buddy_id":  16,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  1,
+                                                      "year":  3,
+                                                      "name":  "Student 15",
+                                                      "gpa":  2.9,
+                                                      "gender":  "M",
+                                                      "school":  "Law",
+                                                      "email":  "student15@smu.edu.sg"
+                                                  },
+                                      "student_id":  15
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "ESFJ",
+                                                      "buddy_id":  15,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  4,
+                                                      "year":  4,
+                                                      "name":  "Student 16",
+                                                      "gpa":  3.6,
+                                                      "gender":  "F",
+                                                      "school":  "SOSS",
+                                                      "email":  "student16@smu.edu.sg"
+                                                  },
+                                      "student_id":  16
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ENTJ",
+                                                      "buddy_id":  18,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  7,
+                                                      "year":  1,
+                                                      "name":  "Student 17",
+                                                      "gpa":  4.3,
+                                                      "gender":  "M",
+                                                      "school":  "SCIS",
+                                                      "email":  "student17@smu.edu.sg"
+                                                  },
+                                      "student_id":  17
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "INFJ",
+                                                      "buddy_id":  17,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  10,
+                                                      "year":  2,
+                                                      "name":  "Student 18",
+                                                      "gpa":  2.6,
+                                                      "gender":  "F",
+                                                      "school":  "Business",
+                                                      "email":  "student18@smu.edu.sg"
+                                                  },
+                                      "student_id":  18
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "ESTP",
+                                                      "buddy_id":  20,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  2,
+                                                      "year":  3,
+                                                      "name":  "Student 19",
+                                                      "gpa":  3.3,
+                                                      "gender":  "M",
+                                                      "school":  "Law",
+                                                      "email":  "student19@smu.edu.sg"
+                                                  },
+                                      "student_id":  19
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ISFP",
+                                                      "buddy_id":  19,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  5,
+                                                      "year":  4,
+                                                      "name":  "Student 20",
+                                                      "gpa":  4,
+                                                      "gender":  "F",
+                                                      "school":  "SOSS",
+                                                      "email":  "student20@smu.edu.sg"
+                                                  },
+                                      "student_id":  20
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "ENTP",
+                                                      "buddy_id":  22,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  8,
+                                                      "year":  1,
+                                                      "name":  "Student 21",
+                                                      "gpa":  2.3,
+                                                      "gender":  "M",
+                                                      "school":  "SCIS",
+                                                      "email":  "student21@smu.edu.sg"
+                                                  },
+                                      "student_id":  21
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "ISFJ",
+                                                      "buddy_id":  21,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  0,
+                                                      "year":  2,
+                                                      "name":  "Student 22",
+                                                      "gpa":  3,
+                                                      "gender":  "F",
+                                                      "school":  "Business",
+                                                      "email":  "student22@smu.edu.sg"
+                                                  },
+                                      "student_id":  22
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ESTJ",
+                                                      "buddy_id":  24,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  3,
+                                                      "year":  3,
+                                                      "name":  "Student 23",
+                                                      "gpa":  3.7,
+                                                      "gender":  "M",
+                                                      "school":  "Law",
+                                                      "email":  "student23@smu.edu.sg"
+                                                  },
+                                      "student_id":  23
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "INFP",
+                                                      "buddy_id":  23,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  6,
+                                                      "year":  4,
+                                                      "name":  "Student 24",
+                                                      "gpa":  2,
+                                                      "gender":  "F",
+                                                      "school":  "SOSS",
+                                                      "email":  "student24@smu.edu.sg"
+                                                  },
+                                      "student_id":  24
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "INTJ",
+                                                      "buddy_id":  26,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  9,
+                                                      "year":  1,
+                                                      "name":  "Student 25",
+                                                      "gpa":  2.7,
+                                                      "gender":  "M",
+                                                      "school":  "SCIS",
+                                                      "email":  "student25@smu.edu.sg"
+                                                  },
+                                      "student_id":  25
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ENFP",
+                                                      "buddy_id":  25,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  1,
+                                                      "year":  2,
+                                                      "name":  "Student 26",
+                                                      "gpa":  3.4,
+                                                      "gender":  "F",
+                                                      "school":  "Business",
+                                                      "email":  "student26@smu.edu.sg"
+                                                  },
+                                      "student_id":  26
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                                                                            ],
+                                                      "mbti":  "ISTP",
+                                                      "buddy_id":  28,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  4,
+                                                      "year":  3,
+                                                      "name":  "Student 27",
+                                                      "gpa":  4.1,
+                                                      "gender":  "M",
+                                                      "school":  "Law",
+                                                      "email":  "student27@smu.edu.sg"
+                                                  },
+                                      "student_id":  27
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "ESFJ",
+                                                      "buddy_id":  27,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  2,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  5,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  7,
+                                                      "year":  4,
+                                                      "name":  "Student 28",
+                                                      "gpa":  2.4,
+                                                      "gender":  "F",
+                                                      "school":  "SOSS",
+                                                      "email":  "student28@smu.edu.sg"
+                                                  },
+                                      "student_id":  28
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                            ],
+                                                      "mbti":  "ENTJ",
+                                                      "buddy_id":  30,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  4,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  3,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  10,
+                                                      "year":  1,
+                                                      "name":  "Student 29",
+                                                      "gpa":  3.1,
+                                                      "gender":  "M",
+                                                      "school":  "SCIS",
+                                                      "email":  "student29@smu.edu.sg"
+                                                  },
+                                      "student_id":  29
+                                  },
+                                  {
+                                      "profile":  {
+                                                      "topic_preferences":  [
+                                                                                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                                                                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                                                                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                            ],
+                                                      "mbti":  "INFJ",
+                                                      "buddy_id":  29,
+                                                      "competences":  [
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                                                                          },
+                                                                          {
+                                                                              "skill_level":  1,
+                                                                              "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
+                                                                          }
+                                                                      ],
+                                                      "reputation_score":  2,
+                                                      "year":  2,
+                                                      "name":  "Student 30",
+                                                      "gpa":  3.8,
+                                                      "gender":  "F",
+                                                      "school":  "Business",
+                                                      "email":  "student30@smu.edu.sg"
+                                                  },
+                                      "student_id":  30
+                                  }
+                              ]
+             }
+}
