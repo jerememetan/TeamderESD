@@ -15,7 +15,7 @@ CRITERIA_URL = os.getenv("CRITERIA_URL", "http://localhost:3004/criteria")
 TOPIC_URL = os.getenv("TOPIC_URL", "http://localhost:3003/topic")
 SKILL_URL = os.getenv("SKILL_URL", "http://localhost:3002/skill")
 
-@app.route("/", methods=["POST"])
+@app.route("/formation-config", methods=["POST"])
 def aggregate():
     payload = request.get_json()
     if not payload or "course_id" not in payload or "section_id" not in payload:
@@ -28,10 +28,6 @@ def aggregate():
     criteria_data = payload.get("criteria")
     if not criteria_data or not isinstance(criteria_data, dict):
         return jsonify({"error": "Missing or invalid criteria. Please provide a valid criteria object."}), 400
-    if "course_id" not in criteria_data:
-        criteria_data["course_id"] = course_id
-    if "section_id" not in criteria_data:
-        criteria_data["section_id"] = section_id
     resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
     if resp.status_code == 200 and resp.json()["data"]:
         put_resp = requests.put(CRITERIA_URL + f"?section_id={section_id}", json=criteria_data)
@@ -62,7 +58,7 @@ def aggregate():
 
     return jsonify(results), 200
 
-@app.route("/", methods=["GET"])
+@app.route("/formation-config", methods=["GET"])
 def aggregate_get():
     section_id = request.args.get("section_id")
     if not section_id:
@@ -77,6 +73,8 @@ def aggregate_get():
         if crit_json.get("data"):
             crit_data = crit_json["data"][0] if isinstance(crit_json["data"], list) and crit_json["data"] else crit_json["data"]
             course_id = crit_data.get("course_id")
+            crit_data.pop("course_id", None)
+            crit_data.pop("section_id", None)
 
     # --- Topics ---
     topic_resp = requests.get(TOPIC_URL, params={"section_id": section_id})
@@ -107,4 +105,4 @@ def aggregate_get():
     return jsonify(result), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 3010)), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 4000)), debug=True)

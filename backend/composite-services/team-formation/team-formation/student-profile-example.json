@@ -1,0 +1,157 @@
+{
+    "code": 200,
+    "data": {
+        "section_id": "22222222-2222-2222-2222-222222222222",
+        "students": [
+            {
+                "profile": {
+                    "buddy_id": 4,
+                    "competences": [
+                        {
+                            "skill_id": "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                            "skill_level": 5
+                        },
+                        {
+                            "skill_id": "33333333-cccc-cccc-cccc-cccccccccccc",
+                            "skill_level": 4
+                        }
+                    ],
+                    "email": "jereme@smu.sg",
+                    "gender": "M",
+                    "gpa": 4.0,
+                    "mbti": "INTJ",
+                    "name": "Jereme",
+                    "reputation_score": 10,
+                    "school_id": 1,
+                    "topic_preferences": [
+                        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                        "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                    ],
+                    "year": 3
+                },
+                "student_id": 1
+            },
+            {
+                "profile": {
+                    "buddy_id": 4,
+                    "competences": [
+                        {
+                            "skill_id": "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                            "skill_level": 5
+                        },
+                        {
+                            "skill_id": "33333333-cccc-cccc-cccc-cccccccccccc",
+                            "skill_level": 3
+                        }
+                    ],
+                    "email": "Mary.Jane.2023@business.smu.edu.sg",
+                    "gender": "F",
+                    "gpa": 3.69,
+                    "mbti": "ENFP",
+                    "name": "Mary Jane",
+                    "reputation_score": 8,
+                    "school_id": 2,
+                    "topic_preferences": [
+                        "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                    ],
+                    "year": 3
+                },
+                "student_id": 2
+            },
+            {
+                "profile": {
+                    "buddy_id": 4,
+                    "competences": [
+                        {
+                            "skill_id": "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                            "skill_level": 3
+                        },
+                        {
+                            "skill_id": "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                            "skill_level": 2
+                        }
+                    ],
+                    "email": "John.Doe.2023@business.smu.edu.sg",
+                    "gender": "M",
+                    "gpa": 2.69,
+                    "mbti": "ISTP",
+                    "name": "John Doe",
+                    "reputation_score": 0,
+                    "school_id": 2,
+                    "topic_preferences": [
+                        "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                    ],
+                    "year": 3
+                },
+                "student_id": 3
+            },
+            {
+                "profile": {
+                    "buddy_id": null,
+                    "competences": [
+                        {
+                            "skill_id": "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                            "skill_level": 2
+                        },
+                        {
+                            "skill_id": "33333333-cccc-cccc-cccc-cccccccccccc",
+                            "skill_level": 4
+                        }
+                    ],
+                    "email": "Timmy.Turner.2023@business.smu.edu.sg",
+                    "gender": "M",
+                    "gpa": 2.69,
+                    "mbti": "ESFJ",
+                    "name": "Timmy Turner",
+                    "reputation_score": 0,
+                    "school_id": 3,
+                    "topic_preferences": [
+                        "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                        "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                    ],
+                    "year": 3
+                },
+                "student_id": 4
+            },
+            {
+                "profile": {
+                    "buddy_id": 4,
+                    "competences": [
+                        {
+                            "skill_id": "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                            "skill_level": 4
+                        },
+                        {
+                            "skill_id": "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                            "skill_level": 4
+                        },
+                        {
+                            "skill_id": "33333333-cccc-cccc-cccc-cccccccccccc",
+                            "skill_level": 3
+                        }
+                    ],
+                    "email": "kim.ju.2024@business.smu.edu.sg",
+                    "gender": "M",
+                    "gpa": 2.69,
+                    "mbti": "ENTJ",
+                    "name": "Kim Jun Un",
+                    "reputation_score": 3,
+                    "school_id": 1,
+                    "topic_preferences": [
+                        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                        "cccccccc-cccc-cccc-cccc-cccccccccccc"
+                    ],
+                    "year": 2
+                },
+                "student_id": 5
+            }
+        ]
+    }
+}
