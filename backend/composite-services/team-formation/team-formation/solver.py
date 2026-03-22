@@ -20,6 +20,9 @@ from objective_builder import (
 )
 from randomness_engine import build_randomness_objective
 
+SOLVER_SUCCESS_STATUSES = {"OPTIMAL", "FEASIBLE"}
+SOLVER_FAILURE_STATUSES = {"INVALID_INPUT", "INFEASIBLE", "MODEL_INVALID", "UNKNOWN"}
+
 
 def _status_name(status: int) -> str:
     mapping = {
@@ -58,7 +61,7 @@ def _invalid_result(
                 "gpa": None,
                 "mbti": None,
                 "reputation": None,
-                "school": None,
+                "school": None,  
                 "skills": None,
                 "topics": None,
                 "year": None,
@@ -538,6 +541,32 @@ def solve_teams(
             },
         },
     }
+
+
+def is_solver_success_status(status: Any) -> bool:
+    return str(status).upper() in SOLVER_SUCCESS_STATUSES
+
+
+def is_solver_failure_status(status: Any) -> bool:
+    return str(status).upper() in SOLVER_FAILURE_STATUSES
+
+
+def filter_solver_result_for_api(
+    solver_result: Dict[str, Any],
+    debug: bool = False,
+) -> Dict[str, Any]:
+    section_id = solver_result.get("section_id")
+    teams = solver_result.get("teams")
+    if not isinstance(teams, list):
+        teams = []
+
+    response_data: Dict[str, Any] = {"section_id": section_id, "teams": teams}
+    if not debug:
+        return response_data
+
+    for key in ("status", "num_groups", "objective", "solver_stats", "diagnostics"):
+        response_data[key] = solver_result.get(key)
+    return response_data
 
 
 def _load_json_file(path: str) -> Dict[str, Any]:

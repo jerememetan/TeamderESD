@@ -22,7 +22,7 @@ OUTSYSTEMS_BASE_URL = os.getenv(
 ).rstrip("/")
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://localhost:3005/enrollment")
 STUDENT_BULK_URL = os.getenv(
-    "STUDENT_BULK_URL", f"{OUTSYSTEMS_BASE_URL}/student/"
+    "STUDENT_BULK_URL", f"{OUTSYSTEMS_BASE_URL}/students/bulk-info"
 )
 FORM_DATA_URL = os.getenv("FORM_DATA_URL", "http://localhost:3010/form-data")
 REPUTATION_URL = os.getenv("REPUTATION_URL", "http://localhost:3006/reputation")
@@ -60,6 +60,8 @@ def normalize_profile(record):
     student_id = record.get("student_id")
     if student_id is None:
         student_id = record.get("studentId")
+    if student_id is None:
+        student_id = record.get("id")
 
     if student_id is None:
         logger.warning("profile record missing student_id keys", extra={"record": record})
@@ -74,7 +76,7 @@ def normalize_profile(record):
     return student_id, {
         "name": record.get("name"),
         "email": record.get("email"),
-        "school": record.get("school"),
+        "school_id": record.get("school_id"),
         "year": record.get("year"),
         "gpa": record.get("gpa"),
         "gender": record.get("gender"),
@@ -94,7 +96,7 @@ def parse_bulk_records(payload):
 
 
 def load_profiles(student_ids):
-    response = http_get(STUDENT_BULK_URL)
+    response = http_post(STUDENT_BULK_URL, payload={"StudentIDList": student_ids})
     payload = safe_json(response)
 
     if response.status_code < 200 or response.status_code >= 300:
@@ -230,7 +232,7 @@ def compose_profile(base_profile, details):
     return {
         "name": base_profile.get("name") if isinstance(base_profile, dict) else None,
         "email": base_profile.get("email") if isinstance(base_profile, dict) else None,
-        "school": base_profile.get("school") if isinstance(base_profile, dict) else None,
+        "school_id": base_profile.get("school_id") if isinstance(base_profile, dict) else None,
         "year": base_profile.get("year") if isinstance(base_profile, dict) else None,
         "gpa": base_profile.get("gpa") if isinstance(base_profile, dict) else None,
         "gender": base_profile.get("gender") if isinstance(base_profile, dict) else None,

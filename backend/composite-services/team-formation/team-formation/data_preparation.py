@@ -55,7 +55,6 @@ def prepare_data(
     parsed_students: list[StudentRecord] = []
     student_id_set = set()
     student_skill_ids = set()
-    student_topic_ids = set()
 
     for row in students_payload:
         if not isinstance(row, dict):
@@ -89,8 +88,6 @@ def prepare_data(
                 student_skill_ids.add(skill_id)
 
         topic_ranks = collect_topic_rank_map(profile.get("topic_preferences"))
-        student_topic_ids.update(topic_ranks.keys())
-
         parsed_students.append(
             StudentRecord(
                 student_id=student_id,
@@ -99,7 +96,7 @@ def prepare_data(
                 gpa=safe_float(profile.get("gpa")),
                 mbti=normalize_mbti(profile.get("mbti")),
                 reputation=safe_float(profile.get("reputation_score")),
-                school=profile.get("school") if isinstance(profile.get("school"), str) else None,
+                school_id=safe_int(profile.get("school_id")),
                 year=safe_int(profile.get("year")),
                 competences=competences,
                 topic_ranks=topic_ranks,
@@ -162,11 +159,6 @@ def prepare_data(
         topic_id = entry.get("topic_id")
         if not isinstance(topic_id, str):
             diagnostics["warnings"].append("Skipped topic without topic_id.")
-            continue
-        if topic_id not in student_topic_ids:
-            diagnostics["warnings"].append(
-                f"Skipped unknown topic_id (not in student profiles): {topic_id}"
-            )
             continue
         filtered_topics.append({"topic_id": topic_id, "topic_label": entry.get("topic_label")})
 

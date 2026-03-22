@@ -180,3 +180,173 @@ GET http://localhost:4001/student-profile?section_id=11111111-1111-1111-1111-111
 - Profile lookup is done directly against OutSystems endpoint (`GET {OUTSYSTEMS_BASE_URL}/student/`) and filtered by enrolled IDs.
 - For non-fatal downstream failures, the request still returns `200` and only the affected profile field(s) are `null`.
 - Response excludes `enrollment` and keeps only `student_id` at the top level; aggregated fields are nested inside `profile`.
+
+---
+
+# Team Formation Composite Service
+
+This service orchestrates team generation and persistence by:
+
+1. Fetching student data from `student-profile` composite microservice.
+2. Fetching criteria/topics/skills from `formation-config` composite microservice.
+3. Solving team assignment with OR-Tools CP-SAT.
+4. Posting generated teams into the team atomic microservice (`POST /team`).
+5. Returning the response from the team atomic microservice.
+
+## Base URL
+
+- Default: `/team-formation` (port: 4002)
+- Container service name: `team-formation-service`
+
+## Endpoints
+
+### GET /health
+
+Simple health endpoint.
+
+#### Success Response (200)
+```json
+{
+  "status": "ok",
+  "service": "team-formation-service"
+}
+```
+
+### GET /team-formation
+
+Generates teams for a section, persists them to team atomic service, and returns the team service response.
+
+### Query Parameters
+- `section_id` (required): UUID for the section
+
+### Headers
+- `X-Debug-Mode` (optional): Truthy values `true|1|yes|on`. This affects failure payload only (`422`) by including solver metadata in `data`.
+
+### Example
+```http
+GET http://localhost:4002/team-formation?section_id=11111111-1111-1111-1111-111111111111
+```
+
+### Success Response (typically 201)
+
+The service returns the body/status from `POST /team` of the team atomic service.
+
+```json
+{
+  "code": 201,
+  "data": {
+    "section_id": "11111111-1111-1111-1111-111111111111",
+    "teams": [
+      {
+        "team_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "team_number": 1,
+        "students": [
+          { "student_id": 101 },
+          { "student_id": 102 },
+          { "student_id": 103 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Validation Error (400)
+```json
+{
+  "code": 400,
+  "message": "section_id is required"
+}
+```
+
+### Downstream Error (502)
+```json
+{
+  "code": 502,
+  "message": "failed to fetch student profile"
+}
+```
+
+### Persistence Error (502)
+```json
+{
+  "code": 502,
+  "message": "failed to persist teams"
+}
+```
+
+### Solver Failure (422)
+```json
+{
+  "code": 422,
+  "message": "team formation could not be generated"
+}
+```
+
+### Solver Failure with Debug Header (422)
+```json
+{
+  "code": 422,
+  "message": "team formation could not be generated",
+  "data": {
+    "section_id": "11111111-1111-1111-1111-111111111111",
+    "teams": [],
+    "status": "INFEASIBLE",
+    "num_groups": 5,
+    "objective": {},
+    "solver_stats": {},
+    "diagnostics": {}
+  }
+}
+```
+
+## Internal REST Calls
+
+### Inputs consumed by team-formation composite
+- `GET {STUDENT_PROFILE_URL}?section_id=<uuid>`
+- `GET {FORMATION_CONFIG_URL}?section_id=<uuid>`
+
+### Output produced by team-formation composite
+- `POST {TEAM_URL}` with body:
+```json
+{
+  "section_id": "11111111-1111-1111-1111-111111111111",
+  "teams": [
+    {
+      "team_id": "generated-uuid",
+      "students": [
+        { "student_id": 101 },
+        { "student_id": 102 }
+      ]
+    }
+  ]
+}
+```
+
+## Environment Variables
+
+- `PORT` (default: `4002`)
+- `REQUEST_TIMEOUT` (default: `8`)
+- `STUDENT_PROFILE_URL` (default: `http://localhost:4001/student-profile`)
+- `FORMATION_CONFIG_URL` (default: `http://localhost:4000/formation-config`)
+- `TEAM_URL` (default: `http://localhost:3007/team`)
+- `SOLVER_TIME_LIMIT_S` (default: `10`)
+- `LOG_LEVEL` (default: `INFO`)
+
+## Team-Formation Service Structure
+
+```text
+team-formation/
+  Dockerfile
+  requirements.txt
+  team-formation/
+    app.py                  # Flask routes + orchestration + persistence call to /team
+    solver.py               # two-phase CP-SAT solve + response shaping
+    config_interpreter.py   # criteria parsing, scaling, solver runtime parameters
+    data_preparation.py     # payload validation/normalization and feature extraction
+    objective_builder.py    # deterministic objective construction per criterion
+    randomness_engine.py    # assignment jitter objective for controlled randomness
+    solver_models.py        # dataclasses for typed solver inputs/prepared data
+    test_app.py
+    test-cases/
+```

@@ -22,7 +22,7 @@
                     "mbti": "INTJ",
                     "name": "Jereme",
                     "reputation_score": 10,
-                    "school": "SCIS",
+                    "school_id": 1,
                     "topic_preferences": [
                         "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
                         "cccccccc-cccc-cccc-cccc-cccccccccccc",
@@ -51,7 +51,7 @@
                     "mbti": "ENFP",
                     "name": "Mary Jane",
                     "reputation_score": 8,
-                    "school": "Business",
+                    "school_id": 2,
                     "topic_preferences": [
                         "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
                         "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -80,7 +80,7 @@
                     "mbti": "ISTP",
                     "name": "John Doe",
                     "reputation_score": 0,
-                    "school": "Business",
+                    "school_id": 2,
                     "topic_preferences": [
                         "cccccccc-cccc-cccc-cccc-cccccccccccc",
                         "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -109,7 +109,7 @@
                     "mbti": "ESFJ",
                     "name": "Timmy Turner",
                     "reputation_score": 0,
-                    "school": "Law",
+                    "school_id": 3,
                     "topic_preferences": [
                         "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
                         "cccccccc-cccc-cccc-cccc-cccccccccccc",
@@ -142,7 +142,7 @@
                     "mbti": "ENTJ",
                     "name": "Kim Jun Un",
                     "reputation_score": 3,
-                    "school": "SCIS",
+                    "school_id": 1,
                     "topic_preferences": [
                         "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
                         "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",

@@ -610,7 +610,7 @@ def build_deterministic_objective(
         model=model,
         assignment=assignment,
         team_sizes=team_sizes,
-        labels=[student.school for student in students],
+        labels=[student.school_id for student in students],
         num_groups=num_groups,
         team_size_upper=team_size_upper,
         criterion_name="school",

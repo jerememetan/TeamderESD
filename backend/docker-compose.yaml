@@ -134,3 +134,19 @@ services:
       - student-topic-preference-service
       - reputation-service
       - student-competence-service
+
+  team-formation-service:
+    build:
+      context: ./composite-services/team-formation
+    container_name: teamder-team-formation-service
+    ports:
+      - "4002:4002"
+    environment:
+      STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
+      FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
+      TEAM_URL: "http://team-service:3007/team"
+      REQUEST_TIMEOUT: 8
+      PORT: 4002
+    depends_on:
+      - student-profile-service
+      - formation-config-service

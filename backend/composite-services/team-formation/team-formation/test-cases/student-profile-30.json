@@ -22,12 +22,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  3,
+                                                      "reputation_score":  30,
                                                       "year":  1,
                                                       "name":  "Student 1",
                                                       "gpa":  2.7,
                                                       "gender":  "M",
-                                                      "school":  "SCIS",
+                                                      "school_id":  1,
                                                       "email":  "student1@smu.edu.sg"
                                                   },
                                       "student_id":  1
@@ -51,12 +51,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  6,
+                                                      "reputation_score":  60,
                                                       "year":  2,
                                                       "name":  "Student 2",
                                                       "gpa":  3.4,
                                                       "gender":  "F",
-                                                      "school":  "Business",
+                                                      "school_id":  2,
                                                       "email":  "student2@smu.edu.sg"
                                                   },
                                       "student_id":  2
@@ -84,12 +84,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  9,
+                                                      "reputation_score":  90,
                                                       "year":  3,
                                                       "name":  "Student 3",
                                                       "gpa":  4.1,
                                                       "gender":  "M",
-                                                      "school":  "Law",
+                                                      "school_id":  3,
                                                       "email":  "student3@smu.edu.sg"
                                                   },
                                       "student_id":  3
@@ -113,12 +113,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  1,
+                                                      "reputation_score":  10,
                                                       "year":  4,
                                                       "name":  "Student 4",
                                                       "gpa":  2.4,
                                                       "gender":  "F",
-                                                      "school":  "SOSS",
+                                                      "school_id":  4,
                                                       "email":  "student4@smu.edu.sg"
                                                   },
                                       "student_id":  4
@@ -142,12 +142,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  4,
+                                                      "reputation_score":  40,
                                                       "year":  1,
                                                       "name":  "Student 5",
                                                       "gpa":  3.1,
                                                       "gender":  "M",
-                                                      "school":  "SCIS",
+                                                      "school_id":  1,
                                                       "email":  "student5@smu.edu.sg"
                                                   },
                                       "student_id":  5
@@ -175,12 +175,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  7,
+                                                      "reputation_score":  70,
                                                       "year":  2,
                                                       "name":  "Student 6",
                                                       "gpa":  3.8,
                                                       "gender":  "F",
-                                                      "school":  "Business",
+                                                      "school_id":  2,
                                                       "email":  "student6@smu.edu.sg"
                                                   },
                                       "student_id":  6
@@ -204,12 +204,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  10,
+                                                      "reputation_score":  100,
                                                       "year":  3,
                                                       "name":  "Student 7",
                                                       "gpa":  2.1,
                                                       "gender":  "M",
-                                                      "school":  "Law",
+                                                      "school_id":  3,
                                                       "email":  "student7@smu.edu.sg"
                                                   },
                                       "student_id":  7
@@ -233,12 +233,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  2,
+                                                      "reputation_score":  20,
                                                       "year":  4,
                                                       "name":  "Student 8",
                                                       "gpa":  2.8,
                                                       "gender":  "F",
-                                                      "school":  "SOSS",
+                                                      "school_id":  4,
                                                       "email":  "student8@smu.edu.sg"
                                                   },
                                       "student_id":  8
@@ -266,12 +266,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  5,
+                                                      "reputation_score":  50,
                                                       "year":  1,
                                                       "name":  "Student 9",
                                                       "gpa":  3.5,
                                                       "gender":  "M",
-                                                      "school":  "SCIS",
+                                                      "school_id":  1,
                                                       "email":  "student9@smu.edu.sg"
                                                   },
                                       "student_id":  9
@@ -295,12 +295,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  8,
+                                                      "reputation_score":  80,
                                                       "year":  2,
                                                       "name":  "Student 10",
                                                       "gpa":  4.2,
                                                       "gender":  "F",
-                                                      "school":  "Business",
+                                                      "school_id":  2,
                                                       "email":  "student10@smu.edu.sg"
                                                   },
                                       "student_id":  10
@@ -329,7 +329,7 @@
                                                       "name":  "Student 11",
                                                       "gpa":  2.5,
                                                       "gender":  "M",
-                                                      "school":  "Law",
+                                                      "school_id":  3,
                                                       "email":  "student11@smu.edu.sg"
                                                   },
                                       "student_id":  11
@@ -357,12 +357,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  3,
+                                                      "reputation_score":  30,
                                                       "year":  4,
                                                       "name":  "Student 12",
                                                       "gpa":  3.2,
                                                       "gender":  "F",
-                                                      "school":  "SOSS",
+                                                      "school_id":  4,
                                                       "email":  "student12@smu.edu.sg"
                                                   },
                                       "student_id":  12
@@ -386,12 +386,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  6,
+                                                      "reputation_score":  60,
                                                       "year":  1,
                                                       "name":  "Student 13",
                                                       "gpa":  3.9,
                                                       "gender":  "M",
-                                                      "school":  "SCIS",
+                                                      "school_id":  2,
                                                       "email":  "student13@smu.edu.sg"
                                                   },
                                       "student_id":  13
@@ -415,12 +415,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  9,
+                                                      "reputation_score":  90,
                                                       "year":  2,
                                                       "name":  "Student 14",
                                                       "gpa":  2.2,
                                                       "gender":  "F",
-                                                      "school":  "Business",
+                                                      "school_id":  1,
                                                       "email":  "student14@smu.edu.sg"
                                                   },
                                       "student_id":  14
@@ -448,12 +448,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  1,
+                                                      "reputation_score":  10,
                                                       "year":  3,
                                                       "name":  "Student 15",
                                                       "gpa":  2.9,
                                                       "gender":  "M",
-                                                      "school":  "Law",
+                                                      "school_id":  5,
                                                       "email":  "student15@smu.edu.sg"
                                                   },
                                       "student_id":  15
@@ -477,12 +477,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  4,
+                                                      "reputation_score":  40,
                                                       "year":  4,
                                                       "name":  "Student 16",
                                                       "gpa":  3.6,
                                                       "gender":  "F",
-                                                      "school":  "SOSS",
+                                                      "school_id":  5,
                                                       "email":  "student16@smu.edu.sg"
                                                   },
                                       "student_id":  16
@@ -506,12 +506,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  7,
+                                                      "reputation_score":  70,
                                                       "year":  1,
                                                       "name":  "Student 17",
                                                       "gpa":  4.3,
                                                       "gender":  "M",
-                                                      "school":  "SCIS",
+                                                      "school_id":  3,
                                                       "email":  "student17@smu.edu.sg"
                                                   },
                                       "student_id":  17
@@ -539,12 +539,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  10,
+                                                      "reputation_score":  100,
                                                       "year":  2,
                                                       "name":  "Student 18",
                                                       "gpa":  2.6,
                                                       "gender":  "F",
-                                                      "school":  "Business",
+                                                      "school_id":  1,
                                                       "email":  "student18@smu.edu.sg"
                                                   },
                                       "student_id":  18
@@ -568,12 +568,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  2,
+                                                      "reputation_score":  20,
                                                       "year":  3,
                                                       "name":  "Student 19",
                                                       "gpa":  3.3,
                                                       "gender":  "M",
-                                                      "school":  "Law",
+                                                      "school_id":  3,
                                                       "email":  "student19@smu.edu.sg"
                                                   },
                                       "student_id":  19
@@ -597,12 +597,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  5,
+                                                      "reputation_score":  50,
                                                       "year":  4,
                                                       "name":  "Student 20",
                                                       "gpa":  4,
                                                       "gender":  "F",
-                                                      "school":  "SOSS",
+                                                      "school_id":  6,
                                                       "email":  "student20@smu.edu.sg"
                                                   },
                                       "student_id":  20
@@ -630,12 +630,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  8,
+                                                      "reputation_score":  80,
                                                       "year":  1,
                                                       "name":  "Student 21",
                                                       "gpa":  2.3,
                                                       "gender":  "M",
-                                                      "school":  "SCIS",
+                                                      "school_id":  2,
                                                       "email":  "student21@smu.edu.sg"
                                                   },
                                       "student_id":  21
@@ -664,7 +664,7 @@
                                                       "name":  "Student 22",
                                                       "gpa":  3,
                                                       "gender":  "F",
-                                                      "school":  "Business",
+                                                      "school_id":  1,
                                                       "email":  "student22@smu.edu.sg"
                                                   },
                                       "student_id":  22
@@ -688,12 +688,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  3,
+                                                      "reputation_score":  30,
                                                       "year":  3,
                                                       "name":  "Student 23",
                                                       "gpa":  3.7,
                                                       "gender":  "M",
-                                                      "school":  "Law",
+                                                      "school_id":  5,
                                                       "email":  "student23@smu.edu.sg"
                                                   },
                                       "student_id":  23
@@ -721,12 +721,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  6,
+                                                      "reputation_score":  60,
                                                       "year":  4,
                                                       "name":  "Student 24",
                                                       "gpa":  2,
                                                       "gender":  "F",
-                                                      "school":  "SOSS",
+                                                      "school_id":  4,
                                                       "email":  "student24@smu.edu.sg"
                                                   },
                                       "student_id":  24
@@ -750,12 +750,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  9,
+                                                      "reputation_score":  90,
                                                       "year":  1,
                                                       "name":  "Student 25",
                                                       "gpa":  2.7,
                                                       "gender":  "M",
-                                                      "school":  "SCIS",
+                                                      "schol_id":  2,
                                                       "email":  "student25@smu.edu.sg"
                                                   },
                                       "student_id":  25
@@ -779,12 +779,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  1,
+                                                      "reputation_score":  10,
                                                       "year":  2,
                                                       "name":  "Student 26",
                                                       "gpa":  3.4,
                                                       "gender":  "F",
-                                                      "school":  "Business",
+                                                      "school_id":  1,
                                                       "email":  "student26@smu.edu.sg"
                                                   },
                                       "student_id":  26
@@ -812,12 +812,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  4,
+                                                      "reputation_score":  40,
                                                       "year":  3,
                                                       "name":  "Student 27",
                                                       "gpa":  4.1,
                                                       "gender":  "M",
-                                                      "school":  "Law",
+                                                      "school_id":  1,
                                                       "email":  "student27@smu.edu.sg"
                                                   },
                                       "student_id":  27
@@ -841,12 +841,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  7,
+                                                      "reputation_score":  70,
                                                       "year":  4,
                                                       "name":  "Student 28",
                                                       "gpa":  2.4,
                                                       "gender":  "F",
-                                                      "school":  "SOSS",
+                                                      "school_id":  3,
                                                       "email":  "student28@smu.edu.sg"
                                                   },
                                       "student_id":  28
@@ -870,12 +870,12 @@
                                                                               "skill_id":  "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  10,
+                                                      "reputation_score":  100,
                                                       "year":  1,
                                                       "name":  "Student 29",
                                                       "gpa":  3.1,
                                                       "gender":  "M",
-                                                      "school":  "SCIS",
+                                                      "school_id":  2,
                                                       "email":  "student29@smu.edu.sg"
                                                   },
                                       "student_id":  29
@@ -903,12 +903,12 @@
                                                                               "skill_id":  "33333333-cccc-cccc-cccc-cccccccccccc"
                                                                           }
                                                                       ],
-                                                      "reputation_score":  2,
+                                                      "reputation_score":  20,
                                                       "year":  2,
                                                       "name":  "Student 30",
                                                       "gpa":  3.8,
                                                       "gender":  "F",
-                                                      "school":  "Business",
+                                                      "school_id":  1,
                                                       "email":  "student30@smu.edu.sg"
                                                   },
                                       "student_id":  30

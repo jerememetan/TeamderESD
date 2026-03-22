@@ -14,7 +14,7 @@ class StudentRecord:
     gpa: Optional[float]
     mbti: Optional[str]
     reputation: Optional[float]
-    school: Optional[str]
+    school_id: Optional[int]
     year: Optional[int]
     competences: Dict[str, float]
     topic_ranks: Dict[str, int]
