@@ -98,6 +98,46 @@ services:
     ports:
       - "3010:3010"
 
+  swap-request-service:
+    build:
+      context: ./atomic-services/swap-request
+    container_name: teamder-swap-request-service
+    env_file:
+      - ./scenario3.env
+    environment:
+      PORT: 3011
+    ports:
+      - "3011:3011"
+    depends_on:
+      - rabbitmq
+
+  swap-constraints-service:
+    build:
+      context: ./atomic-services/swap-constraints
+    container_name: teamder-swap-constraints-service
+    environment:
+      PORT: 3012
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3012:3012"
+
+  team-swap-service:
+    build:
+      context: ./atomic-services/team-swap
+    container_name: teamder-team-swap-service
+    environment:
+      PORT: 3013
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3013:3013"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: teamder-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
   # Composite
 
   formation-config-service:

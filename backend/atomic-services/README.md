@@ -361,3 +361,115 @@ This microservice manages student form data (buddy, MBTI, etc.) for a section. I
       "mbti": "INTJ"
     }
     ```
+
+---
+
+## Swap Constraints Microservice
+
+This microservice stores swap-appeal hard constraints per class/course/module scope.
+
+### Endpoints
+
+- **GET /swap-constraints**
+  - Query params: `course_id` (optional), `module_id` (optional), `class_id` (optional)
+  - Returns: Swap constraints filtered by the given scope values
+  - Example:
+    ```http
+    GET http://localhost:3012/swap-constraints?course_id={uuid}&module_id={uuid}&class_id={uuid}
+    ```
+
+- **GET /swap-constraints/{constraint_id}**
+  - Returns: One swap constraints record by its ID
+  - Example:
+    ```http
+    GET http://localhost:3012/swap-constraints/{constraint_id}
+    ```
+
+- **POST /swap-constraints**
+  - Body: JSON with `course_id`, `module_id`, `class_id`, and optional constraint values
+  - Example:
+    ```json
+    {
+      "course_id": "11111111-1111-1111-1111-111111111111",
+      "module_id": "22222222-2222-2222-2222-222222222222",
+      "class_id": "33333333-3333-3333-3333-333333333333",
+      "min_team_avg_gpa": 3.0,
+      "require_year_diversity": true,
+      "max_skill_imbalance": 1.0,
+      "swap_window_days": 2
+    }
+    ```
+
+### Uniqueness Rule
+
+Only one row is allowed per `course_id + module_id + class_id` combination.
+If a duplicate combination is posted, the API returns `409 Conflict`.
+
+---
+
+## Team Swap Microservice
+
+This microservice optimizes team swap selections using Google OR-Tools constraint solver.
+It receives current teams, approved swap requests, swap constraints, and student attributes,
+then finds the optimal subset of swaps that satisfy constraints while maximizing successful executions.
+
+### Endpoint
+
+- **POST /team-swap/optimize**
+  - Body: Orchestrator payload with teams, approved requests, constraints, and student attributes
+  - Returns: New team rosters and per-request execution status
+  - Example request (basic):
+    ```json
+    {
+      "section_id": "11111111-1111-1111-1111-111111111111",
+      "course_id": "22222222-2222-2222-2222-222222222222",
+      "module_id": "33333333-3333-3333-3333-333333333333",
+      "class_id": "44444444-4444-4444-4444-444444444444",
+      "teams": [
+        {
+          "team_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          "team_number": 1,
+          "section_id": "11111111-1111-1111-1111-111111111111",
+          "students": [101, 102]
+        }
+      ],
+      "students": [
+        {
+          "student_id": 101,
+          "year": 2,
+          "gender": "M",
+          "gpa": 3.5,
+          "skills": {"skill-1": 0.8}
+        },
+        {
+          "student_id": 102,
+          "year": 1,
+          "gender": "F",
+          "gpa": 3.2,
+          "skills": {"skill-1": 0.5}
+        }
+      ],
+      "approved_swap_requests": [
+        {
+          "swap_request_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "student_id": 101,
+          "current_team": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+        }
+      ],
+      "swap_constraints": {
+        "min_team_avg_gpa": 3.0,
+        "require_year_diversity": true,
+        "max_skill_imbalance": 1.5,
+        "swap_window_days": 2
+      }
+    }
+    ```
+  - Response includes `new_team_roster`, `per_request_result`, selected swap pairs, and solver metrics
+
+### Algorithm Details
+
+- Uses CP-SAT solver from Google OR-Tools for optimal swap selection
+- Candidate generation: evaluates all pairwise swaps between students from different teams
+- Feasibility check: year diversity, gender balance, skill imbalance, and minimum team GPA
+- Optimization: maximizes number of successful swaps subject to one-student-per-swap and one-swap-per-team-pair constraints
+- Fallback: requests not selected are marked FAILED with reason
