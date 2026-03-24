@@ -40,3 +40,37 @@ Replace the mock-driven instructor group form flow with the first real backend i
 ### Next likely backend slice
 - `student-profile` for real group roster data
 - then `team-formation` for real generated teams per group
+
+## 2026-03-24 :: Step 2 :: Instructor roster views -> student-profile
+
+### Goal
+Use the backend student-profile service to provide live section roster data in the instructor experience.
+
+### Frontend scope
+- Page: `frontend/src/pages/instructor/Teams.jsx`
+- Page: `frontend/src/pages/instructor/Analytics.jsx`
+- Service layer: `frontend/src/services/studentProfileService.js`
+- Shared ID bridge reused from `frontend/src/data/backendIds.js`
+
+### Backend services touched
+- Composite: `student-profile`
+- Downstream services behind it remain owned by the backend compose graph
+
+### Mapping decisions
+- Frontend `groupId` maps to backend `section_id`
+- The instructor pages now fetch roster data per section using `GET /student-profile?section_id=...`
+- Team assignments remain mock-backed for now because the current frontend team member IDs do not yet match backend `student_id` values
+
+### UI behavior
+- Instructor Teams shows a live section roster panel from student-profile
+- Instructor Analytics uses live student-profile counts when available and falls back to frontend totals otherwise
+- Both pages surface backend loading/failure state explicitly
+
+### Current limitations
+- The backend roster and the mock team assignments are displayed side-by-side, not merged yet
+- A real merge should happen only after the `team`/`team-formation` integration establishes shared student identity across frontend and backend
+- Student-facing pages still use mocked current-student context
+
+### Next likely backend slice
+- `team-formation`
+- followed by `team` persistence and retrieval
