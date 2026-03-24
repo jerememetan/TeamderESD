@@ -216,26 +216,26 @@ export const mockForms: Record<string, TeamForm> = {
 };
 
 export const mockStudents: Student[] = [
-  { id: 's1', name: 'Alice Johnson', email: 'alice@university.edu', studentId: 'STU001' },
-  { id: 's2', name: 'Bob Smith', email: 'bob@university.edu', studentId: 'STU002' },
-  { id: 's3', name: 'Carol Davis', email: 'carol@university.edu', studentId: 'STU003' },
-  { id: 's4', name: 'David Wilson', email: 'david@university.edu', studentId: 'STU004' },
-  { id: 's5', name: 'Emma Brown', email: 'emma@university.edu', studentId: 'STU005' },
-  { id: 's6', name: 'Frank Miller', email: 'frank@university.edu', studentId: 'STU006' },
-  { id: 's7', name: 'Grace Lee', email: 'grace@university.edu', studentId: 'STU007' },
-  { id: 's8', name: 'Henry Chen', email: 'henry@university.edu', studentId: 'STU008' },
-  { id: 's9', name: 'Iris Wang', email: 'iris@university.edu', studentId: 'STU009' },
-  { id: 's10', name: 'Jack Taylor', email: 'jack@university.edu', studentId: 'STU010' },
-  { id: 's11', name: 'Kelly Martinez', email: 'kelly@university.edu', studentId: 'STU011' },
-  { id: 's12', name: 'Leo Anderson', email: 'leo@university.edu', studentId: 'STU012' },
-  { id: 's13', name: 'Maya Patel', email: 'maya@university.edu', studentId: 'STU013' },
-  { id: 's14', name: 'Nathan Kim', email: 'nathan@university.edu', studentId: 'STU014' },
-  { id: 's15', name: 'Olivia Garcia', email: 'olivia@university.edu', studentId: 'STU015' },
-  { id: 's16', name: 'Paul Young', email: 'paul@university.edu', studentId: 'STU016' },
-  { id: 's17', name: 'Queenie Lim', email: 'queenie@university.edu', studentId: 'STU017' },
-  { id: 's18', name: 'Ryan Ho', email: 'ryan@university.edu', studentId: 'STU018' },
-  { id: 's19', name: 'Sophia Ng', email: 'sophia@university.edu', studentId: 'STU019' },
-  { id: 's20', name: 'Theo Tan', email: 'theo@university.edu', studentId: 'STU020' },
+  { id: 's1', name: 'Jereme', email: 'jereme@smu.sg', studentId: 'ID-1' },
+  { id: 's2', name: 'Mary Jane', email: 'Mary.Jane.2023@business.smu.edu.sg', studentId: 'ID-2' },
+  { id: 's3', name: 'John Doe', email: 'John.Doe.2023@business.smu.edu.sg', studentId: 'ID-3' },
+  { id: 's4', name: 'Timmy Turner', email: 'Timmy.Turner.2023@business.smu.edu.sg', studentId: 'ID-4' },
+  { id: 's5', name: 'Kim Jun Un', email: 'kim.ju.2024@business.smu.edu.sg', studentId: 'ID-5' },
+  { id: 's6', name: 'Student 6', email: 'student6@smu.edu.sg', studentId: 'ID-14' },
+  { id: 's7', name: 'Student 7', email: 'student7@smu.edu.sg', studentId: 'ID-15' },
+  { id: 's8', name: 'Student 8', email: 'student8@smu.edu.sg', studentId: 'ID-16' },
+  { id: 's9', name: 'Student 9', email: 'student9@smu.edu.sg', studentId: 'ID-17' },
+  { id: 's10', name: 'Student 10', email: 'student10@smu.edu.sg', studentId: 'ID-18' },
+  { id: 's11', name: 'Student 11', email: 'student11@smu.edu.sg', studentId: 'ID-19' },
+  { id: 's12', name: 'Student 4', email: 'student4@smu.edu.sg', studentId: 'ID-12' },
+  { id: 's13', name: 'Student 13', email: 'student13@smu.edu.sg', studentId: 'ID-21' },
+  { id: 's14', name: 'Student 14', email: 'student14@smu.edu.sg', studentId: 'ID-22' },
+  { id: 's15', name: 'Student 15', email: 'student15@smu.edu.sg', studentId: 'ID-23' },
+  { id: 's16', name: 'Student 16', email: 'student16@smu.edu.sg', studentId: 'ID-24' },
+  { id: 's17', name: 'Student 17', email: 'student17@smu.edu.sg', studentId: 'ID-25' },
+  { id: 's18', name: 'Student 18', email: 'student18@smu.edu.sg', studentId: 'ID-26' },
+  { id: 's19', name: 'Student 19', email: 'student19@smu.edu.sg', studentId: 'ID-27' },
+  { id: 's20', name: 'Student 20', email: 'student20@smu.edu.sg', studentId: 'ID-28' },
 ];
 
 export const mockStudentStrengths: Record<string, string[]> = {
@@ -371,9 +371,9 @@ export const mockSwapRequests: SwapRequest[] = [
 
 export const currentStudent: Student = {
   id: 's1',
-  name: 'Alice Johnson',
-  email: 'alice@university.edu',
-  studentId: 'STU001',
+  name: 'Student 4',
+  email: 'student4@smu.edu.sg',
+  studentId: 'ID-12',
 };
 
 export const currentStudentTeams = mockTeams.filter((team) =>
@@ -381,3 +381,5 @@ export const currentStudentTeams = mockTeams.filter((team) =>
 );
 
 export const currentStudentTeam = currentStudentTeams[0];
+
+

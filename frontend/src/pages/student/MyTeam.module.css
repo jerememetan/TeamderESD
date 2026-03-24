@@ -10,7 +10,9 @@
 .modalCode,
 .fieldLabel,
 .youTag,
-.assignmentMeta {
+.assignmentMeta,
+.sourceNote,
+.feedbackAlert {
   font-family: var(--td-font-mono);
   text-transform: uppercase;
 }
@@ -40,6 +42,13 @@
   align-items: flex-start;
 }
 
+.heroTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  justify-content: flex-end;
+}
+
 .kicker,
 .modalCode {
   margin: 0;
@@ -57,10 +66,24 @@
 }
 
 .subtitle,
-.mailLine {
+.mailLine,
+.sourceNote {
   margin: 0;
   color: var(--td-color-text-muted);
   line-height: 1.7;
+}
+
+.feedbackAlert {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--td-space-xs);
+  padding: 12px 14px;
+  color: #9a3c00;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  border: 1px solid rgba(255, 107, 0, 0.35);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(255, 107, 0, 0.08);
 }
 
 .statsGrid {
@@ -115,7 +138,8 @@
 .memberMeta,
 .modalCode,
 .fieldLabel,
-.youTag {
+.youTag,
+.sourceNote {
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   color: var(--td-color-text-muted);
@@ -331,7 +355,8 @@
   .modalActions,
   .memberCard,
   .teamHeader,
-  .teamActions {
+  .teamActions,
+  .heroTags {
     flex-direction: column;
     align-items: flex-start;
   }

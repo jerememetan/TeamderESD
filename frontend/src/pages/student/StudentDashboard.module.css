@@ -15,7 +15,9 @@
 .actionCode,
 .metaLine,
 .assignmentTitle,
-.assignmentMeta {
+.assignmentMeta,
+.sourceNote,
+.feedbackAlert {
   margin: 0;
   font-family: var(--td-font-mono);
   text-transform: uppercase;
@@ -37,10 +39,24 @@
 
 .subtitle,
 .actionText,
-.historyText {
+.historyText,
+.sourceNote {
   margin: 0;
   color: var(--td-color-text-muted);
   line-height: 1.6;
+}
+
+.feedbackAlert {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--td-space-xs);
+  padding: 12px 14px;
+  color: #9a3c00;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  border: 1px solid rgba(255, 107, 0, 0.35);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(255, 107, 0, 0.08);
 }
 
 .statsGrid,
@@ -97,7 +113,8 @@
 
 .actionCode,
 .metaLine,
-.assignmentMeta {
+.assignmentMeta,
+.sourceNote {
   color: var(--td-color-text-muted);
   font-size: 0.72rem;
   letter-spacing: 0.12em;

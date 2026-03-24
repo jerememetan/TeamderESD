@@ -13,6 +13,10 @@ export const backendSectionIds = {
   '3-g2': '33333333-3333-3333-3333-333333333332',
 };
 
+export const backendStudentIds = {
+  s1: 12,
+};
+
 export function getBackendCourseId(courseId) {
   return backendCourseIds[courseId] ?? null;
 }
@@ -20,3 +24,8 @@ export function getBackendCourseId(courseId) {
 export function getBackendSectionId(groupId) {
   return backendSectionIds[groupId] ?? null;
 }
+
+export function getBackendStudentId(studentId) {
+  return backendStudentIds[studentId] ?? null;
+}
+

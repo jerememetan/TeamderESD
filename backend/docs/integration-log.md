@@ -109,3 +109,37 @@ Allow the instructor teams page to load persisted backend teams and trigger back
 ### Next likely backend slice
 - align analytics with backend team outputs
 - then move student-facing team views off mock data
+
+## 2026-03-24 :: Step 4 :: Student team summary/view -> team + student-profile
+
+### Goal
+Use backend team memberships and live roster data in the student dashboard and My Team flow.
+
+### Frontend scope
+- Page: `frontend/src/pages/student/MyTeam.jsx`
+- Page: `frontend/src/pages/student/StudentDashboard.jsx`
+- Service layer: `frontend/src/services/studentAssignmentService.js`
+- Shared ID bridge extended in `frontend/src/data/backendIds.js`
+
+### Backend services touched
+- Atomic: `team`
+- Composite: `student-profile`
+
+### Mapping decisions
+- A temporary `currentStudent` -> backend `student_id` mapping is used because real authentication is not integrated yet
+- Student assignments are built by finding backend teams that contain that mapped backend student ID
+- Backend team memberships are enriched with `student-profile` roster details to render names and emails
+
+### UI behavior
+- Student pages use backend assignments when available
+- If backend assignments are not available yet, the pages fall back to the existing mock team data
+- The UI surfaces whether data is coming from backend assignments or mock fallback
+
+### Current limitations
+- The current student identity is still a frontend-only mapping used for testing
+- Student confirmation state remains mock-level when backend teams are shown because that service has not been integrated yet
+- Because some group mappings are temporarily reused for testing, backend assignment coverage may not match the final course/group model yet
+
+### Next likely backend slice
+- real student/session identity mapping
+- then swap-request workflow on top of backend teams
