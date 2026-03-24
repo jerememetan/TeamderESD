@@ -61,27 +61,40 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--td-space-xs);
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 71, 171, 0.16);
+  border-radius: var(--td-radius-panel);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(233, 241, 251, 0.9));
+  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.08);
 }
 
 .filterButton {
   display: inline-flex;
   align-items: center;
   gap: var(--td-space-xs);
-  min-height: 40px;
+  min-height: 42px;
   padding: 0 14px;
-  border: 1px solid var(--td-color-border-strong);
-  border-radius: var(--td-radius-sharp);
-  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(0, 71, 171, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
   color: var(--td-color-text-muted);
   font-family: var(--td-font-mono);
   font-size: 0.74rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.08);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.filterButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(6, 28, 61, 0.12);
 }
 
 .activeFilter {
   color: var(--td-color-surface);
+  border-color: rgba(0, 71, 171, 0.32);
   background: linear-gradient(180deg, var(--td-color-primary), var(--td-color-primary-strong));
 }
 
@@ -116,40 +129,57 @@
   letter-spacing: 0.12em;
 }
 
+.metaLine {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 71, 171, 0.14);
+  background: rgba(255, 255, 255, 0.86);
+}
+
 .reasonBox {
   display: flex;
   flex-direction: column;
   gap: var(--td-space-xs);
   padding: var(--td-space-sm);
-  border: 1px solid rgba(124, 145, 166, 0.45);
-  border-radius: var(--td-radius-sharp);
-  background: rgba(240, 244, 248, 0.82);
+  border: 1px solid rgba(0, 71, 171, 0.14);
+  border-radius: var(--td-radius-panel);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(233, 241, 251, 0.7));
 }
 
 .approveButton,
 .rejectButton {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--td-space-xs);
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--td-color-border-strong);
-  border-radius: var(--td-radius-sharp);
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
   font-family: var(--td-font-mono);
   font-size: 0.74rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.08);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.approveButton:hover,
+.rejectButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(6, 28, 61, 0.12);
 }
 
 .approveButton {
+  border: 1px solid rgba(46, 204, 113, 0.32);
   color: #0c6b36;
-  background: rgba(46, 204, 113, 0.15);
+  background: linear-gradient(180deg, rgba(46, 204, 113, 0.18), rgba(46, 204, 113, 0.08));
 }
 
 .rejectButton {
+  border: 1px solid rgba(255, 107, 0, 0.26);
   color: #8b3900;
-  background: rgba(255, 107, 0, 0.14);
+  background: linear-gradient(180deg, rgba(255, 107, 0, 0.16), rgba(255, 107, 0, 0.08));
 }
 
 @media (max-width: 700px) {

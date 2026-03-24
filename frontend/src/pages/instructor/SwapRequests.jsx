@@ -34,14 +34,12 @@ function SwapRequests() {
     <div className={styles.page}>
       <Link to="/instructor" className={styles.backLink}>
         <ArrowLeft className={styles.backIcon} />
-        Return to instructor console
+        Back to Dashboard
       </Link>
 
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[INTERVENTION QUEUE]</p>
-          <h2 className={styles.title}>Review team swap requests as controlled system interventions.</h2>
-          <p className={styles.subtitle}>Pending requests are intentionally loud so instructors can act before team health degrades.</p>
+          <h2 className={styles.title}>Review Student's Swap Requests</h2>
         </div>
         <SystemTag hazard>Live intervention channel</SystemTag>
       </section>
@@ -53,7 +51,7 @@ function SwapRequests() {
             onClick={() => setFilter(status)}
             className={`${styles.filterButton} ${filter === status ? styles.activeFilter : ''}`}
           >
-            <span>{status}</span>
+            <span>{status === 'all' ? 'All requests' : status}</span>
             {status !== 'all' ? (
               <span className={styles.filterCount}>{requestList.filter((request) => request.status === status).length}</span>
             ) : null}
@@ -63,7 +61,7 @@ function SwapRequests() {
 
       <div className={styles.requestList}>
         {filteredRequests.length === 0 ? (
-          <ModuleBlock componentId="MOD-SW0" eyebrow="Queue State" title="No requests in this channel" metric="00" metricLabel="Visible interventions" />
+          <ModuleBlock componentId="MOD-SW0" eyebrow="Queue State" title="No swap requests" metric="00" metricLabel="Visible requests" />
         ) : (
           filteredRequests.map((request, index) => (
             <ModuleBlock
@@ -93,7 +91,7 @@ function SwapRequests() {
                 <p className={styles.metaLine}>Submitted :: {new Date(request.createdAt).toLocaleDateString()}</p>
               </div>
               <div className={styles.reasonBox}>
-                <p className={styles.reasonLabel}>Operator statement</p>
+                <p className={styles.reasonLabel}>Student note</p>
                 <p className={styles.reasonText}>{request.reason}</p>
               </div>
             </ModuleBlock>

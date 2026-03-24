@@ -5,6 +5,7 @@ import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
 import { mockCourses, mockForms, mockTeams } from "../../data/mockData";
 import styles from "./Courses.module.css";
+import { ArrowLeft, CheckCircle, Clock, XCircle } from "lucide-react";
 
 function Courses() {
   const courseList = mockCourses;
@@ -12,7 +13,12 @@ function Courses() {
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
+      <Link to="/instructor" className={styles.backLink}>
+        <ArrowLeft className={styles.backIcon} />
+        Back to Dashboard
+      </Link>
       <section className={styles.header}>
+        
         <div>
           <p className={styles.kicker}>[COURSES]</p>
           <h2 className={styles.title}>Manage my Courses</h2>
