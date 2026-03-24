@@ -6,6 +6,7 @@ import SystemTag from '../../components/schematic/SystemTag';
 import motionStyles from '../../components/schematic/motion.module.css';
 import { currentStudent, currentStudentTeams, mockCourses, mockForms } from '../../data/mockData';
 import { fetchStudentAssignments } from '../../services/studentAssignmentService';
+import { getPendingPeerEvaluations } from '../../services/peerEvaluationService';
 import styles from './StudentDashboard.module.css';
 
 function StudentDashBoard() {
@@ -14,6 +15,7 @@ function StudentDashBoard() {
   const [assignmentSource, setAssignmentSource] = useState('mock');
   const [assignmentError, setAssignmentError] = useState('');
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
+  const [pendingPeerRounds, setPendingPeerRounds] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -35,9 +37,13 @@ function StudentDashBoard() {
         if (backendAssignments.length) {
           setTeamAssignments(backendAssignments);
           setAssignmentSource('backend');
+          const groupIds = new Set(backendAssignments.map((team) => team.groupId));
+          setPendingPeerRounds(getPendingPeerEvaluations({ studentEmail: studentProfile.email, groupIds }));
         } else {
           setTeamAssignments(currentStudentTeams);
           setAssignmentSource('mock');
+          const groupIds = new Set(currentStudentTeams.map((team) => team.groupId));
+          setPendingPeerRounds(getPendingPeerEvaluations({ studentEmail: studentProfile.email, groupIds }));
         }
       } catch (error) {
         if (!isMounted) {
@@ -46,6 +52,8 @@ function StudentDashBoard() {
         setTeamAssignments(currentStudentTeams);
         setAssignmentSource('mock');
         setAssignmentError(error.message);
+        const groupIds = new Set(currentStudentTeams.map((team) => team.groupId));
+        setPendingPeerRounds(getPendingPeerEvaluations({ studentEmail: studentProfile.email, groupIds }));
       } finally {
         if (isMounted) {
           setIsLoadingAssignments(false);
@@ -58,7 +66,7 @@ function StudentDashBoard() {
     return () => {
       isMounted = false;
     };
-  }, [studentProfile.id]);
+  }, [studentProfile.email, studentProfile.id]);
 
   const groupIds = new Set(teamAssignments.map((team) => team.groupId));
   const availableFormList = Object.values(mockForms).filter((form) => groupIds.has(form.groupId));
@@ -68,6 +76,7 @@ function StudentDashBoard() {
     [studentProfile.email, studentProfile.id, studentProfile.studentId, teamAssignments],
   );
   const assignmentTone = assignmentError ? 'alert' : assignmentSource === 'backend' ? 'success' : 'neutral';
+  const nextPeerRound = pendingPeerRounds[0] || null;
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -88,7 +97,7 @@ function StudentDashBoard() {
         {[
           { id: 'MOD-11', eyebrow: 'Overview', title: 'My Teams', metric: String(teamAssignments.length).padStart(2, '0'), label: 'One team per course group', accent: 'blue' },
           { id: 'MOD-12', eyebrow: 'Overview', title: 'Available Forms', metric: String(availableFormList.length).padStart(2, '0'), label: 'Forms you can fill in', accent: 'green' },
-          { id: 'MOD-13', eyebrow: 'Attention', title: 'Pending Confirmations', metric: String(assignmentSource === 'backend' ? 0 : pendingConfirmations).padStart(2, '0'), label: assignmentSource === 'backend' ? 'Confirmation sync not connected yet' : 'Teams waiting for your confirmation', accent: 'orange' },
+          { id: 'MOD-13', eyebrow: 'Attention', title: 'Peer Evaluations', metric: String(pendingPeerRounds.length).padStart(2, '0'), label: pendingPeerRounds.length ? 'Rounds waiting for your response' : 'No peer evaluations to complete', accent: 'orange' },
         ].map((item, index) => (
           <ModuleBlock
             key={item.id}
@@ -104,7 +113,7 @@ function StudentDashBoard() {
         ))}
       </section>
 
-      <section className={styles.actionGrid}>
+      <section className={styles.actionGrid}> 
         {[
           {
             to: '/student/team',
@@ -120,11 +129,18 @@ function StudentDashBoard() {
             title: 'Fill In A Form',
             text: 'Open one of your group forms and submit your answers.',
           },
+          {
+            to: nextPeerRound ? `/student/peer-evaluation/${nextPeerRound.id}` : '/student',
+            icon: <FileText className={styles.actionIcon} />,
+            code: 'Peer Review',
+            title: 'Complete Peer Evaluation',
+            text: nextPeerRound ? 'Rate your teammates and yourself for the final project review.' : 'No peer evaluation rounds are active right now.',
+          },
         ].map((action, index) => (
           <Link
             key={action.code + index}
             to={action.to}
-            className={`${styles.actionCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
+            className={`${styles.actionCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem} ${!nextPeerRound && action.code === 'Peer Review' ? styles.actionCardDisabled : ''}`}
             style={{ '--td-stagger-delay': `${(index + 4) * 50}ms` }}
           >
             {action.icon}
@@ -148,13 +164,14 @@ function StudentDashBoard() {
           {teamAssignments.map((team) => {
             const course = mockCourses.find((item) => item.id === team.courseId);
             const currentMember = team.members.find((member) => member.id === studentProfile.id || member.studentId === studentProfile.studentId || member.email === studentProfile.email);
+            const hasActivePeerRound = pendingPeerRounds.some((round) => round.groupId === team.groupId);
 
             return (
               <div key={team.id} className={styles.assignmentRow}>
                 <p className={styles.assignmentTitle}>You have been assigned to {team.name}.</p>
                 <p className={styles.metaLine}>{course?.code} :: {team.groupId} :: {team.members.length} members</p>
-                <SystemTag tone={assignmentSource === 'backend' ? 'neutral' : currentMember?.confirmationStatus === 'confirmed' ? 'success' : 'alert'}>
-                  {assignmentSource === 'backend' ? 'Backend team membership loaded' : currentMember?.confirmationStatus === 'confirmed' ? 'Confirmed' : 'Waiting for your confirmation'}
+                <SystemTag tone={hasActivePeerRound ? 'alert' : assignmentSource === 'backend' ? 'neutral' : currentMember?.confirmationStatus === 'confirmed' ? 'success' : 'alert'}>
+                  {hasActivePeerRound ? 'Peer evaluation open' : assignmentSource === 'backend' ? 'Backend team membership loaded' : currentMember?.confirmationStatus === 'confirmed' ? 'Confirmed' : 'Waiting for your confirmation'}
                 </SystemTag>
               </div>
             );

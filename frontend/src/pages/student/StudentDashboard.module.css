@@ -66,10 +66,6 @@
   gap: var(--td-space-sm);
 }
 
-.actionGrid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .actionCard {
   position: relative;
   display: flex;
@@ -88,6 +84,10 @@
 .actionCard:hover {
   border-color: var(--td-color-primary);
   box-shadow: 0 16px 30px rgba(6, 28, 61, 0.16);
+}
+
+.actionCardDisabled {
+  opacity: 0.7;
 }
 
 .actionCard::after {

@@ -1,4 +1,4 @@
-import { Course, TeamForm, Team, SwapRequest, Student, TeamMember } from '../types';
+import { Course, TeamForm, Team, SwapRequest, Student, TeamMember, PeerEvaluationRound, PeerEvaluationSubmission } from '../types';
 
 const withStatus = (student: Student, confirmationStatus: 'confirmed' | 'pending'): TeamMember => ({
   ...student,
@@ -382,4 +382,9 @@ export const currentStudentTeams = mockTeams.filter((team) =>
 
 export const currentStudentTeam = currentStudentTeams[0];
 
+
+
+export const mockPeerEvaluationRounds: PeerEvaluationRound[] = [];
+
+export const mockPeerEvaluationSubmissions: PeerEvaluationSubmission[] = [];
 

@@ -8,6 +8,7 @@ import SwapRequests from './pages/instructor/SwapRequests'
 import Teams from './pages/instructor/Teams'
 import FillForm from './pages/student/FillForm'
 import MyTeam from './pages/student/MyTeam'
+import PeerEvaluationForm from './pages/student/PeerEvaluationForm'
 import StudentDashBoard from './pages/student/StudentDashboard'
 import HomePage from './pages/shared/HomePage'
 import TestGalleryPage from './pages/shared/TestGalleryPage'
@@ -60,6 +61,10 @@ const router = createBrowserRouter([
       {
         path: 'student/form/:formId',
         element: <FillForm />,
+      },
+      {
+        path: 'student/peer-evaluation/:roundId',
+        element: <PeerEvaluationForm />,
       },
       {
         path: 'student/team',
