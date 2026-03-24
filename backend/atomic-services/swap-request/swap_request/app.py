@@ -3,7 +3,6 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 
-from .consumer import start_consumer_thread
 from .models.swap_request_model import db
 
 
@@ -22,9 +21,6 @@ def create_app():
     from .routes.swap_request_routes import swap_request_bp
 
     app.register_blueprint(swap_request_bp, url_prefix="/swap-request")
-
-    # RabbitMQ consumer thread only handles async status updates from backend events.
-    start_consumer_thread(app)
 
     return app
 
