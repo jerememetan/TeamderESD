@@ -143,3 +143,14 @@ Use backend team memberships and live roster data in the student dashboard and M
 ### Next likely backend slice
 - real student/session identity mapping
 - then swap-request workflow on top of backend teams
+
+## Final Frontend Cleanup Note
+
+Before final delivery, remove or soften temporary integration diagnostics from user-facing UI, including labels such as:
+- Backend assignments loaded
+- Mock assignments active
+- Backend team membership loaded
+- From backend team
+- other backend/mock source indicators used only for testing and transition
+
+Replace them with normal user-facing copy once backend integration is fully complete and fallback/testing states are no longer needed.
