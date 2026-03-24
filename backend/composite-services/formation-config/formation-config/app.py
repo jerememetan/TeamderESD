@@ -1,9 +1,14 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 import os
 
 
 app = Flask(__name__)
+CORS(
+    app,
+    resources={r"/formation-config*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}},
+)
 
 def safe_json(resp):
     try:
@@ -38,7 +43,6 @@ def aggregate():
 
     # --- Project Topics ---
     topics = payload.get("topics", [])
-    # Delete all topics for this section_id first
     requests.delete(TOPIC_URL, params={"section_id": section_id})
     for topic in topics:
         if "section_id" not in topic:
@@ -48,7 +52,6 @@ def aggregate():
 
     # --- Skills ---
     skills = payload.get("skills", [])
-    # Delete all skills for this section_id first
     requests.delete(SKILL_URL, params={"section_id": section_id})
     for skill in skills:
         if "section_id" not in skill:
@@ -64,7 +67,6 @@ def aggregate_get():
     if not section_id:
         return jsonify({"error": "Missing section_id in query params"}), 400
 
-    # --- Criteria ---
     crit_resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
     crit_data = None
     course_id = None
@@ -76,7 +78,6 @@ def aggregate_get():
             crit_data.pop("course_id", None)
             crit_data.pop("section_id", None)
 
-    # --- Topics ---
     topic_resp = requests.get(TOPIC_URL, params={"section_id": section_id})
     topics = []
     if topic_resp.status_code == 200:
@@ -84,7 +85,6 @@ def aggregate_get():
         for t in topic_json.get("data", []):
             topics.append({"topic_label": t.get("topic_label")})
 
-    # --- Skills ---
     skill_resp = requests.get(SKILL_URL, params={"section_id": section_id})
     skills = []
     if skill_resp.status_code == 200:
