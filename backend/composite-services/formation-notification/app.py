@@ -2,6 +2,7 @@ import os
 
 import requests
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 app = Flask(__name__)
 
@@ -20,6 +21,9 @@ NOTIFICATION_URL = os.getenv(
 DEFAULT_FORM_BASE_URL = os.getenv(
     "DEFAULT_FORM_BASE_URL", "http://localhost:5173/student/fill-form"
 )
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+
+CORS(app, resources={r"/formation-notification/*": {"origins": [FRONTEND_ORIGIN]}})
 
 
 def _safe_json(resp):
@@ -64,7 +68,6 @@ def send_form_links():
     if not isinstance(criteria, dict):
         return jsonify({"code": 400, "message": "criteria object is required"}), 400
 
-    # 1) fetch enrolled students in section
     enrollment_resp = requests.get(
         ENROLLMENT_URL, params={"section_id": section_id}, timeout=REQUEST_TIMEOUT
     )
@@ -96,7 +99,6 @@ def send_form_links():
             }
         ), 200
 
-    # 2) generate/persist section template and unique links
     template_payload = {
         "section_id": section_id,
         "criteria": criteria,
@@ -128,7 +130,6 @@ def send_form_links():
         if isinstance(row, dict) and row.get("student_id") is not None:
             link_by_student[int(row["student_id"])] = row.get("form_url")
 
-    # 3) fetch relevant student details
     recipients = []
     lookup_failures = []
     for sid in student_ids:
@@ -152,7 +153,6 @@ def send_form_links():
             }
         )
 
-    # 4/5) AMQP-backed notification service send + status feedback
     notify_resp = requests.post(
         NOTIFICATION_URL,
         json={"recipients": recipients},
@@ -166,7 +166,6 @@ def send_form_links():
     success_count = int(notify_data.get("success_count", 0))
     failure_count = int(notify_data.get("failure_count", 0)) + len(lookup_failures)
 
-    # 6) response payload for instructor UI rendering
     return jsonify(
         {
             "code": 200,

@@ -4,6 +4,7 @@ import time
 
 import pika
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 app = Flask(__name__)
 
@@ -14,6 +15,9 @@ EXCHANGE_TYPE = os.getenv("NOTIFICATION_EXCHANGE_TYPE", "topic")
 ROUTING_KEY = os.getenv("NOTIFICATION_ROUTING_KEY", "FormLinkNotification")
 RETRY_COUNT = int(os.getenv("AMQP_RETRY_COUNT", "3"))
 RETRY_WAIT_SECONDS = float(os.getenv("AMQP_RETRY_WAIT_SECONDS", "1.5"))
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+
+CORS(app, resources={r"/notification/*": {"origins": [FRONTEND_ORIGIN]}})
 
 
 def publish_message(payload):

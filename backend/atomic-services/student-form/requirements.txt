@@ -4,3 +4,5 @@ marshmallow
 python-dotenv
 sqlalchemy
 psycopg2-binary
+flask-cors
+

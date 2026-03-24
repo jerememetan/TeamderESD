@@ -181,3 +181,10 @@ Add an end-of-project peer evaluation experience to the frontend before the back
 ### Next likely backend slice
 - swap-request workflow on top of backend teams
 - later reputation / peer evaluation persistence if those services are added
+
+## Student-form backend bug note
+
+- The new student-form-service currently depends on a separate student_form schema with orm_template, orm_submission, and orm_link tables.
+- In the current Supabase setup, only student_form_data.form_data exists, so requests into student-form-service fail at runtime.
+- This affects publish-form flow through ormation-notification and can also produce repeated backend errors whenever composite services query student-form endpoints.
+- Treat this as an open backend provisioning bug until the student_form schema/tables are created or the service is remapped.

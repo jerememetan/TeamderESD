@@ -16,7 +16,7 @@ class FormSubmissionCreateSchema(Schema):
 class FormTemplateResponseSchema(Schema):
     section_id = fields.UUID()
     criteria_snapshot = fields.Dict()
-    fields = fields.List(fields.Dict())
+    generated_fields = fields.List(fields.Dict(), data_key="fields")
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
 

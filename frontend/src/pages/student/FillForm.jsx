@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
+import { getBackendSectionId } from "../../data/backendIds";
 import { currentStudent, currentStudentTeams, mockCourses, mockForms, mockStudents } from "../../data/mockData";
 import styles from "./FillForm.module.css";
 
@@ -24,7 +25,8 @@ function FillForm() {
   const selectedCourse = mockCourses.find((course) => course.id === selectedForm?.courseId);
   const selectedGroup = selectedCourse?.groups.find((group) => group.id === selectedForm?.groupId);
   const activeTeam = teamAssignments.find((team) => team.groupId === selectedForm?.groupId) || teamAssignments[0];
-  const sectionId = useMemo(() => selectedGroup?.id || selectedForm?.groupId || formId, [selectedGroup?.id, selectedForm?.groupId, formId]);
+  const backendSectionId = getBackendSectionId(selectedForm?.groupId || "");
+  const sectionId = useMemo(() => backendSectionId || selectedForm?.groupId || formId, [backendSectionId, selectedForm?.groupId, formId]);
 
   if (!selectedForm) {
     return <div className={styles.notFound}>Form not found</div>;

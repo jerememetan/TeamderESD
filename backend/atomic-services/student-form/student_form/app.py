@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 from .models.form_model import db
@@ -9,6 +10,9 @@ def create_app():
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SUPABASE_URL")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+    CORS(app, resources={r"/student-form/*": {"origins": [frontend_origin]}})
 
     db.init_app(app)
     from .models.form_model import StudentFormTemplate, StudentFormSubmission, StudentFormLink
