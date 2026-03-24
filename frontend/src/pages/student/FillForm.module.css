@@ -13,6 +13,7 @@
 .scoreValue { font-size:1.2rem; font-weight:700; letter-spacing:0.12em; }
 .scoreLabel { font-size:0.62rem; color: var(--td-color-text-muted); letter-spacing:0.16em; }
 .select { min-height:44px; padding:0 12px; border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-sharp); background: rgba(255,255,255,0.9); color: var(--td-color-text); }
+.input { min-height:44px; padding:0 12px; border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-sharp); background: rgba(255,255,255,0.9); color: var(--td-color-text); }
 .actionRow { display:flex; flex-wrap:wrap; gap: var(--td-space-xs); }
 .primaryButton,.secondaryButton { display:inline-flex; align-items:center; min-height:42px; padding:0 14px; border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-sharp); font-family: var(--td-font-mono); font-size:0.74rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
 .primaryButton { color: var(--td-color-surface); background: linear-gradient(180deg,var(--td-color-primary),var(--td-color-primary-strong)); }

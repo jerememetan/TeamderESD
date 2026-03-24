@@ -21,6 +21,9 @@ app = Flask(__name__)
 
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team")
 STUDENT_PROFILE_URL = os.getenv("STUDENT_PROFILE_URL", "http://localhost:4001/student-profile")
+STUDENT_FORM_SUBMISSIONS_URL = os.getenv(
+    "STUDENT_FORM_SUBMISSIONS_URL", "http://localhost:3015/student-form/submissions"
+)
 CRITERIA_URL = os.getenv("CRITERIA_URL", "http://localhost:3004/criteria")
 SKILL_URL = os.getenv("SKILL_URL", "http://localhost:3002/skill")
 TOPIC_URL = os.getenv("TOPIC_URL", "http://localhost:3003/topic")
@@ -72,6 +75,16 @@ def get_dashboard():
 
     students = profile_data.get("data", {}).get("students", [])
 
+    # ── 2b. Fetch student form submissions (optional) ────────────────
+    form_submissions_data, err = _fetch(
+        STUDENT_FORM_SUBMISSIONS_URL,
+        params={"section_id": section_id},
+        label="student form service",
+    )
+    form_submissions = []
+    if form_submissions_data:
+        form_submissions = form_submissions_data.get("data", [])
+
     # ── 3. Fetch criteria ────────────────────────────────────────────
     criteria_data, err = _fetch(
         CRITERIA_URL, params={"section_id": section_id}, label="criteria service"
@@ -115,6 +128,7 @@ def get_dashboard():
         "section_id": section_id,
         "teams": teams,
         "students": students,
+        "student_form_submissions": form_submissions,
         "criteria": criteria,
         "skills": skills,
         "topics": topics,

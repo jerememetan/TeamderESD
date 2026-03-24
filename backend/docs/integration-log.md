@@ -7,7 +7,7 @@ Replace the mock-driven instructor group form flow with the first real backend i
 
 ### Frontend scope
 - Route: `/instructor/courses/:courseId/groups/:groupId/create-form`
-- Page: `frontend/src/pages/instructor/CreateForm.jsx`
+- Page: `frontend/src/pages/instructor/`
 - Service layer: `frontend/src/services/formationConfigService.js`
 - ID bridge: `frontend/src/data/backendIds.js`
 

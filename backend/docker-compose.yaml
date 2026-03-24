@@ -98,6 +98,30 @@ services:
     ports:
       - "3010:3010"
 
+  student-form-service:
+    build: ./atomic-services/student-form
+    container_name: teamder-student-form-service
+    environment:
+      PORT: 3015
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3015:3015"
+
+  notification-service:
+    build: ./atomic-services/notification
+    container_name: teamder-notification-service
+    environment:
+      PORT: 3016
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      NOTIFICATION_EXCHANGE: notification_topic
+      NOTIFICATION_EXCHANGE_TYPE: topic
+      NOTIFICATION_ROUTING_KEY: FormLinkNotification
+    ports:
+      - "3016:3016"
+    depends_on:
+      - rabbitmq
+
   swap-request-service:
     build:
       context: ./atomic-services/swap-request
@@ -165,12 +189,14 @@ services:
       OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
+      STUDENT_FORM_SUBMISSION_URL: "http://student-form-service:3015/student-form/submission"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
       TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
       COMPETENCE_URL: "http://student-competence-service:3008/competence"
     depends_on:
       - enrollment-service
       - student-form-data-service
+      - student-form-service
       - student-topic-preference-service
       - reputation-service
       - student-competence-service
@@ -211,6 +237,7 @@ services:
     environment:
       TEAM_URL: "http://team-service:3007/team"
       STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
+      STUDENT_FORM_SUBMISSIONS_URL: "http://student-form-service:3015/student-form/submissions"
       CRITERIA_URL: "http://criteria-service:3004/criteria"
       SKILL_URL: "http://skill-service:3002/skill"
       TOPIC_URL: "http://topic-service:3003/topic"
@@ -220,7 +247,29 @@ services:
     depends_on:
       - team-service
       - student-profile-service
+      - student-form-service
       - criteria-service
       - skill-service
       - topic-service
       - analytics-service
+
+  formation-notification-service:
+    build:
+      context: ./composite-services/formation-notification
+    container_name: teamder-formation-notification-service
+    ports:
+      - "4004:4004"
+    environment:
+      ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
+      STUDENT_FORM_TEMPLATE_URL: "http://student-form-service:3015/student-form/template"
+      STUDENT_FORM_LINK_BATCH_URL: "http://student-form-service:3015/student-form/links/batch"
+      STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
+      NOTIFICATION_URL: "http://notification-service:3016/notification/send-form-link"
+      DEFAULT_FORM_BASE_URL: "http://localhost:5173/student/fill-form"
+      REQUEST_TIMEOUT: 10
+      PORT: 4004
+    depends_on:
+      - enrollment-service
+      - student-form-service
+      - student-service
+      - notification-service

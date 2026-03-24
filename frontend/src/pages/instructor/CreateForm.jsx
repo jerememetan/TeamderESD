@@ -8,6 +8,7 @@ import { mockCourses, mockForms } from "../../data/mockData";
 import { fetchFormationConfig, saveFormationConfig } from "../../services/formationConfigService";
 import styles from "./CreateForm.module.css";
 
+<<<<<<< Updated upstream
 const WEIGHT_FIELDS = [
   { key: "skill_weight", label: "Skill balance", helper: "How strongly to balance technical skills across teams." },
   { key: "topic_weight", label: "Topic preference", helper: "How strongly topic interest should shape teams." },
@@ -108,6 +109,10 @@ function normalizeLoadedConfig(config, group, fallbackState) {
     })),
   };
 }
+=======
+const STUDENT_FORM_API_BASE =
+  import.meta.env.VITE_STUDENT_FORM_API_BASE || "http://localhost:3015/student-form";
+>>>>>>> Stashed changes
 
 function CreateForm() {
   const { courseId, groupId } = useParams();
@@ -125,6 +130,7 @@ function CreateForm() {
   const [errorMessage, setErrorMessage] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
 
+<<<<<<< Updated upstream
   useEffect(() => {
     setFormState(defaultState);
   }, [defaultState]);
@@ -178,6 +184,15 @@ function CreateForm() {
       isMounted = false;
     };
   }, [backendCourseId, backendSectionId, defaultState, selectedCourse, selectedGroup]);
+=======
+  const [groupSize, setGroupSize] = useState(existingForm?.groupSize ?? 5);
+  const [minimumGroupSize, setMinimumGroupSize] = useState(existingForm?.minimumGroupSize ?? 4);
+  const [mixGender, setMixGender] = useState(existingForm?.mixGender ?? true);
+  const [mixYear, setMixYear] = useState(existingForm?.mixYear ?? true);
+  const [allowBuddy, setAllowBuddy] = useState(existingForm?.allowBuddy ?? true);
+  const [criteria, setCriteria] = useState(initialCriteria);
+  const [isPublishing, setIsPublishing] = useState(false);
+>>>>>>> Stashed changes
 
   if (!selectedCourse || !selectedGroup) {
     return <div className={styles.notFound}>Course group not found</div>;
@@ -310,6 +325,51 @@ function CreateForm() {
   const backendStatusTone = loadSource === "backend" ? "success" : errorMessage ? "alert" : "neutral";
   const activeWeights = WEIGHT_FIELDS.reduce((sum, field) => sum + Number(formState.weights[field.key] || 0), 0);
 
+  const publishForm = async () => {
+    setIsPublishing(true);
+    try {
+      const customEntries = criteria
+        .filter((criterion) => criterion.question?.trim())
+        .map((criterion) => ({
+          key: criterion.id,
+          label: criterion.question.trim(),
+          input_type: "number",
+          required: true,
+          weight: Number(criterion.weight || 0),
+        }));
+
+      const payload = {
+        section_id: selectedGroup.id,
+        criteria: {
+          num_groups: Number(groupSize || 0),
+          mbti_weight: mixYear ? 0.1 : 0,
+          buddy_weight: allowBuddy ? 0.3 : 0,
+          topic_weight: 0,
+          skill_weight: 0,
+          randomness: 0,
+        },
+        custom_entries: customEntries,
+      };
+
+      const response = await fetch(`${STUDENT_FORM_API_BASE}/template`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody?.error?.message || "Failed to publish form template");
+      }
+
+      alert("Form template published and ready for student submission.");
+    } catch (error) {
+      alert(`Unable to publish form: ${error.message}`);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <Link to="/instructor/courses" className={styles.backLink}>
@@ -426,8 +486,15 @@ function CreateForm() {
       </div>
 
       <div className={styles.actionRow}>
+<<<<<<< Updated upstream
         <button className={styles.primaryButton} onClick={() => handleSave("draft")} disabled={isSaving || isLoading}>{isSaving ? <Save className={styles.buttonIcon} /> : null} Save draft</button>
         <button className={styles.successButton} onClick={() => handleSave("publish")} disabled={isSaving || isLoading}>Publish form</button>
+=======
+        <button className={styles.primaryButton}>Save draft</button>
+        <button className={styles.successButton} onClick={publishForm} disabled={isPublishing}>
+          {isPublishing ? "Publishing..." : "Publish form"}
+        </button>
+>>>>>>> Stashed changes
       </div>
     </div>
   );

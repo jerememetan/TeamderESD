@@ -30,6 +30,9 @@ STUDENT_BULK_URL = os.getenv(
     "STUDENT_BULK_URL", f"{OUTSYSTEMS_BASE_URL}/students/bulk-info"
 )
 FORM_DATA_URL = os.getenv("FORM_DATA_URL", "http://localhost:3010/form-data")
+STUDENT_FORM_SUBMISSION_URL = os.getenv(
+    "STUDENT_FORM_SUBMISSION_URL", "http://localhost:3015/student-form/submission"
+)
 REPUTATION_URL = os.getenv("REPUTATION_URL", "http://localhost:3006/reputation")
 TOPIC_PREFERENCE_URL = os.getenv(
     "TOPIC_PREFERENCE_URL", "http://localhost:3009/topic-preference"
@@ -152,6 +155,19 @@ def fetch_reputation(student_id):
     return data.get("reputation_score")
 
 
+def fetch_dynamic_form_submission(section_id, student_id):
+    response = http_get(
+        STUDENT_FORM_SUBMISSION_URL, params={"section_id": section_id, "student_id": student_id}
+    )
+    if response.status_code != 200:
+        return None
+
+    data = extract_data(safe_json(response))
+    if not isinstance(data, dict):
+        return None
+    return data.get("responses")
+
+
 def fetch_topic_preferences(section_id, student_id):
     response = http_get(
         TOPIC_PREFERENCE_URL, params={"section_id": section_id, "student_id": student_id}
@@ -197,10 +213,12 @@ def collect_student_details(section_id, student_id):
         "reputation_score": None,
         "topic_preferences": None,
         "competences": None,
+        "form_responses": None,
     }
 
     fetchers = {
         "form_data": lambda: fetch_form_data(section_id, student_id),
+        "form_responses": lambda: fetch_dynamic_form_submission(section_id, student_id),
         "reputation_score": lambda: fetch_reputation(student_id),
         "topic_preferences": lambda: fetch_topic_preferences(section_id, student_id),
         "competences": lambda: fetch_competences(section_id, student_id),
@@ -227,6 +245,8 @@ def collect_student_details(section_id, student_id):
                 if isinstance(value, dict):
                     result["buddy_id"] = value.get("buddy_id")
                     result["mbti"] = value.get("mbti")
+            elif key == "form_responses":
+                result["form_responses"] = value if isinstance(value, dict) else None
             else:
                 result[key] = value
 
@@ -246,6 +266,7 @@ def compose_profile(base_profile, details):
         "reputation_score": details.get("reputation_score"),
         "topic_preferences": details.get("topic_preferences"),
         "competences": details.get("competences"),
+        "form_responses": details.get("form_responses"),
     }
 
 
@@ -337,6 +358,7 @@ def get_student_profile():
                     "reputation_score": None,
                     "topic_preferences": None,
                     "competences": None,
+                    "form_responses": None,
                 }
 
     students = []
@@ -349,6 +371,7 @@ def get_student_profile():
                 "reputation_score": None,
                 "topic_preferences": None,
                 "competences": None,
+                "form_responses": None,
             },
         )
         students.append(
