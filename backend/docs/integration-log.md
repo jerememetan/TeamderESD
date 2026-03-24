@@ -74,3 +74,38 @@ Use the backend student-profile service to provide live section roster data in t
 ### Next likely backend slice
 - `team-formation`
 - followed by `team` persistence and retrieval
+
+## 2026-03-24 :: Step 3 :: Instructor team generation/view -> team-formation + team
+
+### Goal
+Allow the instructor teams page to load persisted backend teams and trigger backend team generation for a group.
+
+### Frontend scope
+- Page: `frontend/src/pages/instructor/Teams.jsx`
+- Service layer: `frontend/src/services/teamFormationService.js`
+- Service layer: `frontend/src/services/teamService.js`
+- Shared ID bridge reused from `frontend/src/data/backendIds.js`
+
+### Backend services touched
+- Composite: `team-formation`
+- Atomic: `team`
+
+### Mapping decisions
+- Frontend `groupId` maps to backend `section_id`
+- The frontend team page first requests persisted teams from `GET /team?section_id=...`
+- The page can trigger backend generation through `GET /team-formation?section_id=...`
+- Numeric backend `student_id` memberships are enriched on the frontend using the already-fetched `student-profile` roster
+
+### UI behavior
+- If backend teams exist, the page renders backend-generated teams
+- If backend teams do not exist yet, the page falls back to mock teams and shows a generate action
+- Generating teams persists them through the backend and swaps the page to the backend dataset immediately
+
+### Current limitations
+- Backend teams do not currently expose confirmation state, team score, or richer analytics fields
+- Swap request wiring is still mock-backed and only applies cleanly to the mock team dataset for now
+- Team naming currently falls back to frontend numbering when `team_number` is absent in backend responses
+
+### Next likely backend slice
+- align analytics with backend team outputs
+- then move student-facing team views off mock data

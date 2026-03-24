@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 from .models.team_model import db
 from dotenv import load_dotenv
 import os
@@ -8,6 +9,10 @@ def create_app():
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SUPABASE_URL")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    CORS(
+        app,
+        resources={r"/team*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}},
+    )
     db.init_app(app)
     from .models.team_model import Team, TeamStudent
     from .routes.team_routes import team_bp

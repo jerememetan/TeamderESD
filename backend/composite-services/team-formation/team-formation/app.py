@@ -5,10 +5,15 @@ from typing import Any, Dict, Optional
 
 import requests
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 from solver import filter_solver_result_for_api, is_solver_success_status, solve_teams
 
 app = Flask(__name__)
+CORS(
+    app,
+    resources={r"/team-formation*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}},
+)
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
