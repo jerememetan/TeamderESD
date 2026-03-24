@@ -87,3 +87,32 @@ export interface FormResponse {
   responses: Record<string, any>;
   submittedAt: string;
 }
+
+export interface PeerEvaluationRound {
+  id: string;
+  courseId: string;
+  groupId: string;
+  status: 'draft' | 'active' | 'closed';
+  title: string;
+  startedAt: string;
+  dueAt: string;
+  eligibleStudentEmails: string[];
+  teamIds: string[];
+}
+
+export interface PeerEvaluationEntry {
+  memberEmail: string;
+  memberName: string;
+  rating: number;
+  justification: string;
+}
+
+export interface PeerEvaluationSubmission {
+  id: string;
+  roundId: string;
+  studentEmail: string;
+  teamId: string;
+  entries: PeerEvaluationEntry[];
+  submittedAt: string;
+  privateReputationSignal: number;
+}

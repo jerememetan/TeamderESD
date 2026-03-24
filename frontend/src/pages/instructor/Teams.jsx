@@ -7,6 +7,7 @@ import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
 import { getBackendSectionId } from "../../data/backendIds";
 import { mockCourses, mockSwapRequests, mockTeams } from "../../data/mockData";
+import { getPeerEvaluationRoundForGroup, getPeerEvaluationSummary, startPeerEvaluationRound } from "../../services/peerEvaluationService";
 import { fetchStudentProfile } from "../../services/studentProfileService";
 import { generateTeamsForSection } from "../../services/teamFormationService";
 import { fetchTeamsBySection } from "../../services/teamService";
@@ -57,6 +58,7 @@ function Teams() {
   const [rosterError, setRosterError] = useState("");
   const [teamError, setTeamError] = useState("");
   const [teamMessage, setTeamMessage] = useState("");
+  const [peerRound, setPeerRound] = useState(null);
 
   const selectedCourse = mockCourses.find((course) => course.id === courseId);
   const selectedGroup = selectedCourse?.groups.find((group) => group.id === groupId) ?? null;
@@ -79,16 +81,14 @@ function Teams() {
 
       try {
         const students = await fetchStudentProfile(backendSectionId);
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          setBackendStudents(students);
         }
-        setBackendStudents(students);
       } catch (error) {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          setRosterError(error.message);
+          setBackendStudents([]);
         }
-        setRosterError(error.message);
-        setBackendStudents([]);
       } finally {
         if (isMounted) {
           setIsRosterLoading(false);
@@ -97,7 +97,6 @@ function Teams() {
     }
 
     loadRoster();
-
     return () => {
       isMounted = false;
     };
@@ -140,11 +139,20 @@ function Teams() {
     }
 
     loadTeams();
-
     return () => {
       isMounted = false;
     };
   }, [backendSectionId, groupId]);
+
+  useEffect(() => {
+    if (!groupId) {
+      setPeerRound(null);
+      return;
+    }
+
+    const round = getPeerEvaluationRoundForGroup(groupId);
+    setPeerRound(round ? getPeerEvaluationSummary(round.id) : null);
+  }, [groupId]);
 
   const rosterById = useMemo(
     () => new Map(backendStudents.map((student) => [student.student_id, student])),
@@ -183,6 +191,22 @@ function Teams() {
     setSelectedRequest((currentRequest) => currentRequest?.id === requestId ? { ...currentRequest, status: "rejected" } : currentRequest);
   };
 
+  const handleStartPeerEvaluation = () => {
+    if (!selectedGroup) {
+      return;
+    }
+
+    const round = startPeerEvaluationRound({
+      courseId,
+      groupId: selectedGroup.id,
+      teamIds: visibleTeams.map((team) => team.id),
+      eligibleStudentEmails: Array.from(new Set(visibleTeams.flatMap((team) => team.members.map((member) => member.email)).filter(Boolean))),
+    });
+
+    setPeerRound(getPeerEvaluationSummary(round.id));
+    setTeamMessage(`Peer evaluation round started for ${selectedGroup.code}.`);
+  };
+
   const handleGenerateTeams = async () => {
     if (!backendSectionId) {
       setTeamError("Missing backend section mapping for this group.");
@@ -206,7 +230,7 @@ function Teams() {
 
   const heroTitle = selectedGroup ? `${selectedGroup.code} teams` : `${selectedCourse.code} teams`;
   const heroSubtitle = selectedGroup
-    ? `Review the teams for ${selectedGroup.label}, compare them against the live section roster, and generate backend teams when the group is ready.`
+    ? `Review the teams for ${selectedGroup.label}, compare them against the live section roster, and start the final peer evaluation round when the project is done.`
     : "See every team in this course, check whether students have confirmed, and review swap requests.";
   const backLink = "/instructor/courses";
   const rosterSourceTone = rosterError ? "alert" : backendStudents.length ? "success" : "neutral";
@@ -235,15 +259,16 @@ function Teams() {
         <div className={styles.heroTags}>
           <SystemTag tone={rosterSourceTone}>{isRosterLoading ? "Loading roster" : backendStudents.length ? "Live roster loaded" : "Roster unavailable"}</SystemTag>
           <SystemTag tone={teamSourceTone}>{isTeamsLoading ? "Loading teams" : teamDataSource === "backend" ? "Backend teams loaded" : "Mock teams active"}</SystemTag>
-          <SystemTag hazard>{visibleSwapRequests.filter((request) => request.status === 'pending').length} pending interventions</SystemTag>
+          {peerRound ? <SystemTag tone="success">Peer evaluation active</SystemTag> : null}
+          <SystemTag hazard>{visibleSwapRequests.filter((request) => request.status === "pending").length} pending interventions</SystemTag>
         </div>
       </section>
 
       {selectedGroup ? (
-        <ModuleBlock componentId="MOD-T0" eyebrow="Section Roster" title={`Live roster :: ${selectedGroup.code}`} metric={backendStudents.length} metricLabel="Students from student-profile" className={motionStyles.staggerItem} style={{ '--td-stagger-delay': '0ms' }}>
+        <ModuleBlock componentId="MOD-T0" eyebrow="Section Roster" title={`Live roster :: ${selectedGroup.code}`} metric={backendStudents.length} metricLabel="Students from student-profile" className={motionStyles.staggerItem} style={{ "--td-stagger-delay": "0ms" }}>
           <div className={styles.rosterSummary}>
-            <div className={styles.rosterStat}><Users className={styles.actionIcon} /><span>{Object.entries(yearCounts).map(([label, count]) => `${label} ${count}`).join(' :: ') || 'No year data'}</span></div>
-            <div className={styles.rosterStat}><span>{Object.entries(genderCounts).map(([label, count]) => `${label} ${count}`).join(' :: ') || 'No gender data'}</span></div>
+            <div className={styles.rosterStat}><Users className={styles.actionIcon} /><span>{Object.entries(yearCounts).map(([label, count]) => `${label} ${count}`).join(" :: ") || "No year data"}</span></div>
+            <div className={styles.rosterStat}><span>{Object.entries(genderCounts).map(([label, count]) => `${label} ${count}`).join(" :: ") || "No gender data"}</span></div>
           </div>
           {rosterError ? <p className={styles.rosterError}>Student-profile load failed: {rosterError}</p> : null}
           <p className={styles.rosterNote}>This roster is fetched from the backend student-profile service. Team cards below will switch to backend teams automatically once they exist for this section.</p>
@@ -255,8 +280,8 @@ function Teams() {
                   <p className={styles.memberMeta}>Backend ID :: {student.student_id}</p>
                 </div>
                 <div className={styles.rosterDetail}>
-                  <SystemTag tone="neutral">Year {student.profile?.year ?? 'NA'}</SystemTag>
-                  <span className={styles.rosterEmail}>{student.profile?.email || 'No email'}</span>
+                  <SystemTag tone="neutral">Year {student.profile?.year ?? "NA"}</SystemTag>
+                  <span className={styles.rosterEmail}>{student.profile?.email || "No email"}</span>
                 </div>
               </div>
             ))}
@@ -268,75 +293,78 @@ function Teams() {
       {teamMessage ? <p className={styles.teamMessage}>{teamMessage}</p> : null}
 
       <div className={styles.layout}>
-        <ModuleBlock componentId="MOD-T1" eyebrow="Teams" title={`Visible Teams :: ${visibleTeams.length}`} className={`${styles.sideModule} ${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '50ms' }} actions={<button onClick={handleGenerateTeams} disabled={isGeneratingTeams || !backendSectionId} className={styles.successButton}><RefreshCw className={styles.actionIcon} /> {isGeneratingTeams ? 'Generating...' : backendVisibleTeams.length ? 'Regenerate teams' : 'Generate teams'}</button>}>
-          <p className={styles.sourceNote}>{teamDataSource === 'backend' ? 'Showing backend teams persisted by the team service.' : 'Showing fallback mock teams until backend teams are generated for this section.'}</p>
+        <ModuleBlock
+          componentId="MOD-T1"
+          eyebrow="Teams"
+          title={`Visible Teams :: ${visibleTeams.length}`}
+          className={`${styles.sideModule} ${motionStyles.staggerItem}`}
+          style={{ "--td-stagger-delay": "50ms" }}
+          actions={
+            <div className={styles.moduleActions}>
+              <button onClick={handleGenerateTeams} disabled={isGeneratingTeams || !backendSectionId} className={styles.successButton}><RefreshCw className={styles.actionIcon} /> {isGeneratingTeams ? "Generating..." : backendVisibleTeams.length ? "Regenerate teams" : "Generate teams"}</button>
+              <button onClick={handleStartPeerEvaluation} disabled={!selectedGroup || !visibleTeams.length || Boolean(peerRound)} className={styles.secondaryButton}>Start peer evaluation</button>
+            </div>
+          }
+        >
+          <p className={styles.sourceNote}>{teamDataSource === "backend" ? "Showing backend teams persisted by the team service." : "Showing fallback mock teams until backend teams are generated for this section."}</p>
+          {peerRound ? <p className={styles.sourceNote}>Peer evaluation round is active for this group. {peerRound.submissionCount} submitted :: {peerRound.pendingCount} pending.</p> : <p className={styles.sourceNote}>Peer evaluation has not started for this group yet.</p>}
           <div className={styles.teamList}>
             {visibleTeams.map((team, index) => {
               const hasPendingRequest = team.members.some((member) => pendingRequestMap[member.id]);
-              const isTeamConfirmed = team.source === 'backend'
-                ? false
-                : team.members.every((member) => member.confirmationStatus === 'confirmed');
+              const isTeamConfirmed = team.source === "backend" ? false : team.members.every((member) => member.confirmationStatus === "confirmed");
               return (
-                <button key={team.id} onClick={() => setSelectedTeamId(team.id)} className={`${styles.teamSelect} ${selectedTeam?.id === team.id ? styles.teamSelectActive : ''} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ '--td-stagger-delay': `${index * 50}ms` }}>
+                <button key={team.id} onClick={() => setSelectedTeamId(team.id)} className={`${styles.teamSelect} ${selectedTeam?.id === team.id ? styles.teamSelectActive : ""} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ "--td-stagger-delay": `${index * 50}ms` }}>
                   <div className={styles.teamSelectHeader}>
                     <p className={`${styles.teamCode} ${isTeamConfirmed ? styles.teamCodeConfirmed : styles.teamCodePending}`}>{team.name}</p>
                     {hasPendingRequest ? <SystemTag hazard>Pending swap</SystemTag> : null}
                   </div>
                   <p className={styles.teamMeta}>{team.groupId} :: {team.members.length} members</p>
-                  <SystemTag tone={team.source === 'backend' ? 'neutral' : isTeamConfirmed ? 'success' : 'alert'}>
-                    {team.source === 'backend' ? 'Generated from backend' : isTeamConfirmed ? 'All members confirmed' : 'Waiting for confirmations'}
+                  <SystemTag tone={team.source === "backend" ? "neutral" : isTeamConfirmed ? "success" : "alert"}>
+                    {team.source === "backend" ? "Generated from backend" : isTeamConfirmed ? "All members confirmed" : "Waiting for confirmations"}
                   </SystemTag>
                 </button>
-              )
+              );
             })}
           </div>
         </ModuleBlock>
 
         <div className={styles.mainColumn}>
           {selectedTeam ? (
-            <ModuleBlock
-              componentId="MOD-T2"
-              eyebrow="Selected Team"
-              title={<span className={selectedTeam.source === 'backend' ? styles.teamCodeConfirmed : selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? styles.teamCodeConfirmed : styles.teamCodePending}>{selectedTeam.name}</span>}
-              metric={selectedTeam.members.length}
-              metricLabel="Members in this team"
-              className={`${motionStyles.staggerItem}`}
-              style={{ '--td-stagger-delay': '100ms' }}
-            >
+            <ModuleBlock componentId="MOD-T2" eyebrow="Selected Team" title={<span className={selectedTeam.source === "backend" ? styles.teamCodeConfirmed : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? styles.teamCodeConfirmed : styles.teamCodePending}>{selectedTeam.name}</span>} metric={selectedTeam.members.length} metricLabel="Members in this team" className={`${motionStyles.staggerItem}`} style={{ "--td-stagger-delay": "100ms" }}>
               <div className={styles.teamSummary}>
-                <GroupChip code={selectedGroup?.code || selectedTeam.groupId} meta={`${selectedTeam.members.length} members`} tone={selectedTeam.source === 'backend' ? 'blue' : selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'green' : 'orange'} className={motionStyles.magneticItem} />
-                <SystemTag tone={selectedTeam.source === 'backend' ? 'neutral' : selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'success' : 'alert'}>
-                  {selectedTeam.source === 'backend' ? 'Backend-generated team' : selectedTeam.members.every((member) => member.confirmationStatus === 'confirmed') ? 'Team confirmed' : 'Waiting for confirmations'}
+                <GroupChip code={selectedGroup?.code || selectedTeam.groupId} meta={`${selectedTeam.members.length} members`} tone={selectedTeam.source === "backend" ? "blue" : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? "green" : "orange"} className={motionStyles.magneticItem} />
+                <SystemTag tone={selectedTeam.source === "backend" ? "neutral" : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? "success" : "alert"}>
+                  {selectedTeam.source === "backend" ? "Backend-generated team" : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? "Team confirmed" : "Waiting for confirmations"}
                 </SystemTag>
               </div>
               <div className={styles.memberList}>
                 {selectedTeam.members.map((member, index) => {
                   const pendingRequest = pendingRequestMap[member.id];
-                  const isBackendMember = selectedTeam.source === 'backend';
+                  const isBackendMember = selectedTeam.source === "backend";
 
                   return (
-                    <div key={member.id} className={`${styles.memberCard} ${pendingRequest ? styles.memberCardAlert : ''} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ '--td-stagger-delay': `${index * 50}ms` }}>
+                    <div key={member.id} className={`${styles.memberCard} ${pendingRequest ? styles.memberCardAlert : ""} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ "--td-stagger-delay": `${index * 50}ms` }}>
                       <div className={styles.memberIdentity}>
                         <div className={styles.memberAvatar}>{member.name.charAt(0)}</div>
                         <div>
-                          <p className={`${styles.memberName} ${isBackendMember ? styles.memberNameConfirmed : member.confirmationStatus === 'confirmed' ? styles.memberNameConfirmed : styles.memberNamePending}`}>{member.name}</p>
+                          <p className={`${styles.memberName} ${isBackendMember ? styles.memberNameConfirmed : member.confirmationStatus === "confirmed" ? styles.memberNameConfirmed : styles.memberNamePending}`}>{member.name}</p>
                           <p className={styles.memberMeta}>{member.studentId}</p>
                         </div>
                       </div>
                       <div className={styles.memberActions}>
-                        <SystemTag tone={isBackendMember ? 'neutral' : member.confirmationStatus === 'confirmed' ? 'success' : 'alert'}>
-                          {isBackendMember ? 'From backend roster' : member.confirmationStatus === 'confirmed' ? 'Confirmed' : 'Pending'}
+                        <SystemTag tone={isBackendMember ? "neutral" : member.confirmationStatus === "confirmed" ? "success" : "alert"}>
+                          {isBackendMember ? "From backend roster" : member.confirmationStatus === "confirmed" ? "Confirmed" : "Pending"}
                         </SystemTag>
                         <div className={styles.mailLine}><Mail className={styles.mailIcon} /> <span>{member.email}</span></div>
                         {!isBackendMember && pendingRequest ? <button onClick={() => setSelectedRequest(pendingRequest)} className={`${styles.alertButton} ${motionStyles.pulseWarning}`}>See swap request</button> : null}
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             </ModuleBlock>
           ) : (
-            <ModuleBlock componentId="MOD-T0A" eyebrow="Selection" title="No team selected" metric="00" metricLabel="Visible team members" className={motionStyles.staggerItem} style={{ '--td-stagger-delay': '100ms' }} />
+            <ModuleBlock componentId="MOD-T0A" eyebrow="Selection" title="No team selected" metric="00" metricLabel="Visible team members" className={motionStyles.staggerItem} style={{ "--td-stagger-delay": "100ms" }} />
           )}
         </div>
       </div>
@@ -349,14 +377,14 @@ function Teams() {
                 <p className={styles.modalCode}>[SWAP REQUEST]</p>
                 <h3 className={styles.modalTitle}>{selectedRequest.studentName} from {selectedRequest.currentTeamName}</h3>
               </div>
-              {selectedRequest.status === 'pending' ? <SystemTag hazard>Pending review</SystemTag> : selectedRequest.status === 'approved' ? <SystemTag tone="success">Approved</SystemTag> : <SystemTag tone="alert">Rejected</SystemTag>}
+              {selectedRequest.status === "pending" ? <SystemTag hazard>Pending review</SystemTag> : selectedRequest.status === "approved" ? <SystemTag tone="success">Approved</SystemTag> : <SystemTag tone="alert">Rejected</SystemTag>}
             </div>
             <div className={styles.reasonBox}>
               <p className={styles.reasonLabel}>Reason</p>
               <p className={styles.reasonText}>{selectedRequest.reason}</p>
             </div>
             <div className={styles.modalActions}>
-              {selectedRequest.status === 'pending' ? (
+              {selectedRequest.status === "pending" ? (
                 <>
                   <button onClick={() => handleApprove(selectedRequest.id)} className={styles.successButton}><CheckCircle className={styles.actionIcon} /> Approve</button>
                   <button onClick={() => handleReject(selectedRequest.id)} className={`${styles.alertButton} ${motionStyles.pulseWarning}`}><XCircle className={styles.actionIcon} /> Reject</button>

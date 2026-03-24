@@ -9,6 +9,7 @@
 .subtitle,.reasonText,.mailLine { margin:0; color: var(--td-color-text-muted); line-height:1.7; }
 .layout { display:grid; grid-template-columns: minmax(280px,0.9fr) minmax(0,1.5fr); gap: var(--td-space-sm); }
 .sideModule { align-self:start; }
+.moduleActions { display:flex; flex-wrap:wrap; gap: var(--td-space-xs); justify-content:flex-end; }
 .teamList,.memberList,.rosterList { display:flex; flex-direction:column; gap: var(--td-space-xs); }
 .teamSelect { display:flex; flex-direction:column; gap: var(--td-space-xs); padding: var(--td-space-sm); border:1px solid rgba(124,145,166,0.45); border-radius: var(--td-radius-sharp); background: rgba(240,244,248,0.82); text-align:left; }
 .teamSelectActive { border-color: var(--td-color-primary); background: rgba(0,71,171,0.08); }
@@ -35,6 +36,6 @@
 .successButton { color:#0c6b36; background: rgba(46,204,113,0.15); }
 .alertButton { color:#8b3900; background: rgba(255,107,0,0.14); }
 .secondaryButton { color: var(--td-color-text); background: rgba(255,255,255,0.9); }
-.successButton:disabled { opacity:0.6; cursor:not-allowed; }
+.successButton:disabled,.secondaryButton:disabled { opacity:0.6; cursor:not-allowed; }
 @media (max-width: 900px) { .layout { grid-template-columns:1fr; } }
-@media (max-width: 700px) { .hero { flex-direction:column; } .memberActions,.heroTags { align-items:flex-start; justify-content:flex-start; } }
+@media (max-width: 700px) { .hero { flex-direction:column; } .memberActions,.heroTags,.moduleActions { align-items:flex-start; justify-content:flex-start; } }

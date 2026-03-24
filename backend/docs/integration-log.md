@@ -154,3 +154,30 @@ Before final delivery, remove or soften temporary integration diagnostics from u
 - other backend/mock source indicators used only for testing and transition
 
 Replace them with normal user-facing copy once backend integration is fully complete and fallback/testing states are no longer needed.
+
+## 2026-03-24 :: Step 5 :: Mock peer evaluation flow
+
+### Goal
+Add an end-of-project peer evaluation experience to the frontend before the backend reputation workflow is integrated.
+
+### Frontend scope
+- Page: rontend/src/pages/instructor/Teams.jsx
+- Page: rontend/src/pages/student/StudentDashboard.jsx
+- Page: rontend/src/pages/student/PeerEvaluationForm.jsx
+- Service layer: rontend/src/services/peerEvaluationService.js
+- Mock seed data/types: rontend/src/data/mockData.ts, rontend/src/types/index.ts
+
+### Behavior
+- Instructors can start a peer evaluation round for a specific course group from the group teams page
+- Students see pending peer evaluation work on their dashboard
+- Students can rate every teammate and themselves from 1 to 5 and give a short written justification for each rating
+- Submissions create a private reputation signal in the mock service, but that value is intentionally not shown in the student UI
+
+### Current limitations
+- This slice is frontend-only and in-memory for now; refreshing clears the round/submission state
+- Instructor initiation currently lives on the group teams page rather than a dedicated course matrix control
+- Reputation impact is stored only as a mock private signal until the real backend reputation flow is integrated
+
+### Next likely backend slice
+- swap-request workflow on top of backend teams
+- later reputation / peer evaluation persistence if those services are added
