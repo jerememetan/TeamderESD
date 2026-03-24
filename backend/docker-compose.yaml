@@ -190,3 +190,37 @@ services:
     depends_on:
       - student-profile-service
       - formation-config-service
+
+      # ── Scenario 2: Dashboard Analytics ──────────────────────────────────
+
+  analytics-service:
+    build:
+      context: ./atomic-services/analytics
+    container_name: teamder-analytics-service
+    environment:
+      PORT: 3014
+    ports:
+      - "3014:3014"
+
+  dashboard-orchestrator-service:
+    build:
+      context: ./composite-services/dashboard-orchestrator
+    container_name: teamder-dashboard-orchestrator-service
+    ports:
+      - "4003:4003"
+    environment:
+      TEAM_URL: "http://team-service:3007/team"
+      STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
+      CRITERIA_URL: "http://criteria-service:3004/criteria"
+      SKILL_URL: "http://skill-service:3002/skill"
+      TOPIC_URL: "http://topic-service:3003/topic"
+      ANALYTICS_URL: "http://analytics-service:3014/analytics"
+      REQUEST_TIMEOUT: 8
+      PORT: 4003
+    depends_on:
+      - team-service
+      - student-profile-service
+      - criteria-service
+      - skill-service
+      - topic-service
+      - analytics-service
