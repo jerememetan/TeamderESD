@@ -1,20 +1,121 @@
-.page,.notFound { display:flex; flex-direction:column; gap: var(--td-space-md); }
-.backLink,.kicker,.insightText,.rosterError { color: var(--td-color-text); }
-.backLink,.kicker { font-family: var(--td-font-mono); text-transform: uppercase; }
-.backLink { display:inline-flex; align-items:center; gap: var(--td-space-xs); color: var(--td-color-primary); text-decoration:none; font-size:0.72rem; letter-spacing:0.12em; }
-.backIcon { width:18px; height:18px; }
-.hero { display:flex; justify-content:space-between; gap: var(--td-space-md); align-items:flex-start; }
-.heroTags { display:flex; flex-wrap:wrap; gap: var(--td-space-xs); justify-content:flex-end; }
-.kicker { margin:0; color: var(--td-color-primary); font-size:0.75rem; letter-spacing:0.18em; }
-.title { margin:8px 0; font-size:clamp(1.9rem,4vw,3rem); line-height:1; font-weight:800; text-transform:uppercase; }
-.subtitle,.insightText,.rosterError { margin:0; color: var(--td-color-text-muted); line-height:1.7; }
-.statsGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap: var(--td-space-sm); }
-.chartGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap: var(--td-space-sm); }
-.chartModule { min-height: 380px; }
-.chartWrap { width:100%; height:300px; }
-.fullSpan { grid-column:1 / -1; }
-.insightList { display:flex; flex-direction:column; gap: var(--td-space-sm); }
-.insightRow { display:flex; flex-wrap:wrap; align-items:center; gap: var(--td-space-xs); padding: var(--td-space-sm); border:1px solid rgba(124,145,166,0.45); border-radius: var(--td-radius-sharp); background: rgba(240,244,248,0.82); }
-.rosterError { padding: 12px 14px; border:1px solid rgba(255,107,0,0.35); border-radius: var(--td-radius-sharp); background: rgba(255,107,0,0.08); color:#9a3c00; }
-@media (max-width: 900px) { .statsGrid,.chartGrid { grid-template-columns:1fr; } .fullSpan { grid-column:auto; } }
-@media (max-width: 700px) { .hero { flex-direction:column; } .heroTags { justify-content:flex-start; } }
+.page,
+.notFound {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-md);
+}
+.backLink,
+.kicker,
+.insightText,
+.rosterError {
+  color: var(--td-color-text);
+}
+.backLink,
+.kicker {
+  font-family: var(--td-font-mono);
+  text-transform: uppercase;
+}
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--td-space-xs);
+  color: var(--td-color-primary);
+  text-decoration: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+}
+.backIcon {
+  width: 18px;
+  height: 18px;
+}
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--td-space-md);
+  align-items: flex-start;
+}
+.heroTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--td-space-xs);
+  justify-content: flex-end;
+}
+.kicker {
+  margin: 0;
+  color: var(--td-color-primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+}
+.title {
+  margin: 8px 0;
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.subtitle,
+.insightText,
+.rosterError {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  line-height: 1.7;
+}
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--td-space-sm);
+}
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--td-space-sm);
+}
+.chartModule {
+  min-height: 380px;
+}
+.chartWrap {
+  width: 100%;
+  height: 300px;
+}
+.fullSpan {
+  grid-column: 1 / -1;
+}
+.insightList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-space-sm);
+}
+.insightRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--td-space-xs);
+  padding: var(--td-space-sm);
+  border: 1px solid rgba(124, 145, 166, 0.45);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(240, 244, 248, 0.82);
+}
+.rosterError {
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 107, 0, 0.35);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(255, 107, 0, 0.08);
+  color: #9a3c00;
+}
+@media (max-width: 900px) {
+  .statsGrid,
+  .chartGrid {
+    grid-template-columns: 1fr;
+  }
+  .fullSpan {
+    grid-column: auto;
+  }
+}
+@media (max-width: 700px) {
+  .hero {
+    flex-direction: column;
+  }
+  .heroTags {
+    justify-content: flex-start;
+  }
+}

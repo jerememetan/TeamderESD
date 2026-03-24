@@ -43,23 +43,24 @@
   display: inline-flex;
   align-items: center;
   gap: var(--td-space-xs);
-  min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--td-color-border-strong);
-  border-radius: var(--td-radius-sharp);
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid rgba(0, 71, 171, 0.3);
+  border-radius: var(--td-radius-panel);
   background: linear-gradient(180deg, var(--td-color-primary), var(--td-color-primary-strong));
   color: var(--td-color-surface);
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.12);
+  box-shadow: 0 12px 24px rgba(6, 28, 61, 0.14);
+  transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
 .headerButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 24px rgba(6, 28, 61, 0.16);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 30px rgba(6, 28, 61, 0.2);
 }
 
 .buttonIcon {
@@ -74,7 +75,7 @@
 }
 
 .courseBlock {
-  gap: var(--td-space-sm);
+  gap: var(--td-space-md);
 }
 
 .courseSemester,
@@ -96,13 +97,27 @@
 }
 
 .groupCard {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--td-space-sm);
-  padding: var(--td-space-sm);
-  border: 1px solid rgba(124, 145, 166, 0.45);
-  border-radius: var(--td-radius-sharp);
-  background: rgba(240, 244, 248, 0.8);
+  min-height: 240px;
+  padding: calc(var(--td-space-md) + 2px);
+  border: 1px solid rgba(0, 71, 171, 0.18);
+  border-radius: var(--td-radius-panel);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(233, 241, 251, 0.88));
+  box-shadow: 0 12px 24px rgba(6, 28, 61, 0.1);
+  overflow: hidden;
+}
+
+.groupCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-top: 4px solid var(--td-color-primary);
+  opacity: 0.95;
+  pointer-events: none;
 }
 
 .groupHeader,
@@ -114,40 +129,57 @@
   justify-content: space-between;
 }
 
+.groupNote {
+  font-size: 0.76rem;
+}
+
 .groupActions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--td-space-xs);
-  align-items: stretch;
+  margin-top: auto;
 }
 
 .groupActionButton {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
+  min-height: 46px;
   padding: 0 14px;
-  border: 1px solid var(--td-color-border-strong);
-  border-radius: var(--td-radius-sharp);
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 71, 171, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
   color: var(--td-color-text);
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.08);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
 
 .groupActionButton:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: rgba(0, 71, 171, 0.4);
   background: rgba(255, 255, 255, 1);
-  box-shadow: 0 10px 18px rgba(6, 28, 61, 0.08);
+  box-shadow: 0 12px 22px rgba(6, 28, 61, 0.12);
 }
 
 .groupActionPrimary {
-  background: linear-gradient(180deg, rgba(0, 71, 171, 0.14), rgba(0, 71, 171, 0.08));
+  background: linear-gradient(180deg, rgba(0, 71, 171, 0.16), rgba(0, 71, 171, 0.08));
   color: var(--td-color-primary);
   border-color: rgba(0, 71, 171, 0.35);
+}
+
+.groupActionPrimary:hover {
+  border-color: rgba(0, 71, 171, 0.52);
+  background: linear-gradient(180deg, rgba(0, 71, 171, 0.22), rgba(0, 71, 171, 0.1));
+}
+
+@media (max-width: 1100px) {
+  .groupActions {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -161,7 +193,32 @@
     flex-direction: column;
   }
 
-  .groupActionButton {
+  .headerButton {
     width: 100%;
+    justify-content: center;
   }
 }
+
+
+.groupTitleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.groupStats {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  font-family: var(--td-font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
