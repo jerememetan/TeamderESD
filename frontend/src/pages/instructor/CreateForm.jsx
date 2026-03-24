@@ -392,7 +392,6 @@ function CreateForm() {
 
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[GROUP FORM BUILDER]</p>
           <h2 className={styles.title}>{existingForm ? "Edit" : "Create"} formation logic for {selectedGroup.code}</h2>
           <p className={styles.subtitle}>This screen now saves the group configuration to the backend formation-config service using {selectedGroup.code} as the section scope.</p>
         </div>
@@ -500,13 +499,12 @@ function CreateForm() {
       </div>
 
       <div className={styles.actionRow}>
-        <button className={styles.primaryButton} onClick={() => handleSave("draft")} disabled={isSaving || isLoading}>
+        <button  className={styles.primaryButton} onClick={() => handleSave("draft")} disabled={isSaving || isLoading}>
           {isSaving ? <Save className={styles.buttonIcon} /> : null} Save draft
         </button>
         <button className={styles.successButton} onClick={handlePublish} disabled={isSaving || isLoading || isPublishingLinks}>
           {isPublishingLinks ? "Publishing..." : "Publish form"}
         </button>
-
       </div>
     </div>
   );
