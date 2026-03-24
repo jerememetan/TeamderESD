@@ -1,11 +1,11 @@
 from flask import Blueprint, jsonify, request
 
-from ..consumer import process_status_event
+from ..consumer import update_status_directly
 from ..models.swap_request_model import SwapRequest, db
 from ..schemas.swap_request_schema import (
     SwapRequestCreateSchema,
     SwapRequestResponseSchema,
-    SwapRequestSimulateEventSchema,
+    SwapRequestStatusUpdateSchema,
 )
 
 swap_request_bp = Blueprint("swap_request", __name__)
@@ -13,7 +13,7 @@ swap_request_bp = Blueprint("swap_request", __name__)
 create_schema = SwapRequestCreateSchema()
 response_schema = SwapRequestResponseSchema()
 many_response_schema = SwapRequestResponseSchema(many=True)
-simulate_event_schema = SwapRequestSimulateEventSchema()
+status_update_schema = SwapRequestStatusUpdateSchema()
 
 
 @swap_request_bp.route("", methods=["POST"])
@@ -93,40 +93,9 @@ def get_swap_request_by_id(swap_request_id):
     )
 
 
-@swap_request_bp.route("/simulate/rejected", methods=["POST"])
-def simulate_rejected_event():
-    # HTTP test endpoint: simulates RabbitMQ SwapRejected consume for Postman testing.
+@swap_request_bp.route("/<uuid:swap_request_id>/status", methods=["PATCH"])
+def update_swap_request_status(swap_request_id):
     payload = request.get_json() or {}
-    data = simulate_event_schema.load(payload)
-    result = process_status_event(
-        payload={"swap_request_id": str(data["swap_request_id"]), "event_type": "SwapRejected"},
-        routing_key="SwapRejected",
-        source="http-simulated",
-    )
-    return jsonify(result), result.get("http_status", 200)
-
-
-@swap_request_bp.route("/simulate/executed", methods=["POST"])
-def simulate_executed_event():
-    # HTTP test endpoint: simulates RabbitMQ SwapExecuted consume for Postman testing.
-    payload = request.get_json() or {}
-    data = simulate_event_schema.load(payload)
-    result = process_status_event(
-        payload={"swap_request_id": str(data["swap_request_id"]), "event_type": "SwapExecuted"},
-        routing_key="SwapExecuted",
-        source="http-simulated",
-    )
-    return jsonify(result), result.get("http_status", 200)
-
-
-@swap_request_bp.route("/simulate/failed", methods=["POST"])
-def simulate_failed_event():
-    # HTTP test endpoint: simulates RabbitMQ SwapFailed consume for Postman testing.
-    payload = request.get_json() or {}
-    data = simulate_event_schema.load(payload)
-    result = process_status_event(
-        payload={"swap_request_id": str(data["swap_request_id"]), "event_type": "SwapFailed"},
-        routing_key="SwapFailed",
-        source="http-simulated",
-    )
+    data = status_update_schema.load(payload)
+    result = update_status_directly(swap_request_id=swap_request_id, status=data["status"])
     return jsonify(result), result.get("http_status", 200)

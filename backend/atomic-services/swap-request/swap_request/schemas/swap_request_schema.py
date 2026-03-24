@@ -20,10 +20,5 @@ class SwapRequestResponseSchema(Schema):
     updated_at = fields.DateTime()
 
 
-class SwapRequestSimulateEventSchema(Schema):
-    swap_request_id = fields.UUID(required=True)
-    event_type = fields.String(
-        required=False,
-        load_default=None,
-        validate=validate.OneOf(["SwapRejected", "SwapExecuted", "SwapFailed"]),
-    )
+class SwapRequestStatusUpdateSchema(Schema):
+    status = fields.String(required=True, validate=validate.OneOf(VALID_STATUSES))
