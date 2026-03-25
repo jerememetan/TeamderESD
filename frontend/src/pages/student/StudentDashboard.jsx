@@ -82,22 +82,16 @@ function StudentDashBoard() {
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
       <section className={`${styles.hero} ${motionStyles.staggerItem}`} style={{ '--td-stagger-delay': '0ms' }}>
         <div>
-          <p className={styles.kicker}>[STUDENT HOME]</p>
-          <h2 className={styles.title}>See your teams and complete your forms.</h2>
+          <h2 className={styles.title}>Student Dashboard</h2>
           <p className={styles.subtitle}>Welcome back, {studentProfile.name}. You are currently assigned to {teamAssignments.length} course group{teamAssignments.length > 1 ? 's' : ''}.</p>
         </div>
         <SystemTag tone={assignmentTone}>{isLoadingAssignments ? 'Loading assignments' : assignmentSource === 'backend' ? 'Backend teams loaded' : 'Mock assignments active'}</SystemTag>
       </section>
-
-      {assignmentError ? <p className={styles.feedbackAlert}><AlertTriangle className={styles.actionIcon} /> Backend student team load failed: {assignmentError}</p> : null}
-      {assignmentSource === 'backend' ? <p className={styles.sourceNote}>Your dashboard team summary is now using backend team memberships enriched with student-profile data.</p> : null}
-      {assignmentSource === 'mock' && !assignmentError ? <p className={styles.sourceNote}>Backend student assignments were not found yet, so the dashboard is showing the existing mock team summary.</p> : null}
-
       <section className={styles.statsGrid}>
         {[
-          { id: 'MOD-11', eyebrow: 'Overview', title: 'My Teams', metric: String(teamAssignments.length).padStart(2, '0'), label: 'One team per course group', accent: 'blue' },
-          { id: 'MOD-12', eyebrow: 'Overview', title: 'Available Forms', metric: String(availableFormList.length).padStart(2, '0'), label: 'Forms you can fill in', accent: 'green' },
-          { id: 'MOD-13', eyebrow: 'Attention', title: 'Peer Evaluations', metric: String(pendingPeerRounds.length).padStart(2, '0'), label: pendingPeerRounds.length ? 'Rounds waiting for your response' : 'No peer evaluations to complete', accent: 'orange' },
+          { title: 'My Teams', metric: String(teamAssignments.length).padStart(2, '0'), accent: 'blue' },
+          { title: 'Available Forms', metric: String(availableFormList.length).padStart(2, '0'), accent: 'green' },
+          { title: 'Peer Evaluations', metric: String(pendingPeerRounds.length).padStart(2, '0'), accent: 'orange' },
         ].map((item, index) => (
           <ModuleBlock
             key={item.id}
@@ -152,32 +146,6 @@ function StudentDashBoard() {
           </Link>
         ))}
       </section>
-
-      <ModuleBlock
-        componentId="MOD-14"
-        eyebrow="Assignments"
-        title="Current Team Assignments"
-        className={`${styles.teamModule} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
-        style={{ '--td-stagger-delay': '300ms' }}
-      >
-        <div className={styles.assignmentList}>
-          {teamAssignments.map((team) => {
-            const course = mockCourses.find((item) => item.id === team.courseId);
-            const currentMember = team.members.find((member) => member.id === studentProfile.id || member.studentId === studentProfile.studentId || member.email === studentProfile.email);
-            const hasActivePeerRound = pendingPeerRounds.some((round) => round.groupId === team.groupId);
-
-            return (
-              <div key={team.id} className={styles.assignmentRow}>
-                <p className={styles.assignmentTitle}>You have been assigned to {team.name}.</p>
-                <p className={styles.metaLine}>{course?.code} :: {team.groupId} :: {team.members.length} members</p>
-                <SystemTag tone={hasActivePeerRound ? 'alert' : assignmentSource === 'backend' ? 'neutral' : currentMember?.confirmationStatus === 'confirmed' ? 'success' : 'alert'}>
-                  {hasActivePeerRound ? 'Peer evaluation open' : assignmentSource === 'backend' ? 'Backend team membership loaded' : currentMember?.confirmationStatus === 'confirmed' ? 'Confirmed' : 'Waiting for your confirmation'}
-                </SystemTag>
-              </div>
-            );
-          })}
-        </div>
-      </ModuleBlock>
 
       <ModuleBlock
         componentId="MOD-15"

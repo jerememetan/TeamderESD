@@ -8,6 +8,7 @@ import motionStyles from "../../components/schematic/motion.module.css";
 import { currentStudent, currentStudentTeams, mockCourses, mockStudentStrengths } from "../../data/mockData";
 import { fetchStudentAssignments } from "../../services/studentAssignmentService";
 import styles from "./MyTeam.module.css";
+import { Button } from "../../components/ui/button";
 
 function MyTeam() {
   const studentProfile = currentStudent;
@@ -128,9 +129,7 @@ function MyTeam() {
 
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[MY TEAMS]</p>
           <h2 className={styles.title}>Your team assignments</h2>
-          <p className={styles.subtitle}>You can be in more than one course group, but only one team in each group.</p>
         </div>
         <div className={styles.heroTags}>
           <SystemTag tone={sourceTone}>{isLoadingAssignments ? "Loading assignments" : assignmentSource === "backend" ? "Backend assignments loaded" : "Mock assignments active"}</SystemTag>
@@ -138,15 +137,11 @@ function MyTeam() {
         </div>
       </section>
 
-      {assignmentError ? <div className={styles.feedbackAlert}><AlertTriangle className={styles.buttonIcon} /> <span>Backend team load failed: {assignmentError}</span></div> : null}
-      {assignmentSource === "mock" && !assignmentError ? <p className={styles.sourceNote}>Backend teams were not found for this student yet, so the page is showing the existing mock assignment data.</p> : null}
-      {assignmentSource === "backend" ? <p className={styles.sourceNote}>These assignments are built from backend team memberships enriched with live student-profile data. Confirmation state is still mock-level until that backend slice exists.</p> : null}
-
-      <section className={styles.statsGrid}>
+     <section className={styles.statsGrid}>
         {[
-          { id: "MOD-M1", eyebrow: "Overview", title: "Course Groups", metric: String(teamAssignments.length).padStart(2, "0"), label: "Active team assignments", accent: "blue" },
-          { id: "MOD-M2", eyebrow: "Overview", title: "Selected Team", metric: selectedTeam.members.length, label: "Members in this team", accent: "green" },
-          { id: "MOD-M3", eyebrow: "Status", title: "My Confirmation", metric: assignmentSource === "backend" ? "SYNC" : isConfirmed ? "YES" : "PEND", label: assignmentSource === "backend" ? "Backend team membership loaded" : isConfirmed ? "You have confirmed" : "Waiting for your confirmation", accent: assignmentSource === "backend" ? "blue" : isConfirmed ? "green" : "orange" },
+          { title: "Course Groups", metric: String(teamAssignments.length).padStart(2, "0"), label: "Active team assignments", accent: "blue" },
+          { title: "Selected Team", metric: selectedTeam.members.length, label: "Members in this team", accent: "green" },
+          { title: "My Confirmation", metric: assignmentSource === "backend" ? "SYNC" : isConfirmed ? "YES" : "PEND", label: assignmentSource === "backend" ? "Backend team membership loaded" : isConfirmed ? "You have confirmed" : "Waiting for your confirmation", accent: assignmentSource === "backend" ? "blue" : isConfirmed ? "green" : "orange" },
         ].map((item, index) => (
           <ModuleBlock
             key={item.id}
