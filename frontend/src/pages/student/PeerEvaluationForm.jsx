@@ -72,7 +72,7 @@ function PeerEvaluationForm() {
         <ModuleBlock componentId="MOD-PDONE" eyebrow="Peer Evaluation" title="Submission received" metric="DONE" metricLabel="Your evaluation has been recorded">
           <p className={styles.infoText}>You have already completed this peer evaluation round. Reputation effects remain private and are not shown here.</p>
           <div className={styles.actionRow}>
-            <button type="button" onClick={() => navigate('/student')} className={styles.primaryButton}>Return to dashboard</button>
+            <Button type="button" onClick={() => navigate('/student')}>Return to dashboard</Button>
           </div>
         </ModuleBlock>
       </div>
@@ -168,8 +168,8 @@ function PeerEvaluationForm() {
         ))}
 
         <div className={styles.actionRow}>
-          <button type="submit" className={styles.primaryButton}>Submit peer evaluation</button>
-          <button type="button" onClick={() => navigate('/student')} className={styles.secondaryButton}>Cancel</button>
+          <Button type="submit">Submit peer evaluation</Button>
+          <Button type="button" onClick={() => navigate('/student')} variant="outline">Cancel</Button>
         </div>
       </form>
     </div>

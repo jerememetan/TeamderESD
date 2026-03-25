@@ -162,13 +162,11 @@ function Analytics() {
 
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[GROUP ANALYTICS CONSOLE]</p>
           <h2 className={styles.title}>
-            {selectedGroup.code} performance and formation telemetry
+            {selectedGroup.code} Analytics Page
           </h2>
           <p className={styles.subtitle}>
-            {selectedCourse.name} :: compare this group against sibling clusters
-            while using live roster totals from student-profile where available.
+            <b>Course Name</b> : {selectedCourse.name} 
           </p>
         </div>
         <div className={styles.heroTags}>

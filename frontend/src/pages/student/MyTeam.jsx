@@ -134,7 +134,7 @@ function MyTeam() {
         </div>
         <div className={styles.heroTags}>
           <SystemTag tone={sourceTone}>{isLoadingAssignments ? "Loading assignments" : assignmentSource === "backend" ? "Backend assignments loaded" : "Mock assignments active"}</SystemTag>
-          <button onClick={() => setShowSwapModal(true)} className={styles.primaryButton}><RefreshCw className={styles.buttonIcon} /> Request team swap</button>
+          <Button onClick={() => setShowSwapModal(true)}><RefreshCw className={styles.buttonIcon} /> Request team swap</Button>
         </div>
       </section>
 
@@ -196,7 +196,7 @@ function MyTeam() {
             <SystemTag tone={assignmentSource === "backend" ? "neutral" : isConfirmed ? "success" : "alert"}>
               {assignmentSource === "backend" ? "Backend team membership loaded" : isConfirmed ? "You have confirmed this team" : "Please confirm this team"}
             </SystemTag>
-            {!isConfirmed && assignmentSource !== "backend" ? <button onClick={handleConfirmTeam} className={styles.confirmButton}>Confirm my team</button> : null}
+            {!isConfirmed && assignmentSource !== "backend" ? <Button onClick={handleConfirmTeam} variant="success" size="sm">Confirm my team</Button> : null}
           </div>
         </div>
 
@@ -259,8 +259,8 @@ function MyTeam() {
                 />
               </label>
               <div className={styles.modalActions}>
-                <button type="submit" className={styles.primaryButton}>Submit request</button>
-                <button type="button" onClick={() => { setShowSwapModal(false); setSwapReason(""); }} className={styles.secondaryButton}>Cancel</button>
+                <Button type="submit">Submit request</Button>
+                <Button type="button" onClick={() => { setShowSwapModal(false); setSwapReason(""); }} variant="outline">Cancel</Button>
               </div>
             </form>
           </div>

@@ -7,6 +7,7 @@ import { getBackendCourseId, getBackendSectionId } from "../../data/backendIds";
 import { mockCourses, mockForms } from "../../data/mockData";
 import { fetchFormationConfig, saveFormationConfig } from "../../services/formationConfigService";
 import styles from "./CreateForm.module.css";
+import { Button } from "../../components/ui/button";
 
 const FORMATION_NOTIFICATION_API_BASE =
   import.meta.env.VITE_FORMATION_NOTIFICATION_API_BASE ||
@@ -465,13 +466,13 @@ function CreateForm() {
       </div>
 
       <div className={styles.grid}>
-        <ModuleBlock componentId="MOD-F03" eyebrow="Topics" title="Project topics" metric={formState.topics.length} metricLabel="Topics saved to backend" actions={<button onClick={addTopic} className={styles.primaryButton}><Plus className={styles.buttonIcon} /> Add topic</button>}>
+        <ModuleBlock componentId="MOD-F03" eyebrow="Topics" title="Project topics" metric={formState.topics.length} metricLabel="Topics saved to backend" actions={<Button onClick={addTopic} variant="default" size="sm"><Plus className={styles.buttonIcon} /> Add topic</Button>}>
           <div className={styles.criteriaList}>
             {formState.topics.length ? formState.topics.map((topic, index) => (
               <div key={topic.id} className={styles.criterionCard}>
                 <div className={styles.criterionHeader}>
                   <p className={styles.criterionCode}>Topic {String(index + 1).padStart(2, "0")}</p>
-                  <button onClick={() => removeTopic(topic.id)} className={styles.iconButton}><Trash2 className={styles.buttonIcon} /></button>
+                  <Button onClick={() => removeTopic(topic.id)} variant="warning" size="icon"><Trash2 className={styles.buttonIcon} /></Button>
                 </div>
                 <input type="text" value={topic.topic_label} onChange={(event) => updateTopic(topic.id, event.target.value)} placeholder="Example: AI product design" className={styles.input} />
               </div>
@@ -479,13 +480,13 @@ function CreateForm() {
           </div>
         </ModuleBlock>
 
-        <ModuleBlock componentId="MOD-F04" eyebrow="Skills" title="Tracked skills" metric={formState.skills.length} metricLabel="Skills saved to backend" actions={<button onClick={addSkill} className={styles.primaryButton}><Plus className={styles.buttonIcon} /> Add skill</button>}>
+        <ModuleBlock componentId="MOD-F04" eyebrow="Skills" title="Tracked skills" metric={formState.skills.length} metricLabel="Skills saved to backend" actions={<Button onClick={addSkill} variant="default" size="sm"><Plus className={styles.buttonIcon} /> Add skill</Button>}>
           <div className={styles.criteriaList}>
             {formState.skills.length ? formState.skills.map((skill, index) => (
               <div key={skill.id} className={styles.criterionCard}>
                 <div className={styles.criterionHeader}>
                   <p className={styles.criterionCode}>Skill {String(index + 1).padStart(2, "0")}</p>
-                  <button onClick={() => removeSkill(skill.id)} className={styles.iconButton}><Trash2 className={styles.buttonIcon} /></button>
+                  <Button onClick={() => removeSkill(skill.id)} variant="warning" size="icon"><Trash2 className={styles.buttonIcon} /></Button>
                 </div>
                 <input type="text" value={skill.skill_label} onChange={(event) => updateSkill(skill.id, { skill_label: event.target.value })} placeholder="Example: React" className={styles.input} />
                 <label className={styles.field}>
@@ -499,12 +500,12 @@ function CreateForm() {
       </div>
 
       <div className={styles.actionRow}>
-        <button  className={styles.primaryButton} onClick={() => handleSave("draft")} disabled={isSaving || isLoading}>
+        <Button variant="default" onClick={() => handleSave("draft")} disabled={isSaving || isLoading}>
           {isSaving ? <Save className={styles.buttonIcon} /> : null} Save draft
-        </button>
-        <button className={styles.successButton} onClick={handlePublish} disabled={isSaving || isLoading || isPublishingLinks}>
+        </Button>
+        <Button variant="success" onClick={handlePublish} disabled={isSaving || isLoading || isPublishingLinks}>
           {isPublishingLinks ? "Publishing..." : "Publish form"}
-        </button>
+        </Button>
       </div>
     </div>
   );

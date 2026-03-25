@@ -1,6 +1,5 @@
 import { Link } from "react-router";
 import { AlertCircle, BookOpen } from "lucide-react";
-import GroupChip from "../../components/schematic/GroupChip";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
@@ -64,12 +63,9 @@ function InstructorDashboard() {
           },
         ].map((item, index) => (
           <ModuleBlock
-            key={item.id}
-            componentId={item.id}
-            eyebrow={item.eyebrow}
+            key={item.title}
             title={item.title}
             metric={item.metric}
-            metricLabel={item.label}
             accent={item.accent}
             className={`${styles.statCard} ${motionStyles.staggerItem}`}
             style={{ "--td-stagger-delay": `${index * 50}ms` }}
@@ -100,18 +96,14 @@ function InstructorDashboard() {
           >
             {action.icon}
             <div>
-              <p className={styles.actionCode}>{action.code}</p>
               <h3 className={styles.actionTitle}>{action.title}</h3>
               <p className={styles.actionText}>{action.text}</p>
             </div>
           </Link>
         ))}
       </section>
-
-
     </div>
   );
 }
 
 export default InstructorDashboard;
-

@@ -12,6 +12,7 @@ import { fetchStudentProfile } from "../../services/studentProfileService";
 import { generateTeamsForSection } from "../../services/teamFormationService";
 import { fetchTeamsBySection } from "../../services/teamService";
 import styles from "./Teams.module.css";
+import { Button } from "../../components/ui/button";
 
 function mapBackendTeamsToViewModel(backendTeams, rosterById, courseId, groupId) {
   return backendTeams.map((team, index) => {
@@ -252,7 +253,6 @@ function Teams() {
 
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[TEAM VIEW]</p>
           <h2 className={styles.title}>{heroTitle}</h2>
           <p className={styles.subtitle}>{heroSubtitle}</p>
         </div>
@@ -265,27 +265,12 @@ function Teams() {
       </section>
 
       {selectedGroup ? (
-        <ModuleBlock componentId="MOD-T0" eyebrow="Section Roster" title={`Live roster :: ${selectedGroup.code}`} metric={backendStudents.length} metricLabel="Students from student-profile" className={motionStyles.staggerItem} style={{ "--td-stagger-delay": "0ms" }}>
+        <ModuleBlock componentId="MOD-T0" eyebrow="Section Roster" title={`${selectedGroup.code}`} metric={backendStudents.length} metricLabel="Students from student-profile" className={motionStyles.staggerItem} style={{ "--td-stagger-delay": "0ms" }}>
           <div className={styles.rosterSummary}>
-            <div className={styles.rosterStat}><Users className={styles.actionIcon} /><span>{Object.entries(yearCounts).map(([label, count]) => `${label} ${count}`).join(" :: ") || "No year data"}</span></div>
-            <div className={styles.rosterStat}><span>{Object.entries(genderCounts).map(([label, count]) => `${label} ${count}`).join(" :: ") || "No gender data"}</span></div>
+            <div className={styles.rosterStat}><Users className={styles.actionIcon} /><span>{Object.entries(yearCounts).map(([label, count]) => `${label} : ${count} Students`).join(" | ") || "No year data"}</span></div>
+            <div className={styles.rosterStat}><span>{Object.entries(genderCounts).map(([label, count]) => `${label} ${count}`).join(" | ") || "No gender data"}</span></div>
           </div>
           {rosterError ? <p className={styles.rosterError}>Student-profile load failed: {rosterError}</p> : null}
-          <p className={styles.rosterNote}>This roster is fetched from the backend student-profile service. Team cards below will switch to backend teams automatically once they exist for this section.</p>
-          <div className={styles.rosterList}>
-            {backendStudents.slice(0, 8).map((student) => (
-              <div key={student.student_id} className={styles.rosterCard}>
-                <div>
-                  <p className={styles.memberName}>{student.profile?.name || `Student ${student.student_id}`}</p>
-                  <p className={styles.memberMeta}>Backend ID :: {student.student_id}</p>
-                </div>
-                <div className={styles.rosterDetail}>
-                  <SystemTag tone="neutral">Year {student.profile?.year ?? "NA"}</SystemTag>
-                  <span className={styles.rosterEmail}>{student.profile?.email || "No email"}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         </ModuleBlock>
       ) : null}
 
@@ -296,13 +281,13 @@ function Teams() {
         <ModuleBlock
           componentId="MOD-T1"
           eyebrow="Teams"
-          title={`Visible Teams :: ${visibleTeams.length}`}
+          title={`Total Teams : ${visibleTeams.length}`}
           className={`${styles.sideModule} ${motionStyles.staggerItem}`}
           style={{ "--td-stagger-delay": "50ms" }}
           actions={
             <div className={styles.moduleActions}>
-              <button onClick={handleGenerateTeams} disabled={isGeneratingTeams || !backendSectionId} className={styles.successButton}><RefreshCw className={styles.actionIcon} /> {isGeneratingTeams ? "Generating..." : backendVisibleTeams.length ? "Regenerate teams" : "Generate teams"}</button>
-              <button onClick={handleStartPeerEvaluation} disabled={!selectedGroup || !visibleTeams.length || Boolean(peerRound)} className={styles.secondaryButton}>Start peer evaluation</button>
+              <Button onClick={handleGenerateTeams} disabled={isGeneratingTeams || !backendSectionId} variant="success" size="sm"><RefreshCw className={styles.actionIcon} /> {isGeneratingTeams ? "Generating..." : backendVisibleTeams.length ? "Regenerate teams" : "Generate teams"}</Button>
+              <Button onClick={handleStartPeerEvaluation} disabled={!selectedGroup || !visibleTeams.length || Boolean(peerRound)} variant="outline" size="sm">Start peer evaluation</Button>
             </div>
           }
         >
@@ -330,9 +315,8 @@ function Teams() {
 
         <div className={styles.mainColumn}>
           {selectedTeam ? (
-            <ModuleBlock componentId="MOD-T2" eyebrow="Selected Team" title={<span className={selectedTeam.source === "backend" ? styles.teamCodeConfirmed : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? styles.teamCodeConfirmed : styles.teamCodePending}>{selectedTeam.name}</span>} metric={selectedTeam.members.length} metricLabel="Members in this team" className={`${motionStyles.staggerItem}`} style={{ "--td-stagger-delay": "100ms" }}>
+            <ModuleBlock componentId="MOD-T2" title={<span className={selectedTeam.source === "backend" ? styles.teamCodeConfirmed : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? styles.teamCodeConfirmed : styles.teamCodePending}>{selectedTeam.name}</span>} metric={selectedTeam.members.length} metricLabel="Members in this team" className={`${motionStyles.staggerItem}`} style={{ "--td-stagger-delay": "100ms" }}>
               <div className={styles.teamSummary}>
-                <GroupChip code={selectedGroup?.code || selectedTeam.groupId} meta={`${selectedTeam.members.length} members`} tone={selectedTeam.source === "backend" ? "blue" : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? "green" : "orange"} className={motionStyles.magneticItem} />
                 <SystemTag tone={selectedTeam.source === "backend" ? "neutral" : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? "success" : "alert"}>
                   {selectedTeam.source === "backend" ? "Backend-generated team" : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? "Team confirmed" : "Waiting for confirmations"}
                 </SystemTag>
@@ -356,7 +340,7 @@ function Teams() {
                           {isBackendMember ? "From backend roster" : member.confirmationStatus === "confirmed" ? "Confirmed" : "Pending"}
                         </SystemTag>
                         <div className={styles.mailLine}><Mail className={styles.mailIcon} /> <span>{member.email}</span></div>
-                        {!isBackendMember && pendingRequest ? <button onClick={() => setSelectedRequest(pendingRequest)} className={`${styles.alertButton} ${motionStyles.pulseWarning}`}>See swap request</button> : null}
+                        {!isBackendMember && pendingRequest ? <Button onClick={() => setSelectedRequest(pendingRequest)} variant="warning" size="sm" className={motionStyles.pulseWarning}>See swap request</Button> : null}
                       </div>
                     </div>
                   );
@@ -386,11 +370,11 @@ function Teams() {
             <div className={styles.modalActions}>
               {selectedRequest.status === "pending" ? (
                 <>
-                  <button onClick={() => handleApprove(selectedRequest.id)} className={styles.successButton}><CheckCircle className={styles.actionIcon} /> Approve</button>
-                  <button onClick={() => handleReject(selectedRequest.id)} className={`${styles.alertButton} ${motionStyles.pulseWarning}`}><XCircle className={styles.actionIcon} /> Reject</button>
+                  <Button onClick={() => handleApprove(selectedRequest.id)} variant="success" size="sm"><CheckCircle className={styles.actionIcon} /> Approve</Button>
+                  <Button onClick={() => handleReject(selectedRequest.id)} variant="warning" size="sm" className={motionStyles.pulseWarning}><XCircle className={styles.actionIcon} /> Reject</Button>
                 </>
               ) : null}
-              <button onClick={() => setSelectedRequest(null)} className={styles.secondaryButton}>Close</button>
+              <Button onClick={() => setSelectedRequest(null)} variant="outline" size="sm">Close</Button>
             </div>
           </div>
         </div>

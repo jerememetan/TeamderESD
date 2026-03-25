@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
+import { Button } from "../../components/ui/button";
 import { mockSwapRequests } from "../../data/mockData";
+import chrome from "../../styles/instructorChrome.module.css";
 import styles from "./SwapRequests.module.css";
 
 function SwapRequests() {
@@ -32,30 +34,33 @@ function SwapRequests() {
 
   return (
     <div className={styles.page}>
-      <Link to="/instructor" className={styles.backLink}>
-        <ArrowLeft className={styles.backIcon} />
+      <Link to="/instructor" className={chrome.backLink}>
+        <ArrowLeft className={chrome.backIcon} />
         Back to Dashboard
       </Link>
 
-      <section className={styles.hero}>
+      <section className={chrome.hero}>
         <div>
-          <h2 className={styles.title}>Review Student's Swap Requests</h2>
+          <p className={chrome.kicker}>[SWAP REQUESTS]</p>
+          <h2 className={chrome.title}>Review swap requests</h2>
+          <p className={chrome.subtitle}>Approve or reject team change requests for your course groups.</p>
         </div>
-        <SystemTag hazard>Live intervention channel</SystemTag>
+        <SystemTag tone="neutral">{requestList.filter((request) => request.status === "pending").length} pending</SystemTag>
       </section>
 
-      <div className={styles.filterRow}>
+      <div className={chrome.toolbar}>
         {["all", "pending", "approved", "rejected"].map((status) => (
-          <button
+          <Button
             key={status}
             onClick={() => setFilter(status)}
-            className={`${styles.filterButton} ${filter === status ? styles.activeFilter : ''}`}
+            variant={filter === status ? "default" : "outline"}
+            size="sm"
           >
-            <span>{status === 'all' ? 'All requests' : status}</span>
-            {status !== 'all' ? (
-              <span className={styles.filterCount}>{requestList.filter((request) => request.status === status).length}</span>
+            <span>{status === "all" ? "All requests" : status}</span>
+            {status !== "all" ? (
+              <span className={chrome.toolbarCount}>{requestList.filter((request) => request.status === status).length}</span>
             ) : null}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -69,26 +74,26 @@ function SwapRequests() {
               componentId={`MOD-SW${index + 1}`}
               eyebrow={request.studentName}
               title={request.courseName}
-              accent={request.status === 'pending' ? 'orange' : request.status === 'approved' ? 'green' : 'blue'}
+              accent={request.status === "pending" ? "orange" : request.status === "approved" ? "green" : "blue"}
               actions={
-                request.status === 'pending' ? (
+                request.status === "pending" ? (
                   <>
-                    <button onClick={() => handleApprove(request.id)} className={styles.approveButton}>
-                      <CheckCircle className={styles.buttonIcon} /> Approve
-                    </button>
-                    <button onClick={() => handleReject(request.id)} className={styles.rejectButton}>
-                      <XCircle className={styles.buttonIcon} /> Reject
-                    </button>
+                    <Button onClick={() => handleApprove(request.id)} variant="success" size="sm">
+                      <CheckCircle className={chrome.buttonIcon} /> Approve
+                    </Button>
+                    <Button onClick={() => handleReject(request.id)} variant="warning" size="sm">
+                      <XCircle className={chrome.buttonIcon} /> Reject
+                    </Button>
                   </>
                 ) : null
               }
             >
               <div className={styles.requestMeta}>
-                {request.status === 'pending' ? <SystemTag hazard>Pending intervention</SystemTag> : null}
-                {request.status === 'approved' ? <SystemTag tone="success">Approved</SystemTag> : null}
-                {request.status === 'rejected' ? <SystemTag tone="alert">Rejected</SystemTag> : null}
-                <p className={styles.metaLine}>Current team :: {request.currentTeamName}</p>
-                <p className={styles.metaLine}>Submitted :: {new Date(request.createdAt).toLocaleDateString()}</p>
+                {request.status === "pending" ? <SystemTag hazard>Pending review</SystemTag> : null}
+                {request.status === "approved" ? <SystemTag tone="success">Approved</SystemTag> : null}
+                {request.status === "rejected" ? <SystemTag tone="alert">Rejected</SystemTag> : null}
+                <p className={chrome.metaPill}>Current team | {request.currentTeamName}</p>
+                <p className={chrome.metaPill}>Submitted | {new Date(request.createdAt).toLocaleDateString()}</p>
               </div>
               <div className={styles.reasonBox}>
                 <p className={styles.reasonLabel}>Student note</p>

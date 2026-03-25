@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
+import { Button } from "../../components/ui/button";
 import { getBackendSectionId } from "../../data/backendIds";
 import { currentStudent, currentStudentTeams, mockCourses, mockForms, mockStudents } from "../../data/mockData";
 import styles from "./FillForm.module.css";
@@ -47,7 +48,6 @@ function FillForm() {
           setTemplateFields(fields);
         }
       } catch (_error) {
-        // Keep mock fallback if service is unavailable.
       } finally {
         setLoadingTemplate(false);
       }
@@ -180,8 +180,8 @@ function FillForm() {
         ) : null}
 
         <div className={styles.actionRow}>
-          <button type="submit" className={styles.primaryButton}>Submit form</button>
-          <button type="button" onClick={() => navigate('/student')} className={styles.secondaryButton}>Cancel</button>
+          <Button type="submit">Submit form</Button>
+          <Button type="button" onClick={() => navigate('/student')} variant="outline">Cancel</Button>
         </div>
       </form>
     </div>

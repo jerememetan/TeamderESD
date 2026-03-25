@@ -4,110 +4,6 @@
   gap: var(--td-space-md);
 }
 
-.backLink,
-.kicker,
-.metaLine,
-.reasonLabel {
-  font-family: var(--td-font-mono);
-  text-transform: uppercase;
-}
-
-.backLink {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--td-space-xs);
-  color: var(--td-color-primary);
-  text-decoration: none;
-  letter-spacing: 0.12em;
-  font-size: 0.72rem;
-}
-
-.backIcon,
-.buttonIcon {
-  width: 18px;
-  height: 18px;
-}
-
-.hero {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--td-space-md);
-  align-items: flex-start;
-}
-
-.kicker {
-  margin: 0;
-  color: var(--td-color-primary);
-  font-size: 0.75rem;
-  letter-spacing: 0.18em;
-}
-
-.title {
-  margin: 8px 0;
-  font-size: clamp(1.9rem, 4vw, 3rem);
-  line-height: 1;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.subtitle,
-.reasonText {
-  margin: 0;
-  color: var(--td-color-text-muted);
-  line-height: 1.7;
-}
-
-.filterRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--td-space-xs);
-  padding: 14px 16px;
-  border: 1px solid rgba(0, 71, 171, 0.16);
-  border-radius: var(--td-radius-panel);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(233, 241, 251, 0.9));
-  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.08);
-}
-
-.filterButton {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--td-space-xs);
-  min-height: 42px;
-  padding: 0 14px;
-  border: 1px solid rgba(0, 71, 171, 0.18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--td-color-text-muted);
-  font-family: var(--td-font-mono);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.08);
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
-}
-
-.filterButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 22px rgba(6, 28, 61, 0.12);
-}
-
-.activeFilter {
-  color: var(--td-color-surface);
-  border-color: rgba(0, 71, 171, 0.32);
-  background: linear-gradient(180deg, var(--td-color-primary), var(--td-color-primary-strong));
-}
-
-.filterCount {
-  min-width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid currentColor;
-  border-radius: var(--td-radius-sharp);
-}
-
 .requestList {
   display: flex;
   flex-direction: column;
@@ -121,19 +17,19 @@
   align-items: center;
 }
 
-.metaLine,
 .reasonLabel {
   margin: 0;
   color: var(--td-color-text-muted);
+  font-family: var(--td-font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.metaLine {
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 71, 171, 0.14);
-  background: rgba(255, 255, 255, 0.86);
+.reasonText {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  line-height: 1.7;
 }
 
 .reasonBox {
@@ -144,46 +40,4 @@
   border: 1px solid rgba(0, 71, 171, 0.14);
   border-radius: var(--td-radius-panel);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(233, 241, 251, 0.7));
-}
-
-.approveButton,
-.rejectButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--td-space-xs);
-  min-height: 42px;
-  padding: 0 16px;
-  border-radius: 999px;
-  font-family: var(--td-font-mono);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  box-shadow: 0 8px 18px rgba(6, 28, 61, 0.08);
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
-}
-
-.approveButton:hover,
-.rejectButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 22px rgba(6, 28, 61, 0.12);
-}
-
-.approveButton {
-  border: 1px solid rgba(46, 204, 113, 0.32);
-  color: #0c6b36;
-  background: linear-gradient(180deg, rgba(46, 204, 113, 0.18), rgba(46, 204, 113, 0.08));
-}
-
-.rejectButton {
-  border: 1px solid rgba(255, 107, 0, 0.26);
-  color: #8b3900;
-  background: linear-gradient(180deg, rgba(255, 107, 0, 0.16), rgba(255, 107, 0, 0.08));
-}
-
-@media (max-width: 700px) {
-  .hero {
-    flex-direction: column;
-  }
 }
