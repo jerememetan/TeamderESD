@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
-import { AlertTriangle, ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Plus,
+  Save,
+  Settings2,
+  SlidersHorizontal,
+  Sparkles,
+  Wrench,
+  Trash2,
+} from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
+import { Button } from "../../components/ui/button";
+import chrome from "../../styles/instructorChrome.module.css";
 import { getBackendCourseId, getBackendSectionId } from "../../data/backendIds";
 import { mockCourses, mockForms } from "../../data/mockData";
 import { fetchFormationConfig, saveFormationConfig } from "../../services/formationConfigService";
 import styles from "./CreateForm.module.css";
-import { Button } from "../../components/ui/button";
 
 const FORMATION_NOTIFICATION_API_BASE =
   import.meta.env.VITE_FORMATION_NOTIFICATION_API_BASE ||
@@ -130,6 +141,7 @@ function CreateForm() {
   const [errorMessage, setErrorMessage] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [isPublishingLinks, setIsPublishingLinks] = useState(false);
+  const [activePanel, setActivePanel] = useState("parameters");
 
   useEffect(() => {
     setFormState(defaultState);
@@ -385,16 +397,143 @@ function CreateForm() {
     }
   };
 
+  const sectionItems = [
+    {
+      id: "parameters",
+      label: "Group parameters",
+      meta: `${formState.numGroups} teams planned`,
+      eyebrow: "Ruleset",
+      title: "Group setup parameters",
+      description: "Set team size rules and the balancing toggles the solver should respect.",
+      icon: <Settings2 className={styles.sectionIcon} />,
+      metric: formState.numGroups,
+      metricLabel: "Teams to generate",
+      content: (
+        <div className={styles.fieldGrid}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Preferred team size</span>
+            <input type="number" min="2" value={formState.preferredGroupSize} onChange={(event) => handlePreferredGroupSizeChange(event.target.value)} className={styles.input} />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Number of teams</span>
+            <input type="number" min="1" value={formState.numGroups} onChange={(event) => setStateValue("numGroups", Math.max(1, Number(event.target.value) || 1))} className={styles.input} />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Minimum team size</span>
+            <input type="number" min="2" value={formState.minimumGroupSize} onChange={(event) => setStateValue("minimumGroupSize", Math.max(2, Number(event.target.value) || 2))} className={styles.input} />
+          </label>
+          <div className={styles.toggleGrid}>
+            <label className={styles.toggle}><input type="checkbox" checked={formState.mixGender} onChange={(event) => setStateValue("mixGender", event.target.checked)} /> <span>Balance gender</span></label>
+            <label className={styles.toggle}><input type="checkbox" checked={formState.mixYear} onChange={(event) => setStateValue("mixYear", event.target.checked)} /> <span>Balance year of study</span></label>
+            <label className={styles.toggle}><input type="checkbox" checked={formState.allowBuddy} onChange={(event) => setStateValue("allowBuddy", event.target.checked)} /> <span>Allow buddy requests</span></label>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "priorities",
+      label: "Formation priorities",
+      meta: `${activeWeights.toFixed(2)} total signal`,
+      eyebrow: "Weighting",
+      title: "Formation priorities",
+      description: "Tune how much influence each signal should have during team generation.",
+      icon: <SlidersHorizontal className={styles.sectionIcon} />,
+      metric: activeWeights.toFixed(2),
+      metricLabel: "Total weighting signal",
+      content: (
+        <div className={styles.criteriaList}>
+          {WEIGHT_FIELDS.map((field) => (
+            <div key={field.key} className={styles.criterionCard}>
+              <div className={styles.criterionHeader}>
+                <div>
+                  <p className={styles.criterionCode}>{field.label}</p>
+                  <p className={styles.helperText}>{field.helper}</p>
+                </div>
+                <SystemTag tone="neutral">{Number(formState.weights[field.key]).toFixed(2)}</SystemTag>
+              </div>
+              <input
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+                value={formState.weights[field.key]}
+                onChange={(event) => setWeightValue(field.key, event.target.value)}
+                className={styles.input}
+              />
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: "topics",
+      label: "Project topics",
+      meta: `${formState.topics.length} topics saved`,
+      eyebrow: "Topics",
+      title: "Project topics",
+      description: "Maintain the topic pool students can align around during formation.",
+      icon: <Sparkles className={styles.sectionIcon} />,
+      metric: formState.topics.length,
+      metricLabel: "Topics saved",
+      actions: <Button onClick={addTopic} variant="default" size="sm"><Plus className={styles.buttonIcon} /> Add topic</Button>,
+      content: (
+        <div className={styles.criteriaList}>
+          {formState.topics.length ? formState.topics.map((topic, index) => (
+            <div key={topic.id} className={styles.criterionCard}>
+              <div className={styles.criterionHeader}>
+                <p className={styles.criterionCode}>Topic {String(index + 1).padStart(2, "0")}</p>
+                <Button onClick={() => removeTopic(topic.id)} variant="warning" size="icon"><Trash2 className={styles.buttonIcon} /></Button>
+              </div>
+              <input type="text" value={topic.topic_label} onChange={(event) => updateTopic(topic.id, event.target.value)} placeholder="Example: AI product design" className={styles.input} />
+            </div>
+          )) : <p className={styles.emptyState}>No topics added yet.</p>}
+        </div>
+      ),
+    },
+    {
+      id: "skills",
+      label: "Tracked skills",
+      meta: `${formState.skills.length} skills tracked`,
+      eyebrow: "Skills",
+      title: "Tracked skills",
+      description: "Define the capabilities you want the formation process to distribute across teams.",
+      icon: <Wrench className={styles.sectionIcon} />,
+      metric: formState.skills.length,
+      metricLabel: "Skills tracked",
+      actions: <Button onClick={addSkill} variant="default" size="sm"><Plus className={styles.buttonIcon} /> Add skill</Button>,
+      content: (
+        <div className={styles.criteriaList}>
+          {formState.skills.length ? formState.skills.map((skill, index) => (
+            <div key={skill.id} className={styles.criterionCard}>
+              <div className={styles.criterionHeader}>
+                <p className={styles.criterionCode}>Skill {String(index + 1).padStart(2, "0")}</p>
+                <Button onClick={() => removeSkill(skill.id)} variant="warning" size="icon"><Trash2 className={styles.buttonIcon} /></Button>
+              </div>
+              <input type="text" value={skill.skill_label} onChange={(event) => updateSkill(skill.id, { skill_label: event.target.value })} placeholder="Example: React" className={styles.input} />
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Skill importance</span>
+                <input type="number" min="0" max="1" step="0.05" value={skill.skill_importance} onChange={(event) => updateSkill(skill.id, { skill_importance: Number(event.target.value) })} className={styles.input} />
+              </label>
+            </div>
+          )) : <p className={styles.emptyState}>No skills added yet.</p>}
+        </div>
+      ),
+    },
+  ];
+
+  const activeSection = sectionItems.find((section) => section.id === activePanel) || sectionItems[0];
+
   return (
     <div className={styles.page}>
-      <Link to="/instructor/courses" className={styles.backLink}>
-        <ArrowLeft className={styles.backIcon} /> Return to course matrix
+      <Link to="/instructor/courses" className={chrome.backLink}>
+        <ArrowLeft className={chrome.backIcon} /> Return to course matrix
       </Link>
 
-      <section className={styles.hero}>
+      <section className={chrome.hero}>
         <div>
-          <h2 className={styles.title}>{existingForm ? "Edit" : "Create"} formation logic for {selectedGroup.code}</h2>
-          <p className={styles.subtitle}>This screen now saves the group configuration to the backend formation-config service using {selectedGroup.code} as the section scope.</p>
+          <p className={chrome.kicker}>[GROUP FORM]</p>
+          <h2 className={chrome.title}>{selectedGroup.code} - {selectedCourse.name}</h2>
+          <p className={chrome.subtitle}>Configure the solver inputs for this group using the sidebar workspace.</p>
         </div>
         <SystemTag tone={backendStatusTone}>{loadSource === "backend" ? "Backend config loaded" : "Fallback values loaded"}</SystemTag>
       </section>
@@ -404,7 +543,7 @@ function CreateForm() {
           <p className={styles.statusLabel}>Integration mapping</p>
           <p className={styles.statusText}>Frontend group ID <strong>{selectedGroup.id}</strong> maps to backend section_id <strong>{backendSectionId ?? "missing"}</strong>.</p>
         </div>
-        {isLoading ? <SystemTag tone="neutral">Loading backend config</SystemTag> : null}
+        <p className={styles.summaryMeta}>{selectedGroup.studentsCount} students | {selectedGroup.teamsCount} existing teams</p>
       </div>
 
       {errorMessage ? (
@@ -416,96 +555,51 @@ function CreateForm() {
 
       {saveMessage ? <div className={styles.feedbackSuccess}>{saveMessage}</div> : null}
 
-      <div className={styles.grid}>
-        <ModuleBlock componentId="MOD-F01" eyebrow="Ruleset" title="Group setup parameters" metric={formState.numGroups} metricLabel="Teams to generate">
-          <div className={styles.fieldGrid}>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Preferred team size</span>
-              <input type="number" min="2" value={formState.preferredGroupSize} onChange={(event) => handlePreferredGroupSizeChange(event.target.value)} className={styles.input} />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Number of teams</span>
-              <input type="number" min="1" value={formState.numGroups} onChange={(event) => setStateValue("numGroups", Math.max(1, Number(event.target.value) || 1))} className={styles.input} />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Minimum team size</span>
-              <input type="number" min="2" value={formState.minimumGroupSize} onChange={(event) => setStateValue("minimumGroupSize", Math.max(2, Number(event.target.value) || 2))} className={styles.input} />
-            </label>
-          </div>
-          <div className={styles.toggleGrid}>
-            <label className={styles.toggle}><input type="checkbox" checked={formState.mixGender} onChange={(event) => setStateValue("mixGender", event.target.checked)} /> <span>Balance gender</span></label>
-            <label className={styles.toggle}><input type="checkbox" checked={formState.mixYear} onChange={(event) => setStateValue("mixYear", event.target.checked)} /> <span>Balance year of study</span></label>
-            <label className={styles.toggle}><input type="checkbox" checked={formState.allowBuddy} onChange={(event) => setStateValue("allowBuddy", event.target.checked)} /> <span>Allow buddy requests</span></label>
-          </div>
-        </ModuleBlock>
-
-        <ModuleBlock componentId="MOD-F02" eyebrow="Weighting" title="Formation priorities" metric={activeWeights.toFixed(2)} metricLabel="Total weighting signal">
-          <div className={styles.criteriaList}>
-            {WEIGHT_FIELDS.map((field) => (
-              <div key={field.key} className={styles.criterionCard}>
-                <div className={styles.criterionHeader}>
-                  <div>
-                    <p className={styles.criterionCode}>{field.label}</p>
-                    <p className={styles.helperText}>{field.helper}</p>
-                  </div>
-                  <SystemTag tone="neutral">{Number(formState.weights[field.key]).toFixed(2)}</SystemTag>
+      <div className={styles.workspace}>
+        <ModuleBlock componentId="MOD-FNAV" eyebrow="Sections" title="Form builder" className={styles.sideModule}>
+          <div className={styles.sectionList}>
+            {sectionItems.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setActivePanel(section.id)}
+                className={`${styles.sectionButton} ${activeSection.id === section.id ? styles.sectionButtonActive : ""}`}
+              >
+                <div className={styles.sectionButtonHeader}>
+                  {section.icon}
+                  <span className={styles.sectionTitle}>{section.label}</span>
                 </div>
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={formState.weights[field.key]}
-                  onChange={(event) => setWeightValue(field.key, event.target.value)}
-                  className={styles.input}
-                />
-              </div>
+                <span className={styles.sectionMeta}>{section.meta}</span>
+              </button>
             ))}
           </div>
         </ModuleBlock>
-      </div>
 
-      <div className={styles.grid}>
-        <ModuleBlock componentId="MOD-F03" eyebrow="Topics" title="Project topics" metric={formState.topics.length} metricLabel="Topics saved to backend" actions={<Button onClick={addTopic} variant="default" size="sm"><Plus className={styles.buttonIcon} /> Add topic</Button>}>
-          <div className={styles.criteriaList}>
-            {formState.topics.length ? formState.topics.map((topic, index) => (
-              <div key={topic.id} className={styles.criterionCard}>
-                <div className={styles.criterionHeader}>
-                  <p className={styles.criterionCode}>Topic {String(index + 1).padStart(2, "0")}</p>
-                  <Button onClick={() => removeTopic(topic.id)} variant="warning" size="icon"><Trash2 className={styles.buttonIcon} /></Button>
-                </div>
-                <input type="text" value={topic.topic_label} onChange={(event) => updateTopic(topic.id, event.target.value)} placeholder="Example: AI product design" className={styles.input} />
-              </div>
-            )) : <p className={styles.emptyState}>No topics added yet.</p>}
+        <div className={styles.mainColumn}>
+          <ModuleBlock
+            componentId="MOD-FWORK"
+            eyebrow={activeSection.eyebrow}
+            title={activeSection.title}
+            metric={activeSection.metric}
+            metricLabel={activeSection.metricLabel}
+            className={styles.detailModule}
+            actions={activeSection.actions}
+          >
+            <div className={styles.detailHeader}>
+              <p className={styles.helperText}>{activeSection.description}</p>
+            </div>
+            {activeSection.content}
+          </ModuleBlock>
+
+          <div className={styles.actionRow}>
+            <Button variant="default" onClick={() => handleSave("draft")} disabled={isSaving || isLoading}>
+              {isSaving ? <Save className={styles.buttonIcon} /> : null} Save draft
+            </Button>
+            <Button variant="success" onClick={handlePublish} disabled={isSaving || isLoading || isPublishingLinks}>
+              {isPublishingLinks ? "Publishing..." : "Publish form"}
+            </Button>
           </div>
-        </ModuleBlock>
-
-        <ModuleBlock componentId="MOD-F04" eyebrow="Skills" title="Tracked skills" metric={formState.skills.length} metricLabel="Skills saved to backend" actions={<Button onClick={addSkill} variant="default" size="sm"><Plus className={styles.buttonIcon} /> Add skill</Button>}>
-          <div className={styles.criteriaList}>
-            {formState.skills.length ? formState.skills.map((skill, index) => (
-              <div key={skill.id} className={styles.criterionCard}>
-                <div className={styles.criterionHeader}>
-                  <p className={styles.criterionCode}>Skill {String(index + 1).padStart(2, "0")}</p>
-                  <Button onClick={() => removeSkill(skill.id)} variant="warning" size="icon"><Trash2 className={styles.buttonIcon} /></Button>
-                </div>
-                <input type="text" value={skill.skill_label} onChange={(event) => updateSkill(skill.id, { skill_label: event.target.value })} placeholder="Example: React" className={styles.input} />
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Skill importance</span>
-                  <input type="number" min="0" max="1" step="0.05" value={skill.skill_importance} onChange={(event) => updateSkill(skill.id, { skill_importance: Number(event.target.value) })} className={styles.input} />
-                </label>
-              </div>
-            )) : <p className={styles.emptyState}>No skills added yet.</p>}
-          </div>
-        </ModuleBlock>
-      </div>
-
-      <div className={styles.actionRow}>
-        <Button variant="default" onClick={() => handleSave("draft")} disabled={isSaving || isLoading}>
-          {isSaving ? <Save className={styles.buttonIcon} /> : null} Save draft
-        </Button>
-        <Button variant="success" onClick={handlePublish} disabled={isSaving || isLoading || isPublishingLinks}>
-          {isPublishingLinks ? "Publishing..." : "Publish form"}
-        </Button>
+        </div>
       </div>
     </div>
   );
