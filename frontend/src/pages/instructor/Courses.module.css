@@ -25,7 +25,8 @@
 
 .courseSummary,
 .groupNote,
-.groupStats {
+.groupStats,
+.groupStageMeta {
   margin: 0;
   color: var(--td-color-text-muted);
   font-family: var(--td-font-mono);
@@ -85,9 +86,15 @@
   font-weight: 800;
 }
 
+.groupStageNote {
+  margin: 0;
+  color: var(--td-color-text);
+  line-height: 1.65;
+}
+
 .groupActions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--group-action-columns, 3), minmax(0, 1fr));
   gap: var(--td-space-xs);
   margin-top: auto;
 }
