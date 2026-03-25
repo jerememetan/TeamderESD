@@ -19,7 +19,7 @@
 .teamCodeConfirmed,.memberNameConfirmed { color:#0c6b36; }
 .teamCodePending,.memberNamePending { color:#b7791f; }
 .teamMeta,.memberMeta,.modalCode,.reasonLabel,.rosterNote,.rosterError,.rosterEmail,.sourceNote,.teamMessage { font-size:0.72rem; letter-spacing:0.12em; color: var(--td-color-text-muted); }
-.memberCard,.rosterCard { justify-content:space-between; align-items:center; flex-wrap:wrap; padding: var(--td-space-sm); border:1px solid rgba(124,145,166,0.45); border-radius: var(--td-radius-sharp); background: rgba(240,244,248,0.82); }
+.memberCard,.rosterCard { justify-content:space-between; align-items:center; flex-wrap:wrap; padding: var(--td-space-sm); border:1px solid rgba(124,145,166,0.45); border-radius: var(--td-radius-sharp); background: rgba(240,244,248,0.82); text-align:left; }
 .memberCardAlert { border-color: rgba(255,107,0,0.6); background: rgba(255,107,0,0.08); }
 .memberAvatar { width:40px; height:40px; display:flex; align-items:center; justify-content:center; border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-sharp); background: rgba(255,255,255,0.92); color: var(--td-color-primary); font-family: var(--td-font-mono); font-weight:700; }
 .memberActions { flex-direction:column; align-items:flex-end; }
@@ -39,3 +39,7 @@
 .successButton:disabled,.secondaryButton:disabled { opacity:0.6; cursor:not-allowed; }
 @media (max-width: 900px) { .layout { grid-template-columns:1fr; } }
 @media (max-width: 700px) { .hero { flex-direction:column; } .memberActions,.heroTags,.moduleActions { align-items:flex-start; justify-content:flex-start; } }
+.memberCardInteractive { cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; }
+.memberCardInteractive:hover { transform: translateY(-2px); box-shadow: 0 12px 22px rgba(6,28,61,0.1); border-color: rgba(0,71,171,0.25); }
+.memberCardSelected { border-color: rgba(255,107,0,0.75); background: rgba(255,107,0,0.1); box-shadow: 0 14px 24px rgba(255,107,0,0.14); }
+.mainColumn { display:flex; flex-direction:column; gap: var(--td-space-sm); }

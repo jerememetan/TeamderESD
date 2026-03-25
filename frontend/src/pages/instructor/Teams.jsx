@@ -46,6 +46,30 @@ function mapBackendTeamsToViewModel(backendTeams, rosterById, courseId, groupId)
   });
 }
 
+function swapMembersAcrossTeams(teams, firstSelection, secondSelection) {
+  return teams.map((team) => {
+    if (team.id === firstSelection.teamId) {
+      return {
+        ...team,
+        members: team.members.map((member) =>
+          member.id === firstSelection.member.id ? secondSelection.member : member,
+        ),
+      };
+    }
+
+    if (team.id === secondSelection.teamId) {
+      return {
+        ...team,
+        members: team.members.map((member) =>
+          member.id === secondSelection.member.id ? firstSelection.member : member,
+        ),
+      };
+    }
+
+    return team;
+  });
+}
+
 function Teams() {
   const { courseId, groupId } = useParams();
   const [selectedTeamId, setSelectedTeamId] = useState(null);
@@ -53,6 +77,7 @@ function Teams() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [backendStudents, setBackendStudents] = useState([]);
   const [backendTeams, setBackendTeams] = useState([]);
+  const [editableTeams, setEditableTeams] = useState([]);
   const [isRosterLoading, setIsRosterLoading] = useState(true);
   const [isTeamsLoading, setIsTeamsLoading] = useState(true);
   const [isGeneratingTeams, setIsGeneratingTeams] = useState(false);
@@ -60,6 +85,8 @@ function Teams() {
   const [teamError, setTeamError] = useState("");
   const [teamMessage, setTeamMessage] = useState("");
   const [peerRound, setPeerRound] = useState(null);
+  const [swapMode, setSwapMode] = useState(false);
+  const [selectedSwapMember, setSelectedSwapMember] = useState(null);
 
   const selectedCourse = mockCourses.find((course) => course.id === courseId);
   const selectedGroup = selectedCourse?.groups.find((group) => group.id === groupId) ?? null;
@@ -165,8 +192,27 @@ function Teams() {
     [backendTeams, rosterById, courseId, groupId],
   );
 
-  const visibleTeams = backendVisibleTeams.length ? backendVisibleTeams : mockVisibleTeams;
+  const initialVisibleTeams = backendVisibleTeams.length ? backendVisibleTeams : mockVisibleTeams;
   const teamDataSource = backendVisibleTeams.length ? "backend" : "mock";
+
+  useEffect(() => {
+    setEditableTeams(initialVisibleTeams);
+    setSelectedSwapMember(null);
+    setSwapMode(false);
+  }, [initialVisibleTeams]);
+
+  useEffect(() => {
+    if (!editableTeams.length) {
+      setSelectedTeamId(null);
+      return;
+    }
+
+    if (!editableTeams.some((team) => team.id === selectedTeamId)) {
+      setSelectedTeamId(editableTeams[0]?.id ?? null);
+    }
+  }, [editableTeams, selectedTeamId]);
+
+  const visibleTeams = editableTeams;
   const selectedTeam = visibleTeams.find((team) => team.id === selectedTeamId) || visibleTeams[0] || null;
 
   const pendingRequestMap = useMemo(
@@ -229,6 +275,48 @@ function Teams() {
     }
   };
 
+  const handleToggleSwapMode = () => {
+    setSwapMode((current) => {
+      const next = !current;
+      if (!next) {
+        setSelectedSwapMember(null);
+      }
+      return next;
+    });
+  };
+
+  const handleCancelSelection = () => {
+    setSelectedSwapMember(null);
+  };
+
+  const handleMemberSwapClick = (team, member) => {
+    if (!swapMode) {
+      return;
+    }
+
+    if (!selectedSwapMember) {
+      setSelectedSwapMember({ teamId: team.id, member });
+      setTeamMessage(`Selected ${member.name}. Choose a student from another team to swap.`);
+      return;
+    }
+
+    if (selectedSwapMember.member.id === member.id && selectedSwapMember.teamId === team.id) {
+      setSelectedSwapMember(null);
+      setTeamMessage("Selection cleared.");
+      return;
+    }
+
+    if (selectedSwapMember.teamId === team.id) {
+      return;
+    }
+
+    setEditableTeams((currentTeams) =>
+      swapMembersAcrossTeams(currentTeams, selectedSwapMember, { teamId: team.id, member }),
+    );
+    setTeamMessage(`Swap completed: ${selectedSwapMember.member.name} and ${member.name}.`);
+    setSelectedSwapMember(null);
+  };
+
   const heroTitle = selectedGroup ? `${selectedGroup.code} teams` : `${selectedCourse.code} teams`;
   const heroSubtitle = selectedGroup
     ? `Review the teams for ${selectedGroup.label}, compare them against the live section roster, and start the final peer evaluation round when the project is done.`
@@ -287,11 +375,14 @@ function Teams() {
           actions={
             <div className={styles.moduleActions}>
               <Button onClick={handleGenerateTeams} disabled={isGeneratingTeams || !backendSectionId} variant="success" size="sm"><RefreshCw className={styles.actionIcon} /> {isGeneratingTeams ? "Generating..." : backendVisibleTeams.length ? "Regenerate teams" : "Generate teams"}</Button>
+              <Button onClick={handleToggleSwapMode} variant={swapMode ? "warning" : "outline"} size="sm">{swapMode ? "Swap mode on" : "Swap mode"}</Button>
+              {swapMode && selectedSwapMember ? <Button onClick={handleCancelSelection} variant="outline" size="sm">Cancel selection</Button> : null}
               <Button onClick={handleStartPeerEvaluation} disabled={!selectedGroup || !visibleTeams.length || Boolean(peerRound)} variant="outline" size="sm">Start peer evaluation</Button>
             </div>
           }
         >
           <p className={styles.sourceNote}>{teamDataSource === "backend" ? "Showing backend teams persisted by the team service." : "Showing fallback mock teams until backend teams are generated for this section."}</p>
+          {swapMode ? <p className={styles.sourceNote}>Swap mode is enabled. Pick one student, then pick a student from another team to exchange them.</p> : null}
           {peerRound ? <p className={styles.sourceNote}>Peer evaluation round is active for this group. {peerRound.submissionCount} submitted :: {peerRound.pendingCount} pending.</p> : <p className={styles.sourceNote}>Peer evaluation has not started for this group yet.</p>}
           <div className={styles.teamList}>
             {visibleTeams.map((team, index) => {
@@ -320,14 +411,22 @@ function Teams() {
                 <SystemTag tone={selectedTeam.source === "backend" ? "neutral" : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? "success" : "alert"}>
                   {selectedTeam.source === "backend" ? "Backend-generated team" : selectedTeam.members.every((member) => member.confirmationStatus === "confirmed") ? "Team confirmed" : "Waiting for confirmations"}
                 </SystemTag>
+                {swapMode ? <SystemTag tone="alert">Swap mode enabled</SystemTag> : null}
               </div>
               <div className={styles.memberList}>
                 {selectedTeam.members.map((member, index) => {
                   const pendingRequest = pendingRequestMap[member.id];
                   const isBackendMember = selectedTeam.source === "backend";
+                  const isSelectedForSwap = selectedSwapMember?.teamId === selectedTeam.id && selectedSwapMember?.member.id === member.id;
 
                   return (
-                    <div key={member.id} className={`${styles.memberCard} ${pendingRequest ? styles.memberCardAlert : ""} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`} style={{ "--td-stagger-delay": `${index * 50}ms` }}>
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => handleMemberSwapClick(selectedTeam, member)}
+                      className={`${styles.memberCard} ${pendingRequest ? styles.memberCardAlert : ""} ${swapMode ? styles.memberCardInteractive : ""} ${isSelectedForSwap ? styles.memberCardSelected : ""} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
+                      style={{ "--td-stagger-delay": `${index * 50}ms` }}
+                    >
                       <div className={styles.memberIdentity}>
                         <div className={styles.memberAvatar}>{member.name.charAt(0)}</div>
                         <div>
@@ -336,13 +435,14 @@ function Teams() {
                         </div>
                       </div>
                       <div className={styles.memberActions}>
+                        {isSelectedForSwap ? <SystemTag tone="alert">Selected for swap</SystemTag> : null}
                         <SystemTag tone={isBackendMember ? "neutral" : member.confirmationStatus === "confirmed" ? "success" : "alert"}>
                           {isBackendMember ? "From backend roster" : member.confirmationStatus === "confirmed" ? "Confirmed" : "Pending"}
                         </SystemTag>
                         <div className={styles.mailLine}><Mail className={styles.mailIcon} /> <span>{member.email}</span></div>
-                        {!isBackendMember && pendingRequest ? <Button onClick={() => setSelectedRequest(pendingRequest)} variant="warning" size="sm" className={motionStyles.pulseWarning}>See swap request</Button> : null}
+                        {!isBackendMember && pendingRequest ? <Button onClick={(event) => { event.stopPropagation(); setSelectedRequest(pendingRequest); }} variant="warning" size="sm" className={motionStyles.pulseWarning}>See swap request</Button> : null}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
