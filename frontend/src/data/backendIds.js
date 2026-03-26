@@ -14,7 +14,9 @@ export const backendSectionIds = {
 };
 
 export const backendStudentIds = {
-  s1: 12,
+  s6: 14,
+  s7: 15, 
+  s8: 16,
 };
 
 export function getBackendCourseId(courseId) {
