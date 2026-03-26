@@ -1,33 +1,23 @@
 import { Link } from "react-router";
 import { AlertCircle, BookOpen } from "lucide-react";
-import ModuleBlock from "../../components/schematic/ModuleBlock";
-import SystemTag from "../../components/schematic/SystemTag";
-import motionStyles from "../../components/schematic/motion.module.css";
-import { mockCourses, mockSwapRequests } from "../../data/mockData";
+import ModuleBlock from "../../../components/schematic/ModuleBlock";
+import SystemTag from "../../../components/schematic/SystemTag";
+import motionStyles from "../../../components/schematic/motion.module.css";
+import { mockCourses, mockSwapRequests } from "../../../data/mockData";
+import { getDashboardStats } from "./logic/dashboardStats";
 import styles from "./InstructorDashboard.module.css";
 
 function InstructorDashboard() {
   const courseList = mockCourses;
   const swapRequestList = mockSwapRequests;
-  const courseGroups = courseList.flatMap((course) => course.groups);
-
-  const totalCourses = courseList.length;
-  const totalGroups = courseGroups.length;
-  const totalStudents = courseGroups.reduce(
-    (sum, group) => sum + group.studentsCount,
-    0,
-  );
-  const pendingSwapRequests = swapRequestList.filter(
-    (request) => request.status === "pending",
-  ).length;
+  const { totalCourses, totalGroups, totalStudents, pendingSwapRequests } =
+    getDashboardStats(courseList, swapRequestList);
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
       <section className={styles.hero}>
         <div>
-          <h2 className={styles.title}>
-            Instructor Dashboard
-          </h2>
+          <h2 className={styles.title}>Instructor Dashboard</h2>
         </div>
         {pendingSwapRequests > 0 ? (
           <SystemTag hazard>

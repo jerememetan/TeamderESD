@@ -18,12 +18,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import GroupChip from "../../components/schematic/GroupChip";
-import ModuleBlock from "../../components/schematic/ModuleBlock";
-import SystemTag from "../../components/schematic/SystemTag";
-import { getBackendSectionId } from "../../data/backendIds";
-import { mockCourses, mockTeams } from "../../data/mockData";
-import { fetchStudentProfile } from "../../services/studentProfileService";
+import GroupChip from "../../../components/schematic/GroupChip";
+import ModuleBlock from "../../../components/schematic/ModuleBlock";
+import SystemTag from "../../../components/schematic/SystemTag";
+import { getBackendSectionId } from "../../../data/backendIds";
+import { mockCourses, mockTeams } from "../../../data/mockData";
+import { fetchStudentProfile } from "../../../services/studentProfileService";
 import styles from "./Analytics.module.css";
 
 function Analytics() {
