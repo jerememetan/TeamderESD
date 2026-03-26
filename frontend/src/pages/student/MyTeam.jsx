@@ -5,20 +5,28 @@ import GroupChip from "../../components/schematic/GroupChip";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
-import { currentStudent, currentStudentTeams, mockCourses, mockStudentStrengths } from "../../data/mockData";
+import MockStudentSwitcher from "../../components/student/MockStudentSwitcher";
+import { mockCourses, mockStudentStrengths } from "../../data/mockData";
 import { fetchStudentAssignments } from "../../services/studentAssignmentService";
+import { useMockStudentSession } from "../../services/mockStudentSession";
 import styles from "./MyTeam.module.css";
 import { Button } from "../../components/ui/button";
 
 function MyTeam() {
-  const studentProfile = currentStudent;
-  const [teamAssignments, setTeamAssignments] = useState(currentStudentTeams);
-  const [selectedTeamId, setSelectedTeamId] = useState(currentStudentTeams[0]?.id ?? null);
+  const { activeStudent, activeStudentTeams, activeStudentId, setActiveStudentId, availableStudents } = useMockStudentSession();
+  const studentProfile = activeStudent;
+  const [teamAssignments, setTeamAssignments] = useState(activeStudentTeams);
+  const [selectedTeamId, setSelectedTeamId] = useState(activeStudentTeams[0]?.id ?? null);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapReason, setSwapReason] = useState("");
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
   const [assignmentSource, setAssignmentSource] = useState("mock");
   const [assignmentError, setAssignmentError] = useState("");
+
+  useEffect(() => {
+    setTeamAssignments(activeStudentTeams);
+    setSelectedTeamId(activeStudentTeams[0]?.id ?? null);
+  }, [activeStudentTeams]);
 
   useEffect(() => {
     let isMounted = true;
@@ -42,8 +50,8 @@ function MyTeam() {
           setSelectedTeamId((currentSelectedTeamId) => currentSelectedTeamId ?? backendAssignments[0].id);
           setAssignmentSource("backend");
         } else {
-          setTeamAssignments(currentStudentTeams);
-          setSelectedTeamId((currentSelectedTeamId) => currentSelectedTeamId ?? currentStudentTeams[0]?.id ?? null);
+          setTeamAssignments(activeStudentTeams);
+          setSelectedTeamId((currentSelectedTeamId) => currentSelectedTeamId ?? activeStudentTeams[0]?.id ?? null);
           setAssignmentSource("mock");
         }
       } catch (error) {
@@ -51,8 +59,8 @@ function MyTeam() {
           return;
         }
 
-        setTeamAssignments(currentStudentTeams);
-        setSelectedTeamId((currentSelectedTeamId) => currentSelectedTeamId ?? currentStudentTeams[0]?.id ?? null);
+        setTeamAssignments(activeStudentTeams);
+        setSelectedTeamId((currentSelectedTeamId) => currentSelectedTeamId ?? activeStudentTeams[0]?.id ?? null);
         setAssignmentSource("mock");
         setAssignmentError(error.message);
       } finally {
@@ -67,7 +75,7 @@ function MyTeam() {
     return () => {
       isMounted = false;
     };
-  }, [studentProfile.id]);
+  }, [activeStudentTeams, studentProfile.id]);
 
   const selectedTeam = useMemo(
     () => teamAssignments.find((team) => team.id === selectedTeamId) || teamAssignments[0] || null,
@@ -132,6 +140,7 @@ function MyTeam() {
           <h2 className={styles.title}>Your team assignments</h2>
         </div>
         <div className={styles.heroTags}>
+          <MockStudentSwitcher activeStudentId={activeStudentId} availableStudents={availableStudents} onChange={setActiveStudentId} />
           <SystemTag tone={sourceTone}>{isLoadingAssignments ? "Loading assignments" : assignmentSource === "backend" ? "Backend assignments loaded" : "Mock assignments active"}</SystemTag>
           <Button onClick={() => setShowSwapModal(true)}><RefreshCw className={styles.buttonIcon} /> Request team swap</Button>
         </div>
@@ -144,9 +153,7 @@ function MyTeam() {
           { title: "My Confirmation", metric: assignmentSource === "backend" ? "SYNC" : isConfirmed ? "YES" : "PEND", label: assignmentSource === "backend" ? "Backend team membership loaded" : isConfirmed ? "You have confirmed" : "Waiting for your confirmation", accent: assignmentSource === "backend" ? "blue" : isConfirmed ? "green" : "orange" },
         ].map((item, index) => (
           <ModuleBlock
-            key={item.id}
-            componentId={item.id}
-            eyebrow={item.eyebrow}
+            key={item.title}
             title={item.title}
             metric={item.metric}
             metricLabel={item.label}

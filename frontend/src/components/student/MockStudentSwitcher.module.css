@@ -1,0 +1,25 @@
+.switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  margin: 0;
+  color: var(--td-color-text-muted);
+  font-family: var(--td-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.select {
+  min-height: 42px;
+  min-width: 220px;
+  padding: 0 12px;
+  border: 1px solid rgba(0, 71, 171, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--td-color-text);
+  font-family: var(--td-font-sans);
+}

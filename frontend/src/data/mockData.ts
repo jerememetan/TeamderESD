@@ -418,12 +418,7 @@ export const mockSwapRequests: SwapRequest[] = [
   },
 ];
 
-export const currentStudent: Student = {
-  id: 's1',
-  name: 'Student 4',
-  email: 'student4@smu.edu.sg',
-  studentId: 'ID-12',
-};
+export const currentStudent: Student = mockStudents.find((student) => student.id === 's12') || mockStudents[0];
 
 export const currentStudentTeams = mockTeams.filter((team) =>
   team.members.some((member) => member.id === currentStudent.id),
@@ -436,6 +431,7 @@ export const currentStudentTeam = currentStudentTeams[0];
 export const mockPeerEvaluationRounds: PeerEvaluationRound[] = [];
 
 export const mockPeerEvaluationSubmissions: PeerEvaluationSubmission[] = [];
+
 
 
 

@@ -3,9 +3,11 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
+import MockStudentSwitcher from "../../components/student/MockStudentSwitcher";
 import { Button } from "../../components/ui/button";
 import { getBackendSectionId } from "../../data/backendIds";
-import { currentStudent, currentStudentTeams, mockCourses, mockForms, mockStudents } from "../../data/mockData";
+import { mockCourses, mockForms, mockStudents } from "../../data/mockData";
+import { useMockStudentSession } from "../../services/mockStudentSession";
 import styles from "./FillForm.module.css";
 
 const STUDENT_FORM_API_BASE =
@@ -15,8 +17,9 @@ function FillForm() {
   const { formId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const studentProfile = currentStudent;
-  const teamAssignments = currentStudentTeams;
+  const { activeStudent, activeStudentTeams, activeStudentId, setActiveStudentId, availableStudents } = useMockStudentSession();
+  const studentProfile = activeStudent;
+  const teamAssignments = activeStudentTeams;
   const groupIds = new Set(teamAssignments.map((team) => team.groupId));
   const scopedFormIds = location.state?.availableFormIds;
   const availableFormList = (Array.isArray(scopedFormIds) && scopedFormIds.length
@@ -76,7 +79,10 @@ function FillForm() {
             <h2 className={styles.title}>Choose a form</h2>
             <p className={styles.subtitle}>You have more than one active form. Pick the course group you want to complete first.</p>
           </div>
-          <SystemTag tone="neutral">{availableFormList.length} forms available</SystemTag>
+          <div className={styles.heroMeta}>
+            <MockStudentSwitcher activeStudentId={activeStudentId} availableStudents={availableStudents} onChange={setActiveStudentId} />
+            <SystemTag tone="neutral">{availableFormList.length} forms available</SystemTag>
+          </div>
         </section>
         <div className={styles.chooserGrid}>
           {availableFormList.map((form, index) => {
@@ -149,7 +155,10 @@ function FillForm() {
           <h2 className={styles.title}>{selectedGroup?.code || activeTeam?.groupId} form</h2>
           <p className={styles.subtitle}>Complete this form for your team in {selectedGroup?.code || activeTeam?.groupId}.</p>
         </div>
-        <SystemTag tone="success">Form open</SystemTag>
+        <div className={styles.heroMeta}>
+          <MockStudentSwitcher activeStudentId={activeStudentId} availableStudents={availableStudents} onChange={setActiveStudentId} />
+          <SystemTag tone="success">Form open</SystemTag>
+        </div>
       </section>
 
       <form onSubmit={handleSubmit} className={styles.form}>

@@ -4,18 +4,25 @@ import { AlertTriangle, FileText, Users, Clock } from 'lucide-react';
 import ModuleBlock from '../../components/schematic/ModuleBlock';
 import SystemTag from '../../components/schematic/SystemTag';
 import motionStyles from '../../components/schematic/motion.module.css';
-import { currentStudent, currentStudentTeams, mockCourses, mockForms } from '../../data/mockData';
+import MockStudentSwitcher from '../../components/student/MockStudentSwitcher';
+import { mockCourses, mockForms } from '../../data/mockData';
 import { fetchStudentAssignments } from '../../services/studentAssignmentService';
+import { useMockStudentSession } from '../../services/mockStudentSession';
 import { getPendingPeerEvaluations } from '../../services/peerEvaluationService';
 import styles from './StudentDashboard.module.css';
 
 function StudentDashBoard() {
-  const studentProfile = currentStudent;
-  const [teamAssignments, setTeamAssignments] = useState(currentStudentTeams);
+  const { activeStudent, activeStudentTeams, activeStudentId, setActiveStudentId, availableStudents } = useMockStudentSession();
+  const studentProfile = activeStudent;
+  const [teamAssignments, setTeamAssignments] = useState(activeStudentTeams);
   const [assignmentSource, setAssignmentSource] = useState('mock');
   const [assignmentError, setAssignmentError] = useState('');
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
   const [pendingPeerRounds, setPendingPeerRounds] = useState([]);
+
+  useEffect(() => {
+    setTeamAssignments(activeStudentTeams);
+  }, [activeStudentTeams]);
 
   useEffect(() => {
     let isMounted = true;
@@ -40,19 +47,19 @@ function StudentDashBoard() {
           const groupIds = new Set(backendAssignments.map((team) => team.groupId));
           setPendingPeerRounds(getPendingPeerEvaluations({ studentEmail: studentProfile.email, groupIds }));
         } else {
-          setTeamAssignments(currentStudentTeams);
+          setTeamAssignments(activeStudentTeams);
           setAssignmentSource('mock');
-          const groupIds = new Set(currentStudentTeams.map((team) => team.groupId));
+          const groupIds = new Set(activeStudentTeams.map((team) => team.groupId));
           setPendingPeerRounds(getPendingPeerEvaluations({ studentEmail: studentProfile.email, groupIds }));
         }
       } catch (error) {
         if (!isMounted) {
           return;
         }
-        setTeamAssignments(currentStudentTeams);
+        setTeamAssignments(activeStudentTeams);
         setAssignmentSource('mock');
         setAssignmentError(error.message);
-        const groupIds = new Set(currentStudentTeams.map((team) => team.groupId));
+        const groupIds = new Set(activeStudentTeams.map((team) => team.groupId));
         setPendingPeerRounds(getPendingPeerEvaluations({ studentEmail: studentProfile.email, groupIds }));
       } finally {
         if (isMounted) {
@@ -66,7 +73,7 @@ function StudentDashBoard() {
     return () => {
       isMounted = false;
     };
-  }, [studentProfile.email, studentProfile.id]);
+  }, [activeStudentTeams, studentProfile.email, studentProfile.id]);
 
   const groupIds = new Set(teamAssignments.map((team) => team.groupId));
   const availableFormList = Object.values(mockForms).filter((form) => groupIds.has(form.groupId));
@@ -90,7 +97,10 @@ function StudentDashBoard() {
           <h2 className={styles.title}>Student Dashboard</h2>
           <p className={styles.subtitle}>Welcome back, {studentProfile.name}. You are currently assigned to {teamAssignments.length} course group{teamAssignments.length > 1 ? 's' : ''}.</p>
         </div>
-        <SystemTag tone={assignmentTone}>{isLoadingAssignments ? 'Loading assignments' : assignmentSource === 'backend' ? 'Backend teams loaded' : 'Mock assignments active'}</SystemTag>
+        <div className={styles.heroMeta}>
+          <MockStudentSwitcher activeStudentId={activeStudentId} availableStudents={availableStudents} onChange={setActiveStudentId} />
+          <SystemTag tone={assignmentTone}>{isLoadingAssignments ? 'Loading assignments' : assignmentSource === 'backend' ? 'Backend teams loaded' : 'Mock assignments active'}</SystemTag>
+        </div>
       </section>
       <section className={styles.statsGrid}>
         {[

@@ -4,18 +4,26 @@ import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
-import { currentStudent, currentStudentTeams, mockCourses } from "../../data/mockData";
+import MockStudentSwitcher from "../../components/student/MockStudentSwitcher";
+import { mockCourses } from "../../data/mockData";
 import { fetchStudentAssignments } from "../../services/studentAssignmentService";
+import { useMockStudentSession } from "../../services/mockStudentSession";
 import { getPeerEvaluationRound, getPeerEvaluationSubmission, submitPeerEvaluation } from "../../services/peerEvaluationService";
 import styles from "./PeerEvaluationForm.module.css";
+import { Button } from "../../components/ui/button";
 
 function PeerEvaluationForm() {
   const { roundId } = useParams();
   const navigate = useNavigate();
-  const studentProfile = currentStudent;
-  const [teamAssignments, setTeamAssignments] = useState(currentStudentTeams);
+  const { activeStudent, activeStudentTeams, activeStudentId, setActiveStudentId, availableStudents } = useMockStudentSession();
+  const studentProfile = activeStudent;
+  const [teamAssignments, setTeamAssignments] = useState(activeStudentTeams);
   const [responses, setResponses] = useState({});
   const [assignmentSource, setAssignmentSource] = useState("mock");
+
+  useEffect(() => {
+    setTeamAssignments(activeStudentTeams);
+  }, [activeStudentTeams]);
 
   useEffect(() => {
     let isMounted = true;
@@ -35,12 +43,12 @@ function PeerEvaluationForm() {
           setTeamAssignments(backendAssignments);
           setAssignmentSource("backend");
         } else {
-          setTeamAssignments(currentStudentTeams);
+          setTeamAssignments(activeStudentTeams);
           setAssignmentSource("mock");
         }
       } catch {
         if (isMounted) {
-          setTeamAssignments(currentStudentTeams);
+          setTeamAssignments(activeStudentTeams);
           setAssignmentSource("mock");
         }
       }
@@ -51,7 +59,7 @@ function PeerEvaluationForm() {
     return () => {
       isMounted = false;
     };
-  }, [studentProfile.id]);
+  }, [activeStudentTeams, studentProfile.id]);
 
   const round = getPeerEvaluationRound(roundId || "");
   const existingSubmission = round ? getPeerEvaluationSubmission(round.id, studentProfile.email) : null;
@@ -122,6 +130,7 @@ function PeerEvaluationForm() {
           <p className={styles.subtitle}>Rate each teammate and yourself from 1 to 5, then add a short justification. Reputation impact is private and will not be shown to students.</p>
         </div>
         <div className={styles.heroTags}>
+          <MockStudentSwitcher activeStudentId={activeStudentId} availableStudents={availableStudents} onChange={setActiveStudentId} />
           <SystemTag tone="success">Round active</SystemTag>
           <SystemTag tone="neutral">Due {new Date(round.dueAt).toLocaleDateString()}</SystemTag>
         </div>
