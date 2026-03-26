@@ -22,6 +22,16 @@ services:
     ports:
       - "3017:3017"
 
+  section-service:
+    build:
+      context: ./atomic-services/section
+    container_name: teamder-section-service
+    environment:
+      PORT: 3018
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3018:3018"
+
   skill-service:
     build:
       context: ./atomic-services/skill
@@ -228,7 +238,7 @@ services:
       - student-profile-service
       - formation-config-service
 
-      # ── Scenario 2: Dashboard Analytics ──────────────────────────────────
+      # â”€â”€ Scenario 2: Dashboard Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   analytics-service:
     build:
@@ -284,6 +294,10 @@ services:
       - student-form-service
       - student-service
       - notification-service
+
+
+
+
 
 
 
