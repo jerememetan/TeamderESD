@@ -71,6 +71,11 @@ function StudentDashBoard() {
   const groupIds = new Set(teamAssignments.map((team) => team.groupId));
   const availableFormList = Object.values(mockForms).filter((form) => groupIds.has(form.groupId));
   const nextForm = availableFormList[0] || null;
+  const formActionTo = availableFormList.length > 1 ? '/student/form' : nextForm ? `/student/form/${nextForm.id}` : '/student';
+  const formActionState = availableFormList.length > 1 ? { availableFormIds: availableFormList.map((form) => form.id) } : undefined;
+  const formActionText = availableFormList.length > 1
+    ? 'Choose which group form you want to complete before submitting your answers.'
+    : 'Open one of your group forms and submit your answers.';
   const pendingConfirmations = useMemo(
     () => teamAssignments.filter((team) => team.members.some((member) => (member.id === studentProfile.id || member.studentId === studentProfile.studentId || member.email === studentProfile.email) && member.confirmationStatus === 'pending')).length,
     [studentProfile.email, studentProfile.id, studentProfile.studentId, teamAssignments],
@@ -94,12 +99,9 @@ function StudentDashBoard() {
           { title: 'Peer Evaluations', metric: String(pendingPeerRounds.length).padStart(2, '0'), accent: 'orange' },
         ].map((item, index) => (
           <ModuleBlock
-            key={item.id}
-            componentId={item.id}
-            eyebrow={item.eyebrow}
+            key={item.title}
             title={item.title}
             metric={item.metric}
-            metricLabel={item.label}
             accent={item.accent}
             className={`${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
             style={{ '--td-stagger-delay': `${(index + 1) * 50}ms` }}
@@ -117,11 +119,12 @@ function StudentDashBoard() {
             text: 'See every team you have been assigned to and confirm your place.',
           },
           {
-            to: nextForm ? `/student/form/${nextForm.id}` : '/student',
+            to: formActionTo,
+            state: formActionState,
             icon: <FileText className={styles.actionIcon} />,
             code: 'Quick Link',
-            title: 'Fill In A Form',
-            text: 'Open one of your group forms and submit your answers.',
+            title: availableFormList.length > 1 ? 'Choose A Form' : 'Fill In A Form',
+            text: formActionText,
           },
           {
             to: nextPeerRound ? `/student/peer-evaluation/${nextPeerRound.id}` : '/student',
@@ -134,6 +137,7 @@ function StudentDashBoard() {
           <Link
             key={action.code + index}
             to={action.to}
+            state={action.state}
             className={`${styles.actionCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem} ${!nextPeerRound && action.code === 'Peer Review' ? styles.actionCardDisabled : ''}`}
             style={{ '--td-stagger-delay': `${(index + 4) * 50}ms` }}
           >

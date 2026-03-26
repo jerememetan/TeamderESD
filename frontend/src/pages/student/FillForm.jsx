@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
@@ -14,26 +14,36 @@ const STUDENT_FORM_API_BASE =
 function FillForm() {
   const { formId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const studentProfile = currentStudent;
   const teamAssignments = currentStudentTeams;
-  const availableFormList = Object.values(mockForms);
+  const groupIds = new Set(teamAssignments.map((team) => team.groupId));
+  const scopedFormIds = location.state?.availableFormIds;
+  const availableFormList = (Array.isArray(scopedFormIds) && scopedFormIds.length
+    ? scopedFormIds.map((id) => Object.values(mockForms).find((form) => form.id === id)).filter(Boolean)
+    : Object.values(mockForms).filter((form) => groupIds.has(form.groupId))
+  );
   const buddyCandidateList = mockStudents.filter((student) => student.id !== studentProfile.id);
-  const selectedForm = availableFormList.find((form) => form.id === formId) || mockForms[formId || ""] || availableFormList[0];
+  const chooserMode = !formId && availableFormList.length > 1;
+  const resolvedForm = formId
+    ? availableFormList.find((form) => form.id === formId) || Object.values(mockForms).find((form) => form.id === formId) || mockForms[formId || ""]
+    : availableFormList[0];
   const [responses, setResponses] = useState({});
   const [buddyRequestStudentId, setBuddyRequestStudentId] = useState("");
   const [templateFields, setTemplateFields] = useState([]);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
-  const selectedCourse = mockCourses.find((course) => course.id === selectedForm?.courseId);
-  const selectedGroup = selectedCourse?.groups.find((group) => group.id === selectedForm?.groupId);
-  const activeTeam = teamAssignments.find((team) => team.groupId === selectedForm?.groupId) || teamAssignments[0];
-  const backendSectionId = getBackendSectionId(selectedForm?.groupId || "");
-  const sectionId = useMemo(() => backendSectionId || selectedForm?.groupId || formId, [backendSectionId, selectedForm?.groupId, formId]);
-
-  if (!selectedForm) {
-    return <div className={styles.notFound}>Form not found</div>;
-  }
+  const selectedCourse = mockCourses.find((course) => course.id === resolvedForm?.courseId);
+  const selectedGroup = selectedCourse?.groups.find((group) => group.id === resolvedForm?.groupId);
+  const activeTeam = teamAssignments.find((team) => team.groupId === resolvedForm?.groupId) || teamAssignments[0];
+  const backendSectionId = getBackendSectionId(resolvedForm?.groupId || "");
+  const sectionId = useMemo(() => backendSectionId || resolvedForm?.groupId || formId, [backendSectionId, resolvedForm?.groupId, formId]);
 
   useEffect(() => {
+    if (!resolvedForm || chooserMode) {
+      setTemplateFields([]);
+      return;
+    }
+
     const loadTemplate = async () => {
       if (!sectionId) return;
       setLoadingTemplate(true);
@@ -54,7 +64,50 @@ function FillForm() {
     };
 
     loadTemplate();
-  }, [sectionId]);
+  }, [chooserMode, resolvedForm, sectionId]);
+
+  if (chooserMode) {
+    return (
+      <div className={styles.page}>
+        <Link to="/student" className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to student console</Link>
+        <section className={styles.hero}>
+          <div>
+            <p className={styles.kicker}>[GROUP FORM]</p>
+            <h2 className={styles.title}>Choose a form</h2>
+            <p className={styles.subtitle}>You have more than one active form. Pick the course group you want to complete first.</p>
+          </div>
+          <SystemTag tone="neutral">{availableFormList.length} forms available</SystemTag>
+        </section>
+        <div className={styles.chooserGrid}>
+          {availableFormList.map((form, index) => {
+            const course = mockCourses.find((item) => item.id === form.courseId);
+            const group = course?.groups.find((item) => item.id === form.groupId);
+            return (
+              <Link
+                key={form.id}
+                to={`/student/form/${form.id}`}
+                state={{ availableFormIds: availableFormList.map((item) => item.id) }}
+                className={styles.chooserCard}
+              >
+                <ModuleBlock
+                  componentId={`MOD-FSEL-${index + 1}`}
+                  eyebrow={group?.code || form.groupId}
+                  title={course ? `${course.code} - ${course.name}` : form.title}
+                >
+                  <p className={styles.chooserMeta}>{group?.label || 'Assigned group'}</p>
+                  <p className={styles.subtitle}>{form.description}</p>
+                </ModuleBlock>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (!resolvedForm) {
+    return <div className={styles.notFound}>Form not found</div>;
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -146,7 +199,7 @@ function FillForm() {
                 )}
               </ModuleBlock>
             ))
-          : selectedForm.criteria.map((criterion, index) => (
+          : resolvedForm.criteria.map((criterion, index) => (
               <ModuleBlock key={criterion.id} componentId={`MOD-R${index + 1}`} eyebrow={`Criterion ${String(index + 1).padStart(2, '0')}`} title={criterion.question}>
                 <div className={styles.scaleGrid}>
                   {[1, 2, 3, 4, 5].map((score) => (
@@ -168,7 +221,7 @@ function FillForm() {
               </ModuleBlock>
             ))}
 
-        {selectedForm.allowBuddy ? (
+        {resolvedForm.allowBuddy ? (
           <ModuleBlock componentId="MOD-RB" eyebrow="Pairing Request" title="Buddy request">
             <select value={buddyRequestStudentId} onChange={(event) => setBuddyRequestStudentId(event.target.value)} className={styles.select}>
               <option value="">No buddy request</option>
