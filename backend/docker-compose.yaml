@@ -1,6 +1,7 @@
 services:
 
   # Atomic
+
   student-service:
     build:
       context: ./atomic-services/student
@@ -10,6 +11,16 @@ services:
       OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student
     ports:
       - "3001:3001"
+
+  course-service:
+    build:
+      context: ./atomic-services/course
+    container_name: teamder-course-service
+    environment:
+      PORT: 3017
+      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course
+    ports:
+      - "3017:3017"
 
   skill-service:
     build:
@@ -273,3 +284,7 @@ services:
       - student-form-service
       - student-service
       - notification-service
+
+
+
+
