@@ -3,22 +3,34 @@ import { AlertCircle, BookOpen } from "lucide-react";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
-import { buildCoursesWithGroups } from "./logic/dashboardStats";
+
 import styles from "./InstructorDashboard.module.css";
 import { useEffect, useState } from "react";
-import { fetchDashboardCourses } from "./service/dashboardService";
+import { fetchDashboardCoursesWithEnrollments } from "./service/dashboardService";
 
 function InstructorDashboard() {
+
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const totalStudents = 0; // Placeholder
+  const [totalStudents, setTotalStudents] = useState(0);
   const pendingSwapRequests = 0; // Placeholder
 
   useEffect(() => {
-    setLoading(true);
-    fetchDashboardCourses()
-      .then((dashboardCourses) => setCourses(dashboardCourses))
-      .catch(() => setCourses([]))
+    fetchDashboardCoursesWithEnrollments()
+      .then((dashboardCourses) => {
+        setCourses(dashboardCourses);
+        // Calculate total students from all groups
+        const total = dashboardCourses.reduce(
+          (sum, course) =>
+            sum + course.groups.reduce((gSum, g) => gSum + (g.studentsCount || 0), 0),
+          0
+        );
+        setTotalStudents(total);
+      })
+      .catch(() => {
+        setCourses([]);
+        setTotalStudents(0);
+      })
       .finally(() => setLoading(false));
   }, []);
 
