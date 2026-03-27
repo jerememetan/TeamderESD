@@ -3,15 +3,30 @@ import { AlertCircle, BookOpen } from "lucide-react";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
-import { mockCourses, mockSwapRequests } from "../../../data/mockData";
-import { getDashboardStats } from "./logic/dashboardStats";
+import { buildCoursesWithGroups } from "./logic/dashboardStats";
 import styles from "./InstructorDashboard.module.css";
+import { useEffect, useState } from "react";
+import { fetchDashboardCourses } from "./service/dashboardService";
 
 function InstructorDashboard() {
-  const courseList = mockCourses;
-  const swapRequestList = mockSwapRequests;
-  const { totalCourses, totalGroups, totalStudents, pendingSwapRequests } =
-    getDashboardStats(courseList, swapRequestList);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const totalStudents = 0; // Placeholder
+  const pendingSwapRequests = 0; // Placeholder
+
+  useEffect(() => {
+    setLoading(true);
+    fetchDashboardCourses()
+      .then((dashboardCourses) => setCourses(dashboardCourses))
+      .catch(() => setCourses([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const totalCourses = courses.length;
+  const totalGroups = courses.reduce(
+    (sum, c) => sum + (c.groups?.length || 0),
+    0,
+  );
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -30,37 +45,41 @@ function InstructorDashboard() {
       </section>
 
       <section className={styles.statsGrid}>
-        {[
-          {
-            title: "Total Courses",
-            metric: String(totalCourses).padStart(2, "0"),
-            accent: "blue",
-          },
-          {
-            title: "Total Groups",
-            metric: String(totalGroups).padStart(2, "0"),
-            accent: "green",
-          },
-          {
-            title: "Total Students",
-            metric: String(totalStudents).padStart(3, "0"),
-            accent: "blue",
-          },
-          {
-            title: "Total Pending Swaps",
-            metric: String(pendingSwapRequests).padStart(2, "0"),
-            accent: "orange",
-          },
-        ].map((item, index) => (
-          <ModuleBlock
-            key={item.title}
-            title={item.title}
-            metric={item.metric}
-            accent={item.accent}
-            className={`${styles.statCard} ${motionStyles.staggerItem}`}
-            style={{ "--td-stagger-delay": `${index * 50}ms` }}
-          />
-        ))}
+        {loading ? (
+          <div>Loading stats...</div>
+        ) : (
+          [
+            {
+              title: "Total Courses",
+              metric: String(totalCourses).padStart(2, "0"),
+              accent: "blue",
+            },
+            {
+              title: "Total Groups",
+              metric: String(totalGroups).padStart(2, "0"),
+              accent: "green",
+            },
+            {
+              title: "Total Students",
+              metric: String(totalStudents).padStart(3, "0"),
+              accent: "blue",
+            },
+            {
+              title: "Total Pending Swaps",
+              metric: String(pendingSwapRequests).padStart(2, "0"),
+              accent: "orange",
+            },
+          ].map((item, index) => (
+            <ModuleBlock
+              key={item.title}
+              title={item.title}
+              metric={item.metric}
+              accent={item.accent}
+              className={`${styles.statCard} ${motionStyles.staggerItem}`}
+              style={{ "--td-stagger-delay": `${index * 50}ms` }}
+            />
+          ))
+        )}
       </section>
 
       <section className={styles.actionsGrid}>
