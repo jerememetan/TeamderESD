@@ -16,13 +16,14 @@ CORS(app)
 
 
 def proxy_request(path, method="GET", payload=None):
+    url = f"{OUTSYSTEMS_BASE_URL}{path}"
+    print(f"Proxying request to: {url} with method {method}")
     response = requests.request(
         method=method,
-        url=f"{OUTSYSTEMS_BASE_URL}{path}",
+        url=url,
         json=payload,
         timeout=15,
     )
-
     try:
         data = response.json()
     except ValueError:
@@ -41,9 +42,9 @@ def get_courses():
     return proxy_request("/course/")
 
 
-@app.get("/api/courses/<int:course_id>")
-def get_course(course_id):
-    return proxy_request(f"/course/{course_id}/")
+@app.get("/api/courses/<string:course_code>")
+def get_course(course_code):
+    return proxy_request(f"/course/{course_code}")
 
 
 @app.post("/api/courses")
@@ -51,16 +52,16 @@ def create_course():
     return proxy_request("/course/", method="POST", payload=request.get_json())
 
 
-@app.put("/api/courses/<int:course_id>")
-def update_course(course_id):
+@app.put("/api/courses/<string:course_code>")
+def update_course(course_code):
     return proxy_request(
-        f"/course/{course_id}/", method="PUT", payload=request.get_json()
+        f"/course/{course_code}", method="PUT", payload=request.get_json()
     )
 
 
-@app.delete("/api/courses/<int:course_id>")
-def delete_course(course_id):
-    return proxy_request(f"/course/{course_id}/", method="DELETE")
+@app.delete("/api/courses/<string:course_code>")
+def delete_course(course_code):
+    return proxy_request(f"/course/{course_code}/", method="DELETE")
 
 
 if __name__ == "__main__":

@@ -8,3 +8,4 @@ class SectionResponseSchema(Schema):
     is_active = fields.Boolean()
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
+    stage = fields.String()

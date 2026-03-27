@@ -10,10 +10,10 @@ This service wraps the existing OutSystems Course REST API and exposes a Teamder
 
 - `GET /health`
 - `GET /api/courses`
-- `GET /api/courses/:courseId`
+- `GET /api/courses/:courseCode`
 - `POST /api/courses`
-- `PUT /api/courses/:courseId`
-- `DELETE /api/courses/:courseId`
+- `PUT /api/courses/:courseCode`
+- `DELETE /api/courses/:courseCode`
 
 ## Environment variables
 

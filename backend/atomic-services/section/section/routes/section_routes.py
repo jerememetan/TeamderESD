@@ -47,6 +47,7 @@ def create_section():
             section_number=int(payload["section_number"]),
             course_id=int(payload["course_id"]),
             is_active=bool(payload.get("is_active", True)),
+            stage=(str(payload.get("stage", "setup")))
         )
         db.session.add(section)
         db.session.commit()
@@ -74,6 +75,8 @@ def update_section(section_id):
             section.course_id = int(payload["course_id"])
         if "is_active" in payload:
             section.is_active = bool(payload["is_active"])
+        if "stage" in payload:
+            section.stage = str(payload["stage"])
 
         db.session.commit()
         return jsonify({"code": 200, "data": response_schema.dump(section)}), 200
