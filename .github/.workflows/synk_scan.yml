@@ -1,15 +1,24 @@
-name: Example workflow for Docker using Snyk 
-on: 
+name: Snyk scan for student-service
+on:
   push:
     branches: [ main ]
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-    - name: Run Snyk to check Docker image for vulnerabilities
-      run: docker build -t jeremetan/student-service
-      uses: snyk/actions/docker@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        image: jeremetan/student-service
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build student-service Docker image
+        run: |
+          docker build -f backend/atomic-services/student/Dockerfile -t jeremetan/student-service backend/atomic-services/student
+
+      - name: Run Snyk to check Docker image for vulnerabilities
+        uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: jeremetan/student-service
