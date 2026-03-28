@@ -1,10 +1,17 @@
 import uuid
+from enum import Enum
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint, func
 
 
 db = SQLAlchemy()
+
+
+class GPAVarianceLevel(Enum):
+    STRICT = "strict"
+    STANDARD = "standard"
+    NONE = "none"
 
 
 class SwapConstraint(db.Model):
@@ -20,7 +27,8 @@ class SwapConstraint(db.Model):
     class_id = db.Column(db.Uuid, nullable=False, index=True)
 
     # Example hard constraints for scenario configuration.
-    min_team_avg_gpa = db.Column(db.Float, nullable=False, default=0.0)
+    gpa_variance_level = db.Column(db.Enum(GPAVarianceLevel), nullable=False, default=GPAVarianceLevel.STANDARD)
+    class_avg_gpa = db.Column(db.Float, nullable=False, default=0.0)
     require_year_diversity = db.Column(db.Boolean, nullable=False, default=False)
     max_skill_imbalance = db.Column(db.Float, nullable=False, default=0.0)
     swap_window_days = db.Column(db.Integer, nullable=False, default=2)
