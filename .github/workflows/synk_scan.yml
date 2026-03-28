@@ -11,7 +11,6 @@ jobs:
       - name: Build student-service Docker image
         run: |
           docker build -f backend/atomic-services/student/Dockerfile -t jeremetan/student-service backend/atomic-services/student
-
       - name: Run Snyk to check Docker image for vulnerabilities
         uses: snyk/actions/docker@master
         env:
