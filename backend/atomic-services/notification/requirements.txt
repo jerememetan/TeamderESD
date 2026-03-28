@@ -1,5 +1,5 @@
 flask
 pika
 python-dotenv
-flask-cors
+flask-cors==6.0.0
 
