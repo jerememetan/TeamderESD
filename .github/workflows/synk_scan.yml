@@ -6,6 +6,8 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Build student-service Docker image
         run: |
           docker build -f backend/atomic-services/student/Dockerfile -t jeremetan/student-service backend/atomic-services/student
