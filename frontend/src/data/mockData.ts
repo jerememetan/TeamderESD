@@ -10,7 +10,6 @@ export const mockCourses: Course[] = [
     id: '1',
     name: 'Software Engineering',
     code: 'CS3240',
-    semester: 'Fall 2026',
     groups: [
       {
         id: '1-g1',
@@ -36,7 +35,6 @@ export const mockCourses: Course[] = [
     id: '2',
     name: 'Database Systems',
     code: 'CS4320',
-    semester: 'Fall 2026',
     groups: [
       {
         id: '2-g1',
@@ -62,7 +60,6 @@ export const mockCourses: Course[] = [
     id: '3',
     name: 'Human-Computer Interaction',
     code: 'CS3250',
-    semester: 'Fall 2026',
     groups: [
       {
         id: '3-g1',

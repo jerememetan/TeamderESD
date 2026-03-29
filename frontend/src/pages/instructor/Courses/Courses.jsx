@@ -11,6 +11,8 @@ import { STAGE_CONFIG } from "./logic/stageConfig";
 import { getGroupActions } from "./logic/getGroupActions";
 
 function Courses() {
+  // currently taking from mockCourses
+  // currently still taking from mockForms
   const courseList = mockCourses;
   const formMap = mockForms;
 
@@ -26,6 +28,7 @@ function Courses() {
           <p className={chrome.kicker}>[COURSES]</p>
           <h2 className={chrome.title}>Manage my courses</h2>
         </div>
+        {/* Button for Add course Not done yet */}
         <Button className={chrome.primaryAction}>
           <Plus className={chrome.buttonIcon} />
           Add Course
@@ -33,6 +36,8 @@ function Courses() {
       </section>
 
       <div className={styles.courseList}>
+        {/* Takes in a courseList - array of objects, courses data mapped to the corresponding
+        groups*/}
         {courseList.map((course, courseIndex) => {
           const totalStudents = course.groups.reduce(
             (sum, group) => sum + group.studentsCount,
@@ -40,12 +45,14 @@ function Courses() {
           );
 
           return (
+            // This is per course, course data 
+            // object id, code, name
             <ModuleBlock
-              key={course.id}
+              key={course.id} 
               title={
                 <span className={styles.courseHeading}>
                   {course.code} <span className={styles.courseDash}>-</span>{" "}
-                  {course.name}
+                  {course.name} 
                 </span>
               }
               className={`${styles.courseBlock} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
@@ -55,6 +62,8 @@ function Courses() {
                 {String(course.groups.length).padStart(2, "0")} Groups |{" "}
                 {totalStudents} students
               </p>
+
+              {/* This is for per courseGroup Data */}
               <div className={styles.groupGrid}>
                 {course.groups.map((group, groupIndex) => {
                   const existingForm = formMap[group.id];
