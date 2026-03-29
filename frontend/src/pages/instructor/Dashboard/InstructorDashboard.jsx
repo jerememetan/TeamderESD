@@ -8,37 +8,33 @@ import styles from "./InstructorDashboard.module.css";
 import { useEffect, useState } from "react";
 import { fetchDashboardCoursesWithEnrollments } from "./service/dashboardService";
 
-function InstructorDashboard() {
 
-  const [courses, setCourses] = useState([]);
+// Instruct Dashboard
+function InstructorDashboard() {
+  // Initiate Courses, loading, total students, swap requests, and groups state
+  const [courses, setCourses] = useState(0);
   const [loading, setLoading] = useState(true);
   const [totalStudents, setTotalStudents] = useState(0);
-  const pendingSwapRequests = 0; // Placeholder
-
+  const [swapRequest, setSwapRequest] = useState(0); // Placeholder
+  const [group, setGroup] = useState(0);
   useEffect(() => {
     fetchDashboardCoursesWithEnrollments()
       .then((dashboardCourses) => {
-        setCourses(dashboardCourses);
-        // Calculate total students from all groups
-        const total = dashboardCourses.reduce(
-          (sum, course) =>
-            sum + course.groups.reduce((gSum, g) => gSum + (g.studentsCount || 0), 0),
-          0
-        );
-        setTotalStudents(total);
+        // gets courses, loading, enrolled students, swap requests
+        setCourses(dashboardCourses.totalCourses);
+        setTotalStudents(dashboardCourses.totalStudents);
+        setGroup(dashboardCourses.totalGroups);
+        setSwapRequest(dashboardCourses.pendingSwapRequests);
+        console.log(dashboardCourses);
       })
       .catch(() => {
-        setCourses([]);
+        setCourses(0);
         setTotalStudents(0);
+        setGroup(0);
+        setSwapRequest(0);
       })
       .finally(() => setLoading(false));
   }, []);
-
-  const totalCourses = courses.length;
-  const totalGroups = courses.reduce(
-    (sum, c) => sum + (c.groups?.length || 0),
-    0,
-  );
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -46,10 +42,10 @@ function InstructorDashboard() {
         <div>
           <h2 className={styles.title}>Instructor Dashboard</h2>
         </div>
-        {pendingSwapRequests > 0 ? (
+        {swapRequest > 0 ? (
           <SystemTag hazard>
-            {pendingSwapRequests} swap request
-            {pendingSwapRequests > 1 ? "s" : ""} to review
+            {swapRequest} swap request
+            {swapRequest > 1 ? "s" : ""} to review
           </SystemTag>
         ) : (
           <SystemTag tone="success">Everything looks up to date</SystemTag>
@@ -63,12 +59,12 @@ function InstructorDashboard() {
           [
             {
               title: "Total Courses",
-              metric: String(totalCourses).padStart(2, "0"),
+              metric: String(courses).padStart(2, "0"),
               accent: "blue",
             },
             {
               title: "Total Groups",
-              metric: String(totalGroups).padStart(2, "0"),
+              metric: String(group).padStart(2, "0"),
               accent: "green",
             },
             {
@@ -78,7 +74,7 @@ function InstructorDashboard() {
             },
             {
               title: "Total Pending Swaps",
-              metric: String(pendingSwapRequests).padStart(2, "0"),
+              metric: String(swapRequest).padStart(2, "0"),
               accent: "orange",
             },
           ].map((item, index) => (
