@@ -54,14 +54,22 @@ function Teams() {
   const selectedCourse = mockCourses.find((course) => course.id === courseId);
   const selectedGroup =
     selectedCourse?.groups.find((group) => group.id === groupId) ?? null;
-  const mockVisibleTeams = mockTeams.filter(
-    (team) =>
-      team.courseId === courseId && (!groupId || team.groupId === groupId),
+  const mockVisibleTeams = useMemo(
+    () =>
+      mockTeams.filter(
+        (team) =>
+          team.courseId === courseId && (!groupId || team.groupId === groupId),
+      ),
+    [courseId, groupId],
   );
-  const visibleSwapRequests = swapRequestList.filter(
-    (request) =>
-      request.courseId === courseId &&
-      (!groupId || request.groupId === groupId),
+  const visibleSwapRequests = useMemo(
+    () =>
+      swapRequestList.filter(
+        (request) =>
+          request.courseId === courseId &&
+          (!groupId || request.groupId === groupId),
+      ),
+    [swapRequestList, courseId, groupId],
   );
   const backendSectionId = getBackendSectionId(groupId || "");
 
@@ -167,9 +175,10 @@ function Teams() {
     [backendTeams, rosterById, courseId, groupId],
   );
 
-  const initialVisibleTeams = backendVisibleTeams.length
-    ? backendVisibleTeams
-    : mockVisibleTeams;
+  const initialVisibleTeams = useMemo(
+    () => (backendVisibleTeams.length ? backendVisibleTeams : mockVisibleTeams),
+    [backendVisibleTeams, mockVisibleTeams],
+  );
   const teamDataSource = backendVisibleTeams.length ? "backend" : "mock";
 
   useEffect(() => {
