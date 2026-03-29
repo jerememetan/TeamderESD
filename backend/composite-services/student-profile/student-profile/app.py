@@ -4,8 +4,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(
+    app,
+    resources={r"/student-profile*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}},
+)
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
