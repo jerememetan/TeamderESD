@@ -4,8 +4,7 @@ from flask import Blueprint, jsonify, request
 
 from ..models.section_model import Section, db
 from ..schemas.section_schema import SectionResponseSchema
-
-
+from sqlalchemy.exc import IntegrityError
 section_bp = Blueprint("section", __name__)
 response_schema = SectionResponseSchema()
 many_response_schema = SectionResponseSchema(many=True)
@@ -36,22 +35,38 @@ def get_section(section_id):
 
     return jsonify({"code": 200, "data": response_schema.dump(section)}), 200
 
-
+# input: requires body to have 
 @section_bp.route("", methods=["POST"])
 def create_section():
     payload = request.get_json(silent=True) or {}
 
     try:
-        section = Section(
-            id=uuid.UUID(str(payload.get("id"))) if payload.get("id") else uuid.uuid4(),
+        existing_section = Section.query.filter_by(
             section_number=int(payload["section_number"]),
-            course_id=int(payload["course_id"]),
-            is_active=bool(payload.get("is_active", True)),
-            stage=(str(payload.get("stage", "setup")))
-        )
-        db.session.add(section)
-        db.session.commit()
-        return jsonify({"code": 201, "data": response_schema.dump(section)}), 201
+            course_id=int(payload["course_id"])
+        ).first()
+        if existing_section:
+            return jsonify({
+                "code": 400,
+                "error": {"message": "Section with this section_number and course_id already exists"}
+            }), 400
+        else:
+            section = Section(
+                id=uuid.UUID(str(payload.get("id"))) if payload.get("id") else uuid.uuid4(),
+                section_number=int(payload["section_number"]),
+                course_id=int(payload["course_id"]),
+                is_active=bool(payload.get("is_active", True)),
+                stage=(str(payload.get("stage", "setup")))
+            )
+            db.session.add(section)
+            db.session.commit()
+            return jsonify({"code": 201, "data": response_schema.dump(section)}), 201
+    except IntegrityError as error:
+        db.session.rollback()
+        return jsonify({
+            "code": 400,
+            "error": {"message": "Section with this section_number and course_id already exists (DB constraint)"}
+        }), 400
     except KeyError as error:
         db.session.rollback()
         return jsonify({"code": 400, "error": {"message": f"Missing field: {error.args[0]}"}}), 400
@@ -80,6 +95,12 @@ def update_section(section_id):
 
         db.session.commit()
         return jsonify({"code": 200, "data": response_schema.dump(section)}), 200
+    except IntegrityError as error:
+        db.session.rollback()
+        return jsonify({
+            "code": 400,
+            "error": {"message": "Section with this section_number and course_id already exists (DB constraint)"}
+        }), 400
     except Exception as error:
         db.session.rollback()
         return jsonify({"code": 400, "error": {"message": str(error)}}), 400

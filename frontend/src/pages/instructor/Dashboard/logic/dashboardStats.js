@@ -3,7 +3,9 @@
 
 export function getDashboardStats(courseList, sectionArr, enrollments, swapRequestList) {
   const totalCourses = courseList.length;
-  const totalGroups = sectionArr.length;
+  const totalGroups = sectionArr.filter(
+    (request) => request.is_active === true
+  ).length;
   const totalStudents = enrollments.length;
   const pendingSwapRequests = swapRequestList.filter(
     (request) => request.status === "pending",

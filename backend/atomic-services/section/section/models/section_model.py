@@ -7,7 +7,10 @@ db = SQLAlchemy()
 
 class Section(db.Model):
     __tablename__ = "section"
-    __table_args__ = {"schema": "section"}
+    __table_args__ = (
+        db.UniqueConstraint('section_number', 'course_id', name='uix_section_course'),
+        {"schema": "section"}
+        )
 
     id = db.Column(db.Uuid, primary_key=True)
     section_number = db.Column(db.BigInteger, nullable=False)
