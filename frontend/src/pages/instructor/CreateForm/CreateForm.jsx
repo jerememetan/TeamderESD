@@ -138,12 +138,19 @@ function CreateForm() {
     }));
   };
 
+  const createClientId = (prefix) => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return `${prefix}-${crypto.randomUUID()}`;
+    }
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  };
+
   const addTopic = () => {
     setFormState((current) => ({
       ...current,
       topics: [
         ...current.topics,
-        { id: `topic-${Date.now()}`, topic_label: "" },
+        { id: createClientId("topic"), topic_label: "" },
       ],
     }));
   };
@@ -169,7 +176,11 @@ function CreateForm() {
       ...current,
       skills: [
         ...current.skills,
-        { id: `skill-${Date.now()}`, skill_label: "", skill_importance: 0.25 },
+        {
+          id: createClientId("skill"),
+          skill_label: "",
+          skill_importance: 0.25,
+        },
       ],
     }));
   };

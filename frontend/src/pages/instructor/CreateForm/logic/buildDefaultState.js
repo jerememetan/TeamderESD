@@ -11,6 +11,20 @@ export function buildDefaultState(group, existingForm) {
   const minimumGroupSize =
     existingForm?.minimumGroupSize ?? Math.max(2, preferredGroupSize - 1);
 
+  const topicsFromCriteria =
+    existingForm?.criteria
+      ?.filter(
+        (criterion) =>
+          criterion.type === "multiple-choice" && criterion.options?.length,
+      )
+      .flatMap((criterion, criterionIndex) =>
+        (criterion.options ?? []).map((option, optionIndex) => ({
+          id: `topic-${criterion.id ?? criterionIndex}-${optionIndex}`,
+          topic_label: String(option ?? ""),
+        })),
+      )
+      .slice(0, 4) ?? [];
+
   return {
     numGroups,
     preferredGroupSize,
@@ -27,14 +41,7 @@ export function buildDefaultState(group, existingForm) {
       buddy_weight:
         existingForm?.allowBuddy === false ? 0 : DEFAULT_WEIGHTS.buddy_weight,
     },
-    topics:
-      existingForm?.criteria
-        ?.filter(
-          (criterion) =>
-            criterion.type === "multiple-choice" && criterion.options?.length,
-        )
-        .flatMap((criterion) => criterion.options ?? [])
-        .slice(0, 4) ?? [],
+    topics: topicsFromCriteria,
     skills: existingForm?.criteria?.length
       ? existingForm.criteria.slice(0, 3).map((criterion, index) => ({
           id: `skill-${criterion.id}-${index}`,
