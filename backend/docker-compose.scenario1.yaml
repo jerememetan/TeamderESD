@@ -1,0 +1,186 @@
+services:
+
+  # Atomic
+
+  student-service:
+    build:
+      context: ./atomic-services/student
+    container_name: teamder-student-service
+    environment:
+      PORT: 3001
+      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student
+    ports:
+      - "3001:3001"
+
+  course-service:
+    build:
+      context: ./atomic-services/course
+    container_name: teamder-course-service
+    environment:
+      PORT: 3017
+      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course
+    ports:
+      - "3017:3017"
+
+  section-service:
+    build:
+      context: ./atomic-services/section
+    container_name: teamder-section-service
+    environment:
+      PORT: 3018
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3018:3018"
+
+  skill-service:
+    build:
+      context: ./atomic-services/skill
+    container_name: teamder-skill-service
+    environment:
+      PORT: 3002
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3002:3002"
+
+  topic-service:
+    build:
+      context: ./atomic-services/project-topic
+    container_name: teamder-project-topic-service
+    environment:
+      PORT: 3003
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3003:3003"
+
+  criteria-service:
+    build:
+      context: ./atomic-services/criteria
+    container_name: teamder-criteria-service
+    environment:
+      PORT: 3004
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3004:3004"
+
+  enrollment-service:
+    build:
+      context: ./atomic-services/enrollment
+    container_name: teamder-enrollment-service
+    environment:
+      PORT: 3005
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3005:3005"
+
+  reputation-service:
+    build:
+      context: ./atomic-services/reputation
+    container_name: teamder-reputation-service
+    environment:
+      PORT: 3006
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3006:3006"
+  
+  team-service:
+    build:
+      context: ./atomic-services/team
+    container_name: teamder-team-service
+    environment:
+      PORT: 3007
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3007:3007"
+
+  student-competence-service:
+    build: ./atomic-services/student-competence
+    container_name: teamder-student-competence-service
+    environment:
+      PORT: 3008
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3008:3008"
+  
+  student-topic-preference-service:
+    build: ./atomic-services/student-topic-preference
+    container_name: teamder-student-topic-preference-service
+    environment:
+      PORT: 3009
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3009:3009"
+
+  student-form-data-service:
+    build: ./atomic-services/student-form-data
+    container_name: teamder-student-form-data-service
+    environment:
+      PORT: 3010
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3010:3010"
+
+
+
+  # Composite
+
+  formation-config-service:
+    build:
+      context: ./composite-services/formation-config
+    container_name: teamder-formation-config-service
+    ports:
+      - "4000:4000"
+    environment:
+      CRITERIA_URL: "http://criteria-service:3004/criteria"
+      TOPIC_URL: "http://topic-service:3003/topic"
+      SKILL_URL: "http://skill-service:3002/skill"
+    depends_on:
+      - criteria-service
+      - topic-service
+      - skill-service
+
+  student-profile-service:
+    build:
+      context: ./composite-services/student-profile
+    container_name: teamder-student-profile-service
+    ports:
+      - "4001:4001"
+    environment:
+      OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
+      ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
+      FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
+      STUDENT_FORM_SUBMISSION_URL: "http://student-form-service:3015/student-form/submission"
+      REPUTATION_URL: "http://reputation-service:3006/reputation"
+      TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
+      COMPETENCE_URL: "http://student-competence-service:3008/competence"
+    depends_on:
+      - enrollment-service
+      - student-form-data-service
+      - student-form-service
+      - student-topic-preference-service
+      - reputation-service
+      - student-competence-service
+
+  team-formation-service:
+    build:
+      context: ./composite-services/team-formation
+    container_name: teamder-team-formation-service
+    ports:
+      - "4002:4002"
+    environment:
+      STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
+      FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
+      TEAM_URL: "http://team-service:3007/team"
+      REQUEST_TIMEOUT: 8
+      PORT: 4002
+    depends_on:
+      - student-profile-service
+      - formation-config-service
+
+
+
+
+
+
+
+
+
