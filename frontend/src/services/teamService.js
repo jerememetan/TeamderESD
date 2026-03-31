@@ -25,6 +25,7 @@ async function handleResponse(response, fallbackMessage) {
 }
 
 export async function fetchTeamsBySection(sectionId) {
+  console.log("fetching teams")
   const response = await fetch(`${TEAM_URL}?section_id=${encodeURIComponent(sectionId)}`, {
     headers: {
       Accept: 'application/json',

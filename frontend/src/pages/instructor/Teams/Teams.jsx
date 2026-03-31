@@ -32,9 +32,11 @@ import {
 } from "./logic/teamLogic";
 import styles from "./Teams.module.css";
 import { Button } from "../../../components/ui/button";
+import {fetchCourseByCode} from "../../../services/courseService";
+import {getSectionById} from "../../../services/sectionService";
 
 function Teams() {
-  const { courseId, groupId } = useParams();
+  const { courseId, groupId: backendSectionId } = useParams();
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [swapRequestList, setSwapRequestList] = useState(mockSwapRequests);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -51,25 +53,53 @@ function Teams() {
   const [swapMode, setSwapMode] = useState(false);
   const [selectedSwapMember, setSelectedSwapMember] = useState(null);
 
-  const selectedCourse = mockCourses.find((course) => course.id === courseId);
-  const selectedGroup =
-    selectedCourse?.groups.find((group) => group.id === groupId) ?? null;
+  const [selectedCourse, setSelectedCourse] = useState(null);
+
+
+  const [selectedGroup,setSelectedGroup] = useState(null);
+
+
   const mockVisibleTeams = mockTeams.filter(
     (team) =>
-      team.courseId === courseId && (!groupId || team.groupId === groupId),
+      team.courseId === courseId && (!backendSectionId || team.groupId === backendSectionId),
   );
   const visibleSwapRequests = swapRequestList.filter(
     (request) =>
       request.courseId === courseId &&
-      (!groupId || request.groupId === groupId),
+      (!backendSectionId || request.groupId === backendSectionId),
   );
-  const backendSectionId = getBackendSectionId(groupId || "");
+
+  useEffect(() =>{
+    async function fetchSection(){
+      try{
+        const section = await fetchCourseByCode(courseId);
+        setSelectedGroup(section);
+      } catch(error){
+        console.log("section not found:"+ error );
+      }
+    }
+    fetchSection();
+  }, [selectedCourse])
+
+  useEffect(() => {
+    async function fetchCourse(){
+      
+      try {
+        const course = await fetchCourseByCode(courseId);
+        setSelectedCourse(course);
+      } catch(error){
+        console.log("course not found: " + courseId, error);
+      }
+
+    }
+    fetchCourse();
+  }, [courseId])
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadRoster() {
-      if (!groupId || !backendSectionId) {
+      if (!backendSectionId) {
         setIsRosterLoading(false);
         setRosterError("Missing backend section mapping for this group.");
         return;
@@ -99,17 +129,19 @@ function Teams() {
     return () => {
       isMounted = false;
     };
-  }, [backendSectionId, groupId]);
+  }, [backendSectionId]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadTeams() {
-      if (!groupId || !backendSectionId) {
+      // checks if backend is present
+      if (!backendSectionId) {
         setIsTeamsLoading(false);
         setTeamError("Missing backend section mapping for this group.");
         return;
       }
+      // sets team initali
 
       setIsTeamsLoading(true);
       setTeamError("");
@@ -143,17 +175,17 @@ function Teams() {
     return () => {
       isMounted = false;
     };
-  }, [backendSectionId, groupId]);
+  }, [backendSectionId]);
 
   useEffect(() => {
-    if (!groupId) {
+    if (!backendSectionId) {
       setPeerRound(null);
       return;
     }
 
-    const round = getPeerEvaluationRoundForGroup(groupId);
+    const round = getPeerEvaluationRoundForGroup(backendSectionId);
     setPeerRound(round ? getPeerEvaluationSummary(round.id) : null);
-  }, [groupId]);
+  }, [backendSectionId]);
 
   const rosterById = useMemo(
     () =>
@@ -163,8 +195,8 @@ function Teams() {
 
   const backendVisibleTeams = useMemo(
     () =>
-      mapBackendTeamsToViewModel(backendTeams, rosterById, courseId, groupId),
-    [backendTeams, rosterById, courseId, groupId],
+      mapBackendTeamsToViewModel(backendTeams, rosterById, courseId, backendSectionId),
+    [backendTeams, rosterById, courseId, backendSectionId],
   );
 
   const initialVisibleTeams = backendVisibleTeams.length
