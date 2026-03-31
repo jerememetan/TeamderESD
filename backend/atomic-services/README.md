@@ -383,6 +383,77 @@ This microservice manages student form data (buddy, MBTI, etc.) for a section. I
 
     - **GET /student-form/submitted**
       - Query params: `section_id` (required)
+
+---
+
+## Notification Service
+
+- **Base hostname / port:** `http://localhost:3016` (default port: 3016)
+- **Health:** `GET /health` — returns service and consumer status/metrics
+- **Publish endpoints:**
+  - `POST /notification/send-form-link` — bulk: accepts `recipients` array (student_id, email, form_url, section_id)
+  - `POST /notification/publish-email` — direct email payload (`to`, `subject`, `body`, `is_html`, ...)
+
+### RabbitMQ topology
+
+- Exchange: `notification.topic` (topic, durable) — env: `NOTIFICATION_EXCHANGE`
+- Consumer queue: `notification.email.queue` (durable) — env: `NOTIFICATION_EMAIL_QUEUE`
+- Routing key(s): default `notification.email` — envs: `NOTIFICATION_ROUTING_KEY`, `NOTIFICATION_CONSUMER_ROUTING_KEYS` (comma-separated)
+- Error events: published to `NOTIFICATION_ERROR_EXCHANGE` with key `NOTIFICATION_ERROR_ROUTING_KEY`
+
+The service will declare the exchange and queue at startup and bind the queue to the configured routing keys.
+
+### Important environment variables
+
+RabbitMQ / AMQP:
+
+- `RABBITMQ_HOST` / `RABBIT_HOST`
+- `RABBITMQ_PORT` / `RABBIT_PORT`
+- `RABBITMQ_USER` / `RABBIT_USER`
+- `RABBITMQ_PASSWORD` / `RABBIT_PASSWORD`
+- `RABBITMQ_VHOST` / `RABBIT_VHOST`
+- `NOTIFICATION_EXCHANGE`
+- `NOTIFICATION_EXCHANGE_TYPE` (default: `topic`)
+- `NOTIFICATION_ROUTING_KEY`
+- `NOTIFICATION_EMAIL_QUEUE`
+- `NOTIFICATION_CONSUMER_ROUTING_KEYS`
+- `NOTIFICATION_ERROR_EXCHANGE`
+- `NOTIFICATION_ERROR_ROUTING_KEY`
+- `NOTIFICATION_CONSUMER_PREFETCH`
+- `NOTIFICATION_CONSUMER_ENABLED`
+
+SMTP / Email:
+
+- `GMAIL_SMTP_HOST` (default: `smtp.gmail.com`)
+- `GMAIL_SMTP_PORT` (default: `587`)
+- `GMAIL_SMTP_USER` / `SMTP_USER`
+- `GMAIL_SMTP_PASSWORD` / `SMTP_PASSWORD` (use an app password)
+- `EMAIL_FROM`
+- `EMAIL_SEND_MAX_RETRIES`
+- `EMAIL_SEND_RETRY_BACKOFF_SECONDS`
+- `EMAIL_SEND_DELAY_SECONDS`
+
+### Message shapes
+
+- Preferred direct-email message: `to`, `subject`, `body`, `is_html`, `reply_to`, `headers`, `metadata`.
+- Backward-compatible event: `event_type: FormLinkGenerated` with `email`, `form_url`, `student_id`, `section_id`.
+
+### Test / run
+
+- Run the service locally:
+
+```bash
+pip install -r notification/requirements.txt
+python notification/app.py
+```
+
+- Publish a test message with the included producer script:
+
+```bash
+python publish_sample_email.py --to you@example.com --subject "Test" --body "Hello from Teamder"
+```
+
+See `publish_sample_email.py` and `notification/app.py` for implementation details.
       - Returns: All student-forms for the section where `submitted=true`.
       - Example:
         ```http

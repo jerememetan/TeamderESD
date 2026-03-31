@@ -128,6 +128,39 @@ services:
     ports:
       - "3015:3015"
 
+  notification-service:
+    build: ./atomic-services/notification
+    container_name: teamder-notification-service
+    environment:
+      PORT: 3016
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      NOTIFICATION_EXCHANGE: notification.topic
+      NOTIFICATION_EXCHANGE_TYPE: topic
+      NOTIFICATION_ROUTING_KEY: notification.email
+      NOTIFICATION_EMAIL_QUEUE: notification.email.queue
+      GMAIL_SMTP_HOST: smtp.gmail.com
+      GMAIL_SMTP_PORT: 587
+      GMAIL_SMTP_USER: ${GMAIL_SMTP_USER}
+      GMAIL_SMTP_PASSWORD: ${GMAIL_SMTP_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_SEND_MAX_RETRIES: ${EMAIL_SEND_MAX_RETRIES:-3}
+      EMAIL_SEND_RETRY_BACKOFF_SECONDS: ${EMAIL_SEND_RETRY_BACKOFF_SECONDS:-2}
+      EMAIL_SEND_DELAY_SECONDS: ${EMAIL_SEND_DELAY_SECONDS:-0}
+      NOTIFICATION_CONSUMER_PREFETCH: ${NOTIFICATION_CONSUMER_PREFETCH:-5}
+      NOTIFICATION_ERROR_EXCHANGE: ${NOTIFICATION_ERROR_EXCHANGE:-notification.topic}
+      NOTIFICATION_ERROR_ROUTING_KEY: ${NOTIFICATION_ERROR_ROUTING_KEY:-notification.email.error}
+    ports:
+      - "3016:3016"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      rabbitmq-setup:
+        condition: service_healthy
+
   # Composite
 
   formation-config-service:
@@ -242,6 +275,7 @@ services:
       timeout: 3s
       retries: 20
       start_period: 10s
+
 
 volumes:
   rabbitmq_data:
