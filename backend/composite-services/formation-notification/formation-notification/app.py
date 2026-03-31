@@ -18,7 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration and service endpoints used by this composite
-REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "10"))
+REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "1000"))
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://localhost:3005/enrollment")
 STUDENT_SERVICE_URL = os.getenv("STUDENT_SERVICE_URL", "http://localhost:3001/api/students")
 STUDENT_FORM_URL = os.getenv("STUDENT_FORM_URL", "http://localhost:3015/student-form")
@@ -32,6 +32,10 @@ FORM_LINK_SUBJECT = os.getenv(
     "Action Required: Complete Your Teamder Student Form",
 )
 FORM_LINK_TEMPLATE_KEY = os.getenv("FORM_LINK_TEMPLATE_KEY", "student_form_link_v1")
+FORM_LINK_GENERIC_MESSAGE = os.getenv(
+    "FORM_LINK_GENERIC_MESSAGE",
+    "Please complete your Teamder student form using the link provided.",
+)
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
 
 # Simple validation patterns
@@ -42,8 +46,7 @@ SECTION_ID_RE = re.compile(r"^[A-Za-z0-9._:-]+$")
 CORS(
     app,
     resources={
-        r"/formation_notifications.*": {"origins": [FRONTEND_ORIGIN]},
-        r"/formation-notification/.*": {"origins": [FRONTEND_ORIGIN]},
+        r"/formation-notifications.*": {"origins": [FRONTEND_ORIGIN]},
     },
 )
 
@@ -102,22 +105,55 @@ def _create_form(section_id: str, student_id: int) -> Optional[str]:
     # success this returns the created form id (string). On failure, logs
     # error details and returns None so the caller can record a dependency
     # failure.
-    form_resp = call_http(
-        method="POST",
-        url=STUDENT_FORM_URL,
-        payload={"section_id": section_id, "students": [student_id]},
-        timeout=REQUEST_TIMEOUT,
-        expected_statuses={200, 201},
-    )
-    if not form_resp["ok"]:
+    # Primary contract: Student Form service expects `students` array.
+    # Fallback retries with `student_id` for compatibility with older payloads.
+    candidate_payloads = [
+        {"section_id": section_id, "students": [student_id]},
+        {"section_id": section_id, "student_id": student_id},
+    ]
+
+    form_resp: Dict[str, Any] = {}
+    for idx, candidate_payload in enumerate(candidate_payloads):
+        form_resp = call_http(
+            method="POST",
+            url=STUDENT_FORM_URL,
+            payload=candidate_payload,
+            timeout=REQUEST_TIMEOUT,
+            expected_statuses={200, 201},
+        )
+        if form_resp["ok"]:
+            break
+
+        should_retry_legacy = idx == 0 and form_resp.get("status_code") == 400
+        if should_retry_legacy:
+            logger.warning(
+                "student-form payload rejected; retrying compatibility payload "
+                "section_id=%s student_id=%s status_code=%s error=%s",
+                section_id,
+                student_id,
+                form_resp.get("status_code"),
+                form_resp.get("error"),
+            )
+            continue
+
         logger.error(
-            "student-form creation failed",
-            extra={
-                "section_id": section_id,
-                "student_id": student_id,
-                "status_code": form_resp.get("status_code"),
-                "error": form_resp.get("error"),
-            },
+            "student-form creation failed "
+            "section_id=%s student_id=%s status_code=%s error=%s",
+            section_id,
+            student_id,
+            form_resp.get("status_code"),
+            form_resp.get("error"),
+        )
+        return None
+
+    if not form_resp.get("ok"):
+        logger.error(
+            "student-form creation failed after payload retries "
+            "section_id=%s student_id=%s status_code=%s error=%s",
+            section_id,
+            student_id,
+            form_resp.get("status_code"),
+            form_resp.get("error"),
         )
         return None
 
@@ -144,7 +180,7 @@ def _build_response(section_id: str, created: List[Dict[str, Any]], failed: List
         "notifications_failed": failed,
         "summary": {
             "total_students": len(created) + len(failed),
-            "queued_count": len(created),
+            "success_count": len(created),
             "failed_count": len(failed),
         },
     }
@@ -153,7 +189,7 @@ def _build_response(section_id: str, created: List[Dict[str, Any]], failed: List
 def _resolve_status_code(created: List[Dict[str, Any]], failed: List[Dict[str, Any]]) -> int:
     # Return appropriate HTTP status based on created/failed outcomes.
     #
-    # - 201: all notifications queued
+    # - 201: all notifications published
     # - 207: partial success
     # - 404: nothing to do (no students)
     # - 502: dependency failures (student/form)
@@ -187,8 +223,7 @@ def health():
     return jsonify({"status": "ok", "service": "formation-notification-service"}), 200
 
 
-@app.route("/formation_notifications", methods=["POST"])
-@app.route("/formation-notification/send-form-links", methods=["POST"])
+@app.route("/formation-notifications", methods=["POST"])
 def create_formation_notifications():
     # Main orchestration endpoint.
     #
@@ -204,7 +239,6 @@ def create_formation_notifications():
     #    e. Record successes and failures for the response body.
     payload = request.get_json(silent=True) or {}
     section_id = payload.get("section_id")
-    initiated_by = payload.get("initiated_by")
 
     # Validate section id input
     if not isinstance(section_id, str) or not section_id.strip():
@@ -215,7 +249,7 @@ def create_formation_notifications():
 
     logger.info(
         "formation notification request received",
-        extra={"section_id": section_id, "initiated_by": initiated_by},
+        extra={"section_id": section_id},
     )
 
     # --- Enrollment service: fetch enrolled students for the section ---
@@ -301,21 +335,34 @@ def create_formation_notifications():
         # Build the public-facing link and notification payload
         form_link = FORM_LINK_URL_TEMPLATE.format(student_id=student_id, form_id=form_id)
         message_payload = {
+            # Primary notification payload contract consumed by
+            # atomic notification service: to/subject/body.
+            "to": email,
+            "subject": FORM_LINK_SUBJECT,
+            "body": f"{FORM_LINK_GENERIC_MESSAGE}\n\n{form_link}",
+            "metadata": {
+                "event_type": "FormLinkGenerated",
+                "student_id": student_id,
+                "section_id": section_id,
+                "form_id": form_id,
+                "template_key": FORM_LINK_TEMPLATE_KEY,
+                "idempotency_key": f"{section_id}:{student_id}:{form_id}",
+            },
+            # Keep legacy fields for compatibility with existing consumers.
             "event_type": "FormLinkGenerated",
             "student_id": student_id,
             "email": email,
             "section_id": section_id,
             "form_id": form_id,
             "form_url": form_link,
-            "subject": FORM_LINK_SUBJECT,
+            "message": FORM_LINK_GENERIC_MESSAGE,
             "template_key": FORM_LINK_TEMPLATE_KEY,
-            "initiated_by": initiated_by,
             "idempotency_key": f"{section_id}:{student_id}:{form_id}",
         }
 
         # --- Publish notification message via AMQP helper ---
         # `publish_notification_message` returns (ok, error). On failure we log
-        # and record a publish failure; otherwise, record as queued.
+        # and record a publish failure.
         publish_ok, publish_error = publish_notification_message(message_payload)
         if not publish_ok:
             logger.error(
@@ -329,14 +376,13 @@ def create_formation_notifications():
             failed.append({"student_id": student_id, "reason": "notification publish failed"})
             continue
 
-        # Successfully queued notification for sending
+        # Notification message published successfully
         created.append(
             {
                 "student_id": student_id,
                 "email": email,
                 "form_id": form_id,
                 "form_link": form_link,
-                "status": "queued",
             }
         )
 

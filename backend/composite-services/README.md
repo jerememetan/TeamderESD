@@ -189,9 +189,14 @@ This service orchestrates team generation and persistence by:
 
 1. Fetching student data from `student-profile` composite microservice.
 2. Fetching criteria/topics/skills from `formation-config` composite microservice.
-3. Solving team assignment with OR-Tools CP-SAT.
-4. Posting generated teams into the team atomic microservice (`POST /team`).
-5. Returning the response from the team atomic microservice.
+3. Fetching all student-form rows for the section from student-form atomic service.
+4. Deleting the fetched student-form rows for that section.
+5. Updating reputation by form submission result (`submitted=true` => `+2`, `submitted=false` => `-5`).
+6. Initializing missing reputation rows (`POST /reputation`) before `GET`/`PUT` reputation calls when needed.
+7. Re-fetching student-profile so solver uses updated reputation values.
+8. Solving team assignment with OR-Tools CP-SAT.
+9. Posting generated teams into the team atomic microservice (`POST /team`).
+10. Returning the response from the team atomic microservice.
 
 ## Base URL
 
@@ -267,6 +272,13 @@ The service returns the body/status from `POST /team` of the team atomic service
 }
 ```
 
+Other possible downstream `502` messages include:
+- `failed to fetch student forms`
+- `failed to delete student forms`
+- `failed to fetch reputation`
+- `failed to initialize reputation`
+- `failed to update reputation`
+
 ### Persistence Error (502)
 ```json
 {
@@ -305,6 +317,11 @@ The service returns the body/status from `POST /team` of the team atomic service
 ### Inputs consumed by team-formation composite
 - `GET {STUDENT_PROFILE_URL}?section_id=<uuid>`
 - `GET {FORMATION_CONFIG_URL}?section_id=<uuid>`
+- `GET {STUDENT_FORM_URL}?section_id=<uuid>`
+- `DELETE {STUDENT_FORM_URL}?section_id=<uuid>`
+- `GET {REPUTATION_URL}/{student_id}`
+- `POST {REPUTATION_URL}` with body `{ "student_id": <int> }`
+- `PUT {REPUTATION_URL}/{student_id}` with body `{ "delta": <int> }`
 
 ### Output produced by team-formation composite
 - `POST {TEAM_URL}` with body:
@@ -330,6 +347,8 @@ The service returns the body/status from `POST /team` of the team atomic service
 - `STUDENT_PROFILE_URL` (default: `http://localhost:4001/student-profile`)
 - `FORMATION_CONFIG_URL` (default: `http://localhost:4000/formation-config`)
 - `TEAM_URL` (default: `http://localhost:3007/team`)
+- `STUDENT_FORM_URL` (default: `http://localhost:3015/student-form`)
+- `REPUTATION_URL` (default: `http://localhost:3006/reputation`)
 - `SOLVER_TIME_LIMIT_S` (default: `10`)
 - `LOG_LEVEL` (default: `INFO`)
 
@@ -350,3 +369,113 @@ team-formation/
     test_app.py
     test-cases/
 ```
+
+---
+
+# Formation Notification Composite Service
+
+This service orchestrates form-link notification publishing for students enrolled in a section.
+
+## Base URL
+
+- Default: `/formation-notifications` (port: 4004)
+
+## POST /formation-notifications
+
+Publishes notification messages with form links for all students in the section.
+
+### Input JSON Body
+```json
+{
+  "section_id": "IS213-2026-01"
+}
+```
+
+- `section_id` (required): non-empty section identifier.
+
+### Example
+```http
+POST http://localhost:4004/formation-notifications
+Content-Type: application/json
+
+{
+  "section_id": "IS213-2026-01"
+}
+```
+
+### Success Response (201)
+```json
+{
+  "section_id": "IS213-2026-01",
+  "notifications_created": [
+    {
+      "student_id": 101,
+      "email": "student1@university.edu",
+      "form_id": "f-001",
+      "form_link": "http://localhost:5173/student/101/form/f-001"
+    }
+  ],
+  "notifications_failed": [],
+  "summary": {
+    "total_students": 1,
+    "success_count": 1,
+    "failed_count": 0
+  }
+}
+```
+
+### Partial Success Response (207)
+```json
+{
+  "section_id": "IS213-2026-01",
+  "notifications_created": [
+    {
+      "student_id": 101,
+      "email": "student1@university.edu",
+      "form_id": "f-001",
+      "form_link": "http://localhost:5173/student/101/form/f-001"
+    }
+  ],
+  "notifications_failed": [
+    {
+      "student_id": 102,
+      "reason": "missing email"
+    }
+  ],
+  "summary": {
+    "total_students": 2,
+    "success_count": 1,
+    "failed_count": 1
+  }
+}
+```
+
+### Validation Error (400)
+```json
+{
+  "code": 400,
+  "message": "section_id is required and must be a non-empty string"
+}
+```
+
+### Not Found / Empty Section (404)
+```json
+{
+  "section_id": "IS213-2026-01",
+  "notifications_created": [],
+  "notifications_failed": [],
+  "summary": {
+    "total_students": 0,
+    "success_count": 0,
+    "failed_count": 0
+  },
+  "message": "no enrolled students"
+}
+```
+
+## Behavior Notes
+
+- Request is synchronous for orchestration only; it does not return downstream delivery status from notification processing.
+- The service fetches enrolled students, creates per-student forms, builds form links, and publishes notification messages to RabbitMQ.
+- Notification payload includes a generic user-facing message and a form link.
+- The service returns per-student success/failure details for orchestration outcomes only.

@@ -52,11 +52,20 @@ def call_http(
     body = _safe_json(response)
     valid_statuses = expected_statuses or set(range(200, 300))
     if response.status_code not in valid_statuses:
+        error_message = "non-success response"
+        if isinstance(body, dict):
+            nested_error = body.get("error")
+            if isinstance(nested_error, dict) and isinstance(nested_error.get("message"), str):
+                error_message = nested_error["message"]
+            elif isinstance(body.get("message"), str):
+                error_message = body["message"]
+            elif isinstance(body.get("error"), str):
+                error_message = body["error"]
         return {
             "ok": False,
             "status_code": response.status_code,
             "payload": body,
-            "error": body.get("message") if isinstance(body, dict) else "non-success response",
+            "error": error_message,
             "error_type": "http",
         }
 

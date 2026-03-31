@@ -209,6 +209,8 @@ services:
     environment:
       STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
       FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
+      STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
+      REPUTATION_URL: "http://reputation-service:3006/reputation"
       TEAM_URL: "http://team-service:3007/team"
       REQUEST_TIMEOUT: 8
       PORT: 4002
@@ -216,6 +218,9 @@ services:
     depends_on:
       - student-profile-service
       - formation-config-service
+      - student-form-service
+      - reputation-service
+      - team-service
 
 # RabbitMQ
   rabbitmq:

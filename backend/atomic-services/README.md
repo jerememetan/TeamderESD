@@ -114,6 +114,68 @@ This README provides simple instructions for calling the endpoints of the three 
 
 ---
 
+    ## Section Service
+    - **Base URL:** `/section` (default port: 3018)
+
+    ### Endpoints
+
+    - **GET /section**
+      - Query params: `course_id` (optional, integer), `is_active` (optional, boolean-like string `true|false`)
+      - Returns: List of sections filtered by `course_id` and/or `is_active`, ordered by `section_number`.
+      - Example:
+        ```http
+        GET http://localhost:3018/section?course_id=123&is_active=true
+        ```
+
+    - **GET /section/{section_id}**
+      - Returns: Section with the given `section_id`.
+      - Example:
+        ```http
+        GET http://localhost:3018/section/11111111-1111-1111-1111-111111111111
+        ```
+
+
+    - **POST /section**
+      - Body: JSON matching the `Section` create schema. `id` is optional (UUID); if omitted a UUID will be generated.
+      - Required fields: `section_number` (integer), `course_id` (integer). Optional: `is_active` (boolean), `stage` (string).
+      - Example request body:
+        ```json
+        {
+          "section_number": 1,
+          "course_id": 123,
+          "is_active": true,
+          "stage": "setup"
+        }
+        ```
+      - Success response (201):
+        ```json
+        {
+          "code": 201,
+          "data": {
+            "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "section_number": 1,
+            "course_id": 123,
+            "is_active": true,
+            "stage": "setup",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+          }
+        }
+        ```
+
+    - **PUT /section/{section_id}**
+      - Body: Partial or full section fields to update (same field names as POST).
+      - Returns: Updated section object.
+
+    - **DELETE /section/{section_id}**
+      - Deletes the section and returns a confirmation object.
+      - Example response:
+        ```json
+        { "code": 200, "data": { "deleted": true, "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" } }
+        ```
+
+    ---
+
 ## Enrollment Service
 - **Base URL:** `/enrollment` (default port: 3001)
 
@@ -137,7 +199,7 @@ This README provides simple instructions for calling the endpoints of the three 
 ---
 
 ## Reputation Service
-- **Base URL:** `/reputation` (default port: 3001)
+- **Base URL:** `/reputation` (default port: 3006)
 
 ### Endpoints
 
@@ -145,21 +207,35 @@ This README provides simple instructions for calling the endpoints of the three 
   - Returns: List of all student reputations
   - Example:
     ```http
-    GET http://localhost:3001/reputation
+    GET http://localhost:3006/reputation
     ```
+
+- **POST /reputation**
+  - Body: JSON with `student_id` (integer)
+  - Behavior: Creates a new reputation row with `reputation_score` initialized to `50`
+  - Example:
+    ```http
+    POST http://localhost:3006/reputation
+    Content-Type: application/json
+    {
+      "student_id": 123
+    }
+    ```
+  - Response: Created reputation object (`201`)
+  - Conflict: Returns `409` if reputation already exists for the `student_id`
 
 - **GET /reputation/{student_id}**
   - Returns: Reputation for the given student_id
   - Example:
     ```http
-    GET http://localhost:3001/reputation/{student_id}
+    GET http://localhost:3006/reputation/{student_id}
     ```
 
 - **PUT /reputation/{student_id}**
   - Body: JSON with a `delta` integer (positive or negative) to increment/decrement the student's reputation score
   - Example:
     ```http
-    PUT http://localhost:3001/reputation/{student_id}
+    PUT http://localhost:3006/reputation/{student_id}
     Content-Type: application/json
     {
       "delta": 5
@@ -471,6 +547,7 @@ See `publish_sample_email.py` and `notification/app.py` for implementation detai
     - **POST /student-form**
       - Body: JSON matching `StudentFormCreateSchema` — must include `section_id` (UUID) and `students` (array of integer student IDs).
       - Behavior: Creates any missing `StudentForm` rows for the listed students in the section; existing rows are left unchanged.
+      - Note: For a single student, send `students` with one item (for example, `[123]`). The request body should not use `student_id` for this endpoint.
       - Example request body:
         ```json
         {

@@ -5,6 +5,10 @@ class ReputationResponseSchema(Schema):
     reputation_score = fields.Int()
 
 
+class ReputationCreateSchema(Schema):
+    student_id = fields.Int(required=True)
+
+
 # Schema for PUT request body
 class ReputationUpdateSchema(Schema):
     delta = fields.Int(required=True)

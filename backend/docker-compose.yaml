@@ -245,12 +245,17 @@ services:
     environment:
       STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
       FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
+      STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
+      REPUTATION_URL: "http://reputation-service:3006/reputation"
       TEAM_URL: "http://team-service:3007/team"
       REQUEST_TIMEOUT: 8
       PORT: 4002
     depends_on:
       - student-profile-service
       - formation-config-service
+      - student-form-service
+      - reputation-service
+      - team-service
 
       # â”€â”€ Scenario 2: Dashboard Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -301,6 +306,7 @@ services:
       SECTION_URL: "http://section-service:3018/section"
       FORM_LINK_URL_TEMPLATE: "http://localhost:5173/student/{student_id}/form/{form_id}"
       FORM_LINK_SUBJECT: "Action Required: Complete Your Teamder Student Form"
+      FORM_LINK_GENERIC_MESSAGE: "Please complete your Teamder student form using the link provided."
       FORM_LINK_TEMPLATE_KEY: "student_form_link_v1"
       RABBITMQ_HOST: "rabbitmq"
       RABBITMQ_PORT: 5672

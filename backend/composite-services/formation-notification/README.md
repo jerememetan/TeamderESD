@@ -1,24 +1,35 @@
 # Formation Notification Composite Service
 
-This process/composite service orchestrates notification creation for a section.  
-It does not own business data and does not persist email delivery status.
+This service orchestrates form-link notification publishing for all students enrolled in a section.
 
 ## Base URL
 
-- `POST /formation_notifications` (port: `4004`)
-- Backward-compatible alias: `POST /formation-notification/send-form-links`
+- Default: `/formation-notifications` (port: `4004`)
 
-## Request
+## POST /formation-notifications
 
+Publishes notification messages with form links for all enrolled students in the provided section.
+
+### Input JSON Body
 ```json
 {
-  "section_id": "IS213-2026-01",
-  "initiated_by": "instructor_id_or_username"
+  "section_id": "IS213-2026-01"
 }
 ```
 
-## Response
+- `section_id` (required): non-empty section identifier.
 
+### Example
+```http
+POST http://localhost:4004/formation-notifications
+Content-Type: application/json
+
+{
+  "section_id": "IS213-2026-01"
+}
+```
+
+### Success Response (201)
 ```json
 {
   "section_id": "IS213-2026-01",
@@ -27,8 +38,28 @@ It does not own business data and does not persist email delivery status.
       "student_id": 101,
       "email": "student1@university.edu",
       "form_id": "f-001",
-      "form_link": "http://localhost:5173/student/101/form/f-001",
-      "status": "queued"
+      "form_link": "http://localhost:5173/student/101/form/f-001"
+    }
+  ],
+  "notifications_failed": [],
+  "summary": {
+    "total_students": 1,
+    "success_count": 1,
+    "failed_count": 0
+  }
+}
+```
+
+### Partial Success Response (207)
+```json
+{
+  "section_id": "IS213-2026-01",
+  "notifications_created": [
+    {
+      "student_id": 101,
+      "email": "student1@university.edu",
+      "form_id": "f-001",
+      "form_link": "http://localhost:5173/student/101/form/f-001"
     }
   ],
   "notifications_failed": [
@@ -39,66 +70,82 @@ It does not own business data and does not persist email delivery status.
   ],
   "summary": {
     "total_students": 2,
-    "queued_count": 1,
+    "success_count": 1,
     "failed_count": 1
   }
 }
 ```
 
+### Validation Error (400)
+```json
+{
+  "code": 400,
+  "message": "section_id is required and must be a non-empty string"
+}
+```
+
+### Not Found / Empty Section (404)
+```json
+{
+  "section_id": "IS213-2026-01",
+  "notifications_created": [],
+  "notifications_failed": [],
+  "summary": {
+    "total_students": 0,
+    "success_count": 0,
+    "failed_count": 0
+  },
+  "message": "no enrolled students"
+}
+```
+
 ## Status Codes
 
-- `201`: all notifications queued successfully.
-- `207`: partial success (or per-student failures with no critical global failure).
-- `400`: invalid request body (`section_id` missing/invalid).
-- `404`: no section/no enrollments to notify.
-- `502/503`: critical downstream dependency failure (Enrollment/Student/Student Form/RabbitMQ).
+- `201`: all notifications published successfully to RabbitMQ.
+- `207`: mixed outcome (some students succeeded, some failed).
+- `400`: invalid request payload.
+- `404`: section has no enrollments or does not exist.
+- `502`: downstream dependency errors (e.g., Student/Student Form failures).
+- `503`: notification publish failures (RabbitMQ unavailable/unhealthy).
 
-## Orchestration Sequence
+## Orchestration Flow
 
-1. Validate inbound JSON and `section_id`.
-2. Fetch enrollments from Enrollment Service.
-3. If no students returned, check Section Service to differentiate section-not-found vs no-enrollments.
+1. Validate `section_id`.
+2. Fetch enrollments from Enrollment service.
+3. If no enrollments are found, probe Section service to distinguish missing section vs empty section.
 4. For each enrolled student:
-   - Fetch student details from Student Service.
-   - Validate email.
-   - Create/get form via Student Form Service.
-   - Build form URL using `FORM_LINK_URL_TEMPLATE`.
-   - Publish AMQP message to RabbitMQ exchange/routing key for Notification service consumption.
-5. Return consolidated per-student success/failure summary.
+   - fetch student details from Student service,
+   - validate email,
+   - create student form via Student Form service,
+   - build form link,
+   - publish a notification message (with generic message + form link) to RabbitMQ.
+5. Return a consolidated per-student success/failure summary.
 
-## Internal Data Structures
+## RabbitMQ Message Payload
 
-- Inbound request:
-  - `section_id: str`
-  - `initiated_by: Optional[str]`
-- Per-student result:
-  - success: `{student_id, email, form_id, form_link, status}`
-  - failure: `{student_id, reason}`
-- RabbitMQ payload:
-  - `event_type`, `student_id`, `email`, `section_id`, `form_id`, `form_url`, `subject`, `template_key`, `initiated_by`, `idempotency_key`
-- Final response:
-  - `section_id`, `notifications_created`, `notifications_failed`, `summary`
-
-## Handler Skeleton
-
-```python
-@app.post("/formation_notifications")
-def create_notifications():
-    validate(section_id)
-    enrollments = get_enrollments(section_id)
-    for student_id in enrolled_students:
-        student = get_student(student_id)
-        if not valid_email(student.email):
-            record_failure(...)
-            continue
-        form = create_form(section_id, student_id)
-        if not form:
-            record_failure(...)
-            continue
-        msg = build_notification_payload(student, form)
-        ok = publish_to_rabbitmq(msg)
-        record_success_or_failure(ok, ...)
-    return consolidated_response(...)
+```json
+{
+  "to": "student1@university.edu",
+  "subject": "Action Required: Complete Your Teamder Student Form",
+  "body": "Please complete your Teamder student form using the link provided.\n\nhttp://localhost:5173/student/101/form/f-001",
+  "metadata": {
+    "event_type": "FormLinkGenerated",
+    "student_id": 101,
+    "section_id": "IS213-2026-01",
+    "form_id": "f-001",
+    "template_key": "student_form_link_v1",
+    "idempotency_key": "IS213-2026-01:101:f-001"
+  },
+  "event_type": "FormLinkGenerated",
+  "student_id": 101,
+  "email": "student1@university.edu",
+  "section_id": "IS213-2026-01",
+  "form_id": "f-001",
+  "form_url": "http://localhost:5173/student/101/form/f-001",
+  "message": "Please complete your Teamder student form using the link provided.",
+  "template_key": "student_form_link_v1",
+  "idempotency_key": "IS213-2026-01:101:f-001"
+}
 ```
 
 ## Environment Variables
@@ -110,6 +157,7 @@ def create_notifications():
 - `STUDENT_FORM_URL`
 - `SECTION_URL`
 - `FORM_LINK_URL_TEMPLATE`
+- `FORM_LINK_GENERIC_MESSAGE`
 - `FORM_LINK_SUBJECT`
 - `FORM_LINK_TEMPLATE_KEY`
 - `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST`
