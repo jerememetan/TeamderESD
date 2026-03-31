@@ -30,12 +30,15 @@ import { buildDefaultState } from "./logic/buildDefaultState";
 import { normalizeLoadedConfig } from "./logic/normalizeLoadedConfig";
 
 function CreateForm() {
+  // takes course Id and Group ID from the params (already configured)
   const { courseId, groupId } = useParams();
-  const selectedCourse = mockCourses.find((course) => course.id === courseId);
-  const selectedGroup = selectedCourse?.groups.find(
-    (group) => group.id === groupId,
+  // Need to change this to get course from courseService instead
+  const [selectedCourse, setSelectedCourse] = useState(
+    () => mockCourses.find((c) => c.code === courseId) || null,
   );
+  const selectedGroup = selectedCourse?.groups.find((group) => group.id === groupId);
   const existingForm = mockForms[groupId || ""];
+  // i think this is linked already?????
   const backendCourseId = getBackendCourseId(courseId || "");
   const backendSectionId = getBackendSectionId(groupId || "");
   const defaultState = useMemo(

@@ -34,3 +34,5 @@ export async function fetchTeamsBySection(sectionId) {
   const payload = await handleResponse(response, 'Unable to load teams for this section.');
   return payload?.data?.teams ?? [];
 }
+
+

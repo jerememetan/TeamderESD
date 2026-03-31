@@ -4,17 +4,41 @@ import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
 import { Button } from "../../../components/ui/button";
-import { mockCourses, mockForms, mockTeams } from "../../../data/mockData";
+import { mockForms, mockTeams } from "../../../data/mockData";
 import chrome from "../../../styles/instructorChrome.module.css";
 import styles from "./Courses.module.css";
 import { STAGE_CONFIG } from "./logic/stageConfig";
 import { getGroupActions } from "./logic/getGroupActions";
+import {fetchCourses} from "./service/courseService"
+import {useEffect, useState} from 'react';
 
 function Courses() {
   // currently taking from mockCourses
   // currently still taking from mockForms
-  const courseList = mockCourses;
+  const [courseList, setCourseList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const formMap = mockForms;
+
+  useEffect(() => {
+    fetchCourses()
+      .then(data => {
+        setCourseList(data);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className={`${styles.page} ${motionStyles.motionPage}`}>
+        <section className={chrome.hero}>
+          <div>
+            <h2 className={chrome.title}>Manage my courses</h2>
+          </div>
+        </section>
+        <div style={{ padding: 24 }}>Loading courses...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -25,7 +49,6 @@ function Courses() {
 
       <section className={chrome.hero}>
         <div>
-          <p className={chrome.kicker}>[COURSES]</p>
           <h2 className={chrome.title}>Manage my courses</h2>
         </div>
         {/* Button for Add course Not done yet */}
@@ -45,14 +68,14 @@ function Courses() {
           );
 
           return (
-            // This is per course, course data 
+            // This is per course, course data
             // object id, code, name
             <ModuleBlock
-              key={course.id} 
+              key={course.id}
               title={
                 <span className={styles.courseHeading}>
                   {course.code} <span className={styles.courseDash}>-</span>{" "}
-                  {course.name} 
+                  {course.name}
                 </span>
               }
               className={`${styles.courseBlock} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
@@ -71,7 +94,7 @@ function Courses() {
                     (team) => team.groupId === group.id,
                   );
                   const actions = getGroupActions(
-                    course.id,
+                    course.code,
                     group,
                     existingForm,
                   );
