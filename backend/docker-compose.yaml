@@ -163,63 +163,40 @@ services:
     ports:
       - "3013:3013"
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: teamder-rabbitmq
-    restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+  notification-service:
+    build: ./atomic-services/notification
+    container_name: teamder-notification-service
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 10s
-
-  rabbitmq-setup:
-    image: python:3.12-slim
-    container_name: teamder-rabbitmq-setup
-    restart: unless-stopped
-    working_dir: /app
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
+      PORT: 3016
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
       RABBITMQ_USER: guest
       RABBITMQ_PASSWORD: guest
       RABBITMQ_VHOST: /
-    volumes:
-      - ./rabbitmq:/app:ro
+      NOTIFICATION_EXCHANGE: notification.topic
+      NOTIFICATION_EXCHANGE_TYPE: topic
+      NOTIFICATION_ROUTING_KEY: notification.email
+      NOTIFICATION_EMAIL_QUEUE: notification.email.queue
+      GMAIL_SMTP_HOST: smtp.gmail.com
+      GMAIL_SMTP_PORT: 587
+      GMAIL_SMTP_USER: ${GMAIL_SMTP_USER}
+      GMAIL_SMTP_PASSWORD: ${GMAIL_SMTP_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_SEND_MAX_RETRIES: ${EMAIL_SEND_MAX_RETRIES:-3}
+      EMAIL_SEND_RETRY_BACKOFF_SECONDS: ${EMAIL_SEND_RETRY_BACKOFF_SECONDS:-2}
+      EMAIL_SEND_DELAY_SECONDS: ${EMAIL_SEND_DELAY_SECONDS:-0}
+      NOTIFICATION_CONSUMER_PREFETCH: ${NOTIFICATION_CONSUMER_PREFETCH:-5}
+      NOTIFICATION_ERROR_EXCHANGE: ${NOTIFICATION_ERROR_EXCHANGE:-notification.topic}
+      NOTIFICATION_ERROR_ROUTING_KEY: ${NOTIFICATION_ERROR_ROUTING_KEY:-notification.email.error}
+    ports:
+      - "3016:3016"
     depends_on:
       rabbitmq:
         condition: service_healthy
-    command: >
-      sh -c "
-      pip install --no-cache-dir -r /app/requirements.txt &&
-      last_hash='' &&
-      while true; do
-        current_hash=$$(sha256sum /app/amqpsetup.py /app/requirements.txt | sha256sum | awk '{print $$1}') &&
-        if [ \"$$current_hash\" != \"$$last_hash\" ]; then
-          echo 'Applying RabbitMQ topology from /app/amqpsetup.py...' &&
-          python /app/amqpsetup.py &&
-          last_hash=\"$$current_hash\" &&
-          touch /tmp/rabbitmq-setup.ready;
-        fi;
-        sleep 10;
-      done
-      "
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /tmp/rabbitmq-setup.ready"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 10s
+      rabbitmq-setup:
+        condition: service_healthy
 
+      
   # Composite
 
   formation-config-service:
@@ -342,42 +319,69 @@ services:
       - student-service
       - rabbitmq
 
- # Atomic   
-  notification-service:
-    build: ./atomic-services/notification
-    container_name: teamder-notification-service
+  # RabbitMQ
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: teamder-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
     environment:
-      PORT: 3016
-      RABBIT_HOST: rabbitmq
-      RABBIT_PORT: 5672
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  rabbitmq-setup:
+    image: python:3.12-slim
+    container_name: teamder-rabbitmq-setup
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
       RABBITMQ_USER: guest
       RABBITMQ_PASSWORD: guest
       RABBITMQ_VHOST: /
-      NOTIFICATION_EXCHANGE: notification.topic
-      NOTIFICATION_EXCHANGE_TYPE: topic
-      NOTIFICATION_ROUTING_KEY: notification.email
-      NOTIFICATION_EMAIL_QUEUE: notification.email.queue
-      GMAIL_SMTP_HOST: smtp.gmail.com
-      GMAIL_SMTP_PORT: 587
-      GMAIL_SMTP_USER: ${GMAIL_SMTP_USER}
-      GMAIL_SMTP_PASSWORD: ${GMAIL_SMTP_PASSWORD}
-      EMAIL_FROM: ${EMAIL_FROM}
-      EMAIL_SEND_MAX_RETRIES: ${EMAIL_SEND_MAX_RETRIES:-3}
-      EMAIL_SEND_RETRY_BACKOFF_SECONDS: ${EMAIL_SEND_RETRY_BACKOFF_SECONDS:-2}
-      EMAIL_SEND_DELAY_SECONDS: ${EMAIL_SEND_DELAY_SECONDS:-0}
-      NOTIFICATION_CONSUMER_PREFETCH: ${NOTIFICATION_CONSUMER_PREFETCH:-5}
-      NOTIFICATION_ERROR_EXCHANGE: ${NOTIFICATION_ERROR_EXCHANGE:-notification.topic}
-      NOTIFICATION_ERROR_ROUTING_KEY: ${NOTIFICATION_ERROR_ROUTING_KEY:-notification.email.error}
-    ports:
-      - "3016:3016"
+    volumes:
+      - ./rabbitmq:/app:ro
     depends_on:
       rabbitmq:
         condition: service_healthy
-      rabbitmq-setup:
-        condition: service_healthy
+    command: >
+      sh -c "
+      pip install --no-cache-dir -r /app/requirements.txt &&
+      last_hash='' &&
+      while true; do
+        current_hash=$$(sha256sum /app/amqpsetup.py /app/requirements.txt | sha256sum | awk '{print $$1}') &&
+        if [ \"$$current_hash\" != \"$$last_hash\" ]; then
+          echo 'Applying RabbitMQ topology from /app/amqpsetup.py...' &&
+          python /app/amqpsetup.py &&
+          last_hash=\"$$current_hash\" &&
+          touch /tmp/rabbitmq-setup.ready;
+        fi;
+        sleep 10;
+      done
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/rabbitmq-setup.ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
 
 volumes:
   rabbitmq_data:
+
+
 
 
 
