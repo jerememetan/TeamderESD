@@ -319,18 +319,28 @@ services:
       - "4004:4004"
     environment:
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
-      STUDENT_FORM_TEMPLATE_URL: "http://student-form-service:3015/student-form/template"
-      STUDENT_FORM_LINK_BATCH_URL: "http://student-form-service:3015/student-form/links/batch"
+      STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
       STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
-      NOTIFICATION_URL: "http://notification-service:3016/notification/send-form-link"
-      DEFAULT_FORM_BASE_URL: "http://localhost:5173/student/fill-form"
+      SECTION_URL: "http://section-service:3018/section"
+      FORM_LINK_URL_TEMPLATE: "http://localhost:5173/student/{student_id}/form/{form_id}"
+      FORM_LINK_SUBJECT: "Action Required: Complete Your Teamder Student Form"
+      FORM_LINK_TEMPLATE_KEY: "student_form_link_v1"
+      RABBITMQ_HOST: "rabbitmq"
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: "guest"
+      RABBITMQ_PASSWORD: "guest"
+      RABBITMQ_VHOST: "/"
+      NOTIFICATION_EXCHANGE: "notification.topic"
+      NOTIFICATION_EXCHANGE_TYPE: "topic"
+      NOTIFICATION_ROUTING_KEY: "notification.email"
       REQUEST_TIMEOUT: 10
       PORT: 4004
     depends_on:
       - enrollment-service
+      - section-service
       - student-form-service
       - student-service
-      - notification-service
+      - rabbitmq
 
  # Atomic   
   notification-service:
@@ -368,7 +378,6 @@ services:
 
 volumes:
   rabbitmq_data:
-
 
 
 
