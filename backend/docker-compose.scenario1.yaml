@@ -128,65 +128,6 @@ services:
     ports:
       - "3015:3015"
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: teamder-rabbitmq
-    restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 10s
-
-  rabbitmq-setup:
-    image: python:3.12-slim
-    container_name: teamder-rabbitmq-setup
-    restart: unless-stopped
-    working_dir: /app
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: guest
-      RABBITMQ_PASSWORD: guest
-      RABBITMQ_VHOST: /
-    volumes:
-      - ./rabbitmq:/app:ro
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    command: >
-      sh -c "
-      pip install --no-cache-dir -r /app/requirements.txt &&
-      last_hash='' &&
-      while true; do
-        current_hash=$$(sha256sum /app/amqpsetup.py /app/requirements.txt | sha256sum | awk '{print $$1}') &&
-        if [ \"$$current_hash\" != \"$$last_hash\" ]; then
-          echo 'Applying RabbitMQ topology from /app/amqpsetup.py...' &&
-          python /app/amqpsetup.py &&
-          last_hash=\"$$current_hash\" &&
-          touch /tmp/rabbitmq-setup.ready;
-        fi;
-        sleep 10;
-      done
-      "
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /tmp/rabbitmq-setup.ready"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 10s
-
-
-
   # Composite
 
   formation-config-service:
@@ -242,6 +183,65 @@ services:
     depends_on:
       - student-profile-service
       - formation-config-service
+
+# RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: teamder-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+
+  rabbitmq-setup:
+    image: python:3.12-slim
+    container_name: teamder-rabbitmq-setup
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+    volumes:
+      - ./rabbitmq:/app:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: >
+      sh -c "
+      pip install --no-cache-dir -r /app/requirements.txt &&
+      last_hash='' &&
+      while true; do
+        current_hash=$$(sha256sum /app/amqpsetup.py /app/requirements.txt | sha256sum | awk '{print $$1}') &&
+        if [ \"$$current_hash\" != \"$$last_hash\" ]; then
+          echo 'Applying RabbitMQ topology from /app/amqpsetup.py...' &&
+          python /app/amqpsetup.py &&
+          last_hash=\"$$current_hash\" &&
+          touch /tmp/rabbitmq-setup.ready;
+        fi;
+        sleep 10;
+      done
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/rabbitmq-setup.ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
 
 volumes:
   rabbitmq_data:
