@@ -119,6 +119,15 @@ services:
     ports:
       - "3010:3010"
 
+  student-form-service:
+    build: ./atomic-services/student-form
+    container_name: teamder-student-form-service
+    environment:
+      PORT: 3015
+      SUPABASE_URL: ${SUPABASE_URL}
+    ports:
+      - "3015:3015"
+
 
 
   # Composite

@@ -364,6 +364,105 @@ This microservice manages student form data (buddy, MBTI, etc.) for a section. I
 
 ---
 
+    ## Student Form Microservice
+
+    This microservice manages the lightweight student-form rows (one-per-student-per-section). It exposes endpoints to create/update forms, query by section/student, and delete forms for a section.
+
+    **Base URL:** `/student-form` (default port: 3015)
+
+    ### Endpoints
+
+    - **GET /student-form**
+      - Query params: `section_id` (required), `student_id` (optional)
+      - Behavior: If `student_id` is provided returns the single matching row for that student+section; otherwise returns all student-forms for the `section_id`.
+      - Example:
+        ```http
+        GET http://localhost:3015/student-form?section_id={uuid}
+        GET http://localhost:3015/student-form?section_id={uuid}&student_id=123
+        ```
+
+    - **GET /student-form/submitted**
+      - Query params: `section_id` (required)
+      - Returns: All student-forms for the section where `submitted=true`.
+      - Example:
+        ```http
+        GET http://localhost:3015/student-form/submitted?section_id={uuid}
+        ```
+
+    - **GET /student-form/unsubmitted**
+      - Query params: `section_id` (required)
+      - Returns: All student-forms for the section where `submitted=false`.
+      - Example:
+        ```http
+        GET http://localhost:3015/student-form/unsubmitted?section_id={uuid}
+        ```
+
+    - **POST /student-form**
+      - Body: JSON matching `StudentFormCreateSchema` — must include `section_id` (UUID) and `students` (array of integer student IDs).
+      - Behavior: Creates any missing `StudentForm` rows for the listed students in the section; existing rows are left unchanged.
+      - Example request body:
+        ```json
+        {
+          "section_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "students": [123, 456, 789]
+        }
+        ```
+      - Example success response: `200` (no new rows) or `201` (some rows created)
+        ```json
+        {
+          "data": [
+            { "id": 1, "student_id": 123, "section_id": "...", "submitted": false, "created_at": "...", "updated_at": "..." },
+            { "id": 2, "student_id": 456, "section_id": "...", "submitted": false, "created_at": "...", "updated_at": "..." }
+          ]
+        }
+        ```
+
+    - **PUT /student-form**
+      - Body: JSON matching `StudentFormUpdateSchema` — must include `student_id` (int) and `section_id` (UUID).
+      - Behavior: Marks the matching student-form as `submitted=true` and returns the updated record.
+      - Example request body:
+        ```json
+        {
+          "student_id": 123,
+          "section_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        }
+        ```
+      - Example response:
+        ```json
+        { "data": { "id": 1, "student_id": 123, "section_id": "...", "submitted": true, "created_at": "...", "updated_at": "..." } }
+        ```
+
+    - **DELETE /student-form**
+      - Query params: `section_id` (required)
+      - Behavior: Deletes all student-form rows for the given `section_id` and returns the deleted records in the response body.
+      - Example call:
+        ```http
+        DELETE http://localhost:3015/student-form?section_id=3fa85f64-5717-4562-b3fc-2c963f66afa6
+        ```
+      - Example response:
+        ```json
+        {
+          "data": [
+            { "id": 1, "student_id": 123, "section_id": "...", "submitted": true, "created_at": "...", "updated_at": "..." },
+            { "id": 2, "student_id": 456, "section_id": "...", "submitted": false, "created_at": "...", "updated_at": "..." }
+          ]
+        }
+        ```
+
+    ### Response & Error Format
+
+    - Successful responses follow the pattern: `{ "data": ... }` where `data` is a single object or an array.
+    - Validation errors return `400` with: `{ "error": { "code": "VALIDATION_ERROR", "message": <details> } }`.
+    - Missing parameters return `400` with `MISSING_PARAMS` code.
+    - Not found returns `404` with `NOT_FOUND` code.
+    - Server errors return `500` with `SERVER_ERROR`.
+
+    ### Notes
+
+    - `section_id` must be a UUID string. `student_id` and entries in `students` must be integers.
+    - The service uses the `student_form` table (schema `student_form`) and returns `created_at` / `updated_at` timestamps in ISO format.
+
+
 ## Swap Constraints Microservice
 
 This microservice stores swap-appeal hard constraints per class/course/module scope.
