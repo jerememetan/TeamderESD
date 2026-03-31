@@ -10,11 +10,11 @@ This README provides simple instructions for calling the endpoints of the three 
 
 ### Endpoints
 - **GET /criteria**
-  - Query params: `section_id` (recommended), `course_id` (optional)
+  - Query params: `section_id` (recommended), `course_id` (optional, integer)
   - Returns: List of criteria filtered by section or course
   - Example:
     ```http
-    GET http://localhost:3004/criteria?section_id={uuid}
+    GET http://localhost:3004/criteria?section_id={uuid}&course_id={int}
     ```
 
 - **GET /criteria/{section_id}**
@@ -25,12 +25,12 @@ This README provides simple instructions for calling the endpoints of the three 
     ```
 
 - **POST /criteria**
-  - Body: JSON matching `CriteriaCreateSchema` (must include `section_id` and `course_id`)
+  - Body: JSON matching `CriteriaCreateSchema` (must include `section_id` and `course_id` where `course_id` is an integer)
   - Example:
     ```json
     {
       "section_id": "...",
-      "course_id": "...",
+      "course_id": 12345,
       "num_groups": ...,
       "school_weight": ...,
       "year_weight": ...,
