@@ -18,7 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration and service endpoints used by this composite
-REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "1000"))
+REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "4000"))
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://localhost:3005/enrollment")
 STUDENT_SERVICE_URL = os.getenv("STUDENT_SERVICE_URL", "http://localhost:3001/api/students")
 STUDENT_FORM_URL = os.getenv("STUDENT_FORM_URL", "http://localhost:3015/student-form")
@@ -239,7 +239,7 @@ def create_formation_notifications():
     #    e. Record successes and failures for the response body.
     payload = request.get_json(silent=True) or {}
     section_id = payload.get("section_id")
-
+    print(f"{section_id} is the section_id")
     # Validate section id input
     if not isinstance(section_id, str) or not section_id.strip():
         return jsonify({"code": 400, "message": "section_id is required and must be a non-empty string"}), 400

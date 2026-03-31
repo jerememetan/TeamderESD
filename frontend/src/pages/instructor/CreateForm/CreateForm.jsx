@@ -335,7 +335,7 @@ function CreateForm() {
         groupId,
       );
 
-      const result = await sendFormLinks(publishPayload);
+      const result = await sendFormLinks({"section_id": groupId});
       const data = result?.data || {};
       setSaveMessage(
         `Published. Generated ${data.generated_links_count ?? 0} link(s); notification success: ${data.success_count ?? 0}, failure: ${data.failure_count ?? 0}.`,
