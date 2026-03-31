@@ -1,10 +1,12 @@
-from ..schemas.reputation_schema import ReputationResponseSchema
+from ..schemas.reputation_schema import ReputationCreateSchema, ReputationResponseSchema
 from flask import Blueprint, request, jsonify
 from ..models.reputation_model import Reputation, db
+from marshmallow import ValidationError
 
 reputation_bp = Blueprint("reputation", __name__)
 response_schema = ReputationResponseSchema()
 many_response_schema = ReputationResponseSchema(many=True)
+create_schema = ReputationCreateSchema()
 
 @reputation_bp.route("", methods=["GET"])
 def get_reputations():
@@ -13,6 +15,29 @@ def get_reputations():
         "data": many_response_schema.dump(reputations),
         "meta": {}
     }), 200
+
+
+@reputation_bp.route("", methods=["POST"])
+def create_reputation():
+    payload = request.get_json() or {}
+    try:
+        data = create_schema.load(payload)
+    except ValidationError as err:
+        return jsonify({"error": {"code": "VALIDATION_ERROR", "message": err.messages}}), 400
+
+    student_id = data["student_id"]
+    existing = Reputation.query.get(student_id)
+    if existing:
+        return jsonify({"error": {"code": "CONFLICT", "message": "Reputation already exists"}}), 409
+
+    reputation = Reputation(student_id=student_id, reputation_score=50)
+    db.session.add(reputation)
+    db.session.commit()
+
+    return jsonify({
+        "data": response_schema.dump(reputation),
+        "meta": {}
+    }), 201
 
 @reputation_bp.route("/<int:student_id>", methods=["GET"])
 def get_reputation_by_student_id(student_id):

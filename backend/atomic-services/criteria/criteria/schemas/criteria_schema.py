@@ -1,7 +1,7 @@
 from marshmallow import Schema, fields
 
 class CriteriaCreateSchema(Schema):
-    course_id = fields.UUID(required=True)
+    course_id = fields.Integer(required=True)
     section_id = fields.UUID(required=True)
     num_groups = fields.Integer(required=True)
     school_weight = fields.Float(required=False, load_default=0.0)
@@ -17,7 +17,7 @@ class CriteriaCreateSchema(Schema):
 
 class CriteriaResponseSchema(Schema):
     section_id = fields.UUID()
-    course_id = fields.UUID()
+    course_id = fields.Integer()
     num_groups = fields.Integer()
     school_weight = fields.Float()
     year_weight = fields.Float()

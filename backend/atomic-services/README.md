@@ -10,11 +10,11 @@ This README provides simple instructions for calling the endpoints of the three 
 
 ### Endpoints
 - **GET /criteria**
-  - Query params: `section_id` (recommended), `course_id` (optional)
+  - Query params: `section_id` (recommended), `course_id` (optional, integer)
   - Returns: List of criteria filtered by section or course
   - Example:
     ```http
-    GET http://localhost:3004/criteria?section_id={uuid}
+    GET http://localhost:3004/criteria?section_id={uuid}&course_id={int}
     ```
 
 - **GET /criteria/{section_id}**
@@ -25,12 +25,12 @@ This README provides simple instructions for calling the endpoints of the three 
     ```
 
 - **POST /criteria**
-  - Body: JSON matching `CriteriaCreateSchema` (must include `section_id` and `course_id`)
+  - Body: JSON matching `CriteriaCreateSchema` (must include `section_id` and `course_id` where `course_id` is an integer)
   - Example:
     ```json
     {
       "section_id": "...",
-      "course_id": "...",
+      "course_id": 12345,
       "num_groups": ...,
       "school_weight": ...,
       "year_weight": ...,
@@ -114,6 +114,68 @@ This README provides simple instructions for calling the endpoints of the three 
 
 ---
 
+    ## Section Service
+    - **Base URL:** `/section` (default port: 3018)
+
+    ### Endpoints
+
+    - **GET /section**
+      - Query params: `course_id` (optional, integer), `is_active` (optional, boolean-like string `true|false`)
+      - Returns: List of sections filtered by `course_id` and/or `is_active`, ordered by `section_number`.
+      - Example:
+        ```http
+        GET http://localhost:3018/section?course_id=123&is_active=true
+        ```
+
+    - **GET /section/{section_id}**
+      - Returns: Section with the given `section_id`.
+      - Example:
+        ```http
+        GET http://localhost:3018/section/11111111-1111-1111-1111-111111111111
+        ```
+
+
+    - **POST /section**
+      - Body: JSON matching the `Section` create schema. `id` is optional (UUID); if omitted a UUID will be generated.
+      - Required fields: `section_number` (integer), `course_id` (integer). Optional: `is_active` (boolean), `stage` (string).
+      - Example request body:
+        ```json
+        {
+          "section_number": 1,
+          "course_id": 123,
+          "is_active": true,
+          "stage": "setup"
+        }
+        ```
+      - Success response (201):
+        ```json
+        {
+          "code": 201,
+          "data": {
+            "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "section_number": 1,
+            "course_id": 123,
+            "is_active": true,
+            "stage": "setup",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+          }
+        }
+        ```
+
+    - **PUT /section/{section_id}**
+      - Body: Partial or full section fields to update (same field names as POST).
+      - Returns: Updated section object.
+
+    - **DELETE /section/{section_id}**
+      - Deletes the section and returns a confirmation object.
+      - Example response:
+        ```json
+        { "code": 200, "data": { "deleted": true, "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" } }
+        ```
+
+    ---
+
 ## Enrollment Service
 - **Base URL:** `/enrollment` (default port: 3001)
 
@@ -137,7 +199,7 @@ This README provides simple instructions for calling the endpoints of the three 
 ---
 
 ## Reputation Service
-- **Base URL:** `/reputation` (default port: 3001)
+- **Base URL:** `/reputation` (default port: 3006)
 
 ### Endpoints
 
@@ -145,21 +207,35 @@ This README provides simple instructions for calling the endpoints of the three 
   - Returns: List of all student reputations
   - Example:
     ```http
-    GET http://localhost:3001/reputation
+    GET http://localhost:3006/reputation
     ```
+
+- **POST /reputation**
+  - Body: JSON with `student_id` (integer)
+  - Behavior: Creates a new reputation row with `reputation_score` initialized to `50`
+  - Example:
+    ```http
+    POST http://localhost:3006/reputation
+    Content-Type: application/json
+    {
+      "student_id": 123
+    }
+    ```
+  - Response: Created reputation object (`201`)
+  - Conflict: Returns `409` if reputation already exists for the `student_id`
 
 - **GET /reputation/{student_id}**
   - Returns: Reputation for the given student_id
   - Example:
     ```http
-    GET http://localhost:3001/reputation/{student_id}
+    GET http://localhost:3006/reputation/{student_id}
     ```
 
 - **PUT /reputation/{student_id}**
   - Body: JSON with a `delta` integer (positive or negative) to increment/decrement the student's reputation score
   - Example:
     ```http
-    PUT http://localhost:3001/reputation/{student_id}
+    PUT http://localhost:3006/reputation/{student_id}
     Content-Type: application/json
     {
       "delta": 5
@@ -363,6 +439,177 @@ This microservice manages student form data (buddy, MBTI, etc.) for a section. I
     ```
 
 ---
+
+    ## Student Form Microservice
+
+    This microservice manages the lightweight student-form rows (one-per-student-per-section). It exposes endpoints to create/update forms, query by section/student, and delete forms for a section.
+
+    **Base URL:** `/student-form` (default port: 3015)
+
+    ### Endpoints
+
+    - **GET /student-form**
+      - Query params: `section_id` (required), `student_id` (optional)
+      - Behavior: If `student_id` is provided returns the single matching row for that student+section; otherwise returns all student-forms for the `section_id`.
+      - Example:
+        ```http
+        GET http://localhost:3015/student-form?section_id={uuid}
+        GET http://localhost:3015/student-form?section_id={uuid}&student_id=123
+        ```
+
+    - **GET /student-form/submitted**
+      - Query params: `section_id` (required)
+
+---
+
+## Notification Service
+
+- **Base hostname / port:** `http://localhost:3016` (default port: 3016)
+- **Health:** `GET /health` — returns service and consumer status/metrics
+- **Publish endpoints:**
+  - `POST /notification/send-form-link` — bulk: accepts `recipients` array (student_id, email, form_url, section_id)
+  - `POST /notification/publish-email` — direct email payload (`to`, `subject`, `body`, `is_html`, ...)
+
+### RabbitMQ topology
+
+- Exchange: `notification.topic` (topic, durable) — env: `NOTIFICATION_EXCHANGE`
+- Consumer queue: `notification.email.queue` (durable) — env: `NOTIFICATION_EMAIL_QUEUE`
+- Routing key(s): default `notification.email` — envs: `NOTIFICATION_ROUTING_KEY`, `NOTIFICATION_CONSUMER_ROUTING_KEYS` (comma-separated)
+- Error events: published to `NOTIFICATION_ERROR_EXCHANGE` with key `NOTIFICATION_ERROR_ROUTING_KEY`
+
+The service will declare the exchange and queue at startup and bind the queue to the configured routing keys.
+
+### Important environment variables
+
+RabbitMQ / AMQP:
+
+- `RABBITMQ_HOST` / `RABBIT_HOST`
+- `RABBITMQ_PORT` / `RABBIT_PORT`
+- `RABBITMQ_USER` / `RABBIT_USER`
+- `RABBITMQ_PASSWORD` / `RABBIT_PASSWORD`
+- `RABBITMQ_VHOST` / `RABBIT_VHOST`
+- `NOTIFICATION_EXCHANGE`
+- `NOTIFICATION_EXCHANGE_TYPE` (default: `topic`)
+- `NOTIFICATION_ROUTING_KEY`
+- `NOTIFICATION_EMAIL_QUEUE`
+- `NOTIFICATION_CONSUMER_ROUTING_KEYS`
+- `NOTIFICATION_ERROR_EXCHANGE`
+- `NOTIFICATION_ERROR_ROUTING_KEY`
+- `NOTIFICATION_CONSUMER_PREFETCH`
+- `NOTIFICATION_CONSUMER_ENABLED`
+
+SMTP / Email:
+
+- `GMAIL_SMTP_HOST` (default: `smtp.gmail.com`)
+- `GMAIL_SMTP_PORT` (default: `587`)
+- `GMAIL_SMTP_USER` / `SMTP_USER`
+- `GMAIL_SMTP_PASSWORD` / `SMTP_PASSWORD` (use an app password)
+- `EMAIL_FROM`
+- `EMAIL_SEND_MAX_RETRIES`
+- `EMAIL_SEND_RETRY_BACKOFF_SECONDS`
+- `EMAIL_SEND_DELAY_SECONDS`
+
+### Message shapes
+
+- Preferred direct-email message: `to`, `subject`, `body`, `is_html`, `reply_to`, `headers`, `metadata`.
+- Backward-compatible event: `event_type: FormLinkGenerated` with `email`, `form_url`, `student_id`, `section_id`.
+
+### Test / run
+
+- Run the service locally:
+
+```bash
+pip install -r notification/requirements.txt
+python notification/app.py
+```
+
+- Publish a test message with the included producer script:
+
+```bash
+python publish_sample_email.py --to you@example.com --subject "Test" --body "Hello from Teamder"
+```
+
+See `publish_sample_email.py` and `notification/app.py` for implementation details.
+      - Returns: All student-forms for the section where `submitted=true`.
+      - Example:
+        ```http
+        GET http://localhost:3015/student-form/submitted?section_id={uuid}
+        ```
+
+    - **GET /student-form/unsubmitted**
+      - Query params: `section_id` (required)
+      - Returns: All student-forms for the section where `submitted=false`.
+      - Example:
+        ```http
+        GET http://localhost:3015/student-form/unsubmitted?section_id={uuid}
+        ```
+
+    - **POST /student-form**
+      - Body: JSON matching `StudentFormCreateSchema` — must include `section_id` (UUID) and `students` (array of integer student IDs).
+      - Behavior: Creates any missing `StudentForm` rows for the listed students in the section; existing rows are left unchanged.
+      - Note: For a single student, send `students` with one item (for example, `[123]`). The request body should not use `student_id` for this endpoint.
+      - Example request body:
+        ```json
+        {
+          "section_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "students": [123, 456, 789]
+        }
+        ```
+      - Example success response: `200` (no new rows) or `201` (some rows created)
+        ```json
+        {
+          "data": [
+            { "id": 1, "student_id": 123, "section_id": "...", "submitted": false, "created_at": "...", "updated_at": "..." },
+            { "id": 2, "student_id": 456, "section_id": "...", "submitted": false, "created_at": "...", "updated_at": "..." }
+          ]
+        }
+        ```
+
+    - **PUT /student-form**
+      - Body: JSON matching `StudentFormUpdateSchema` — must include `student_id` (int) and `section_id` (UUID).
+      - Behavior: Marks the matching student-form as `submitted=true` and returns the updated record.
+      - Example request body:
+        ```json
+        {
+          "student_id": 123,
+          "section_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        }
+        ```
+      - Example response:
+        ```json
+        { "data": { "id": 1, "student_id": 123, "section_id": "...", "submitted": true, "created_at": "...", "updated_at": "..." } }
+        ```
+
+    - **DELETE /student-form**
+      - Query params: `section_id` (required)
+      - Behavior: Deletes all student-form rows for the given `section_id` and returns the deleted records in the response body.
+      - Example call:
+        ```http
+        DELETE http://localhost:3015/student-form?section_id=3fa85f64-5717-4562-b3fc-2c963f66afa6
+        ```
+      - Example response:
+        ```json
+        {
+          "data": [
+            { "id": 1, "student_id": 123, "section_id": "...", "submitted": true, "created_at": "...", "updated_at": "..." },
+            { "id": 2, "student_id": 456, "section_id": "...", "submitted": false, "created_at": "...", "updated_at": "..." }
+          ]
+        }
+        ```
+
+    ### Response & Error Format
+
+    - Successful responses follow the pattern: `{ "data": ... }` where `data` is a single object or an array.
+    - Validation errors return `400` with: `{ "error": { "code": "VALIDATION_ERROR", "message": <details> } }`.
+    - Missing parameters return `400` with `MISSING_PARAMS` code.
+    - Not found returns `404` with `NOT_FOUND` code.
+    - Server errors return `500` with `SERVER_ERROR`.
+
+    ### Notes
+
+    - `section_id` must be a UUID string. `student_id` and entries in `students` must be integers.
+    - The service uses the `student_form` table (schema `student_form`) and returns `created_at` / `updated_at` timestamps in ISO format.
+
 
 ## Swap Constraints Microservice
 

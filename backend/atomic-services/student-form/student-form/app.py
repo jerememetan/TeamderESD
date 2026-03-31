@@ -2,7 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
-from .models.form_model import db
+from .models.student_form_model import db
 
 
 def create_app():
@@ -15,8 +15,8 @@ def create_app():
     CORS(app, resources={r"/student-form/*": {"origins": [frontend_origin]}})
 
     db.init_app(app)
-    from .models.form_model import StudentFormTemplate, StudentFormSubmission, StudentFormLink
-    from .routes.form_routes import student_form_bp
+    from .models.student_form_model import StudentForm
+    from .routes.student_form_routes import student_form_bp
 
     app.register_blueprint(student_form_bp, url_prefix="/student-form")
     return app

@@ -27,9 +27,12 @@ class TeamFormationAppTests(unittest.TestCase):
         self.assertEqual(body["code"], 400)
         self.assertEqual(body["message"], "section_id is required")
 
+    @patch("app.orchestrate_form_submissions_and_reputation")
     @patch("app.solve_teams")
     @patch("app.requests.get")
-    def test_default_success_returns_only_section_and_teams(self, mock_get, mock_solve):
+    def test_default_success_returns_only_section_and_teams(
+        self, mock_get, mock_solve, mock_orchestrate
+    ):
         mock_get.side_effect = [
             MockResponse(
                 200,
@@ -40,6 +43,10 @@ class TeamFormationAppTests(unittest.TestCase):
                 {"section_id": "sec-1", "criteria": {"num_groups": 1}, "topics": [], "skills": []},
             ),
         ]
+        mock_orchestrate.return_value = (
+            {"code": 200, "data": {"section_id": "sec-1", "students": []}},
+            None,
+        )
         mock_solve.return_value = {
             "status": "OPTIMAL",
             "section_id": "sec-1",
@@ -61,9 +68,10 @@ class TeamFormationAppTests(unittest.TestCase):
         self.assertNotIn("solver_stats", body["data"])
         self.assertNotIn("diagnostics", body["data"])
 
+    @patch("app.orchestrate_form_submissions_and_reputation")
     @patch("app.solve_teams")
     @patch("app.requests.get")
-    def test_debug_success_includes_extended_fields(self, mock_get, mock_solve):
+    def test_debug_success_includes_extended_fields(self, mock_get, mock_solve, mock_orchestrate):
         mock_get.side_effect = [
             MockResponse(
                 200,
@@ -74,6 +82,10 @@ class TeamFormationAppTests(unittest.TestCase):
                 {"section_id": "sec-2", "criteria": {"num_groups": 1}, "topics": [], "skills": []},
             ),
         ]
+        mock_orchestrate.return_value = (
+            {"code": 200, "data": {"section_id": "sec-2", "students": []}},
+            None,
+        )
         mock_solve.return_value = {
             "status": "FEASIBLE",
             "section_id": "sec-2",
@@ -98,9 +110,11 @@ class TeamFormationAppTests(unittest.TestCase):
         self.assertIn("solver_stats", body["data"])
         self.assertIn("diagnostics", body["data"])
 
+    @patch("app.orchestrate_form_submissions_and_reputation")
     @patch("app.requests.get")
-    def test_student_profile_downstream_non_2xx_returns_502(self, mock_get):
+    def test_student_profile_downstream_non_2xx_returns_502(self, mock_get, mock_orchestrate):
         mock_get.return_value = MockResponse(500, {"message": "fail"})
+        mock_orchestrate.return_value = (None, "failed to process forms")
 
         response = self.client.get("/team-formation?section_id=sec-3")
 
@@ -109,8 +123,9 @@ class TeamFormationAppTests(unittest.TestCase):
         self.assertEqual(body["code"], 502)
         self.assertEqual(body["message"], "failed to fetch student profile")
 
+    @patch("app.orchestrate_form_submissions_and_reputation")
     @patch("app.requests.get")
-    def test_formation_config_downstream_exception_returns_502(self, mock_get):
+    def test_formation_config_downstream_exception_returns_502(self, mock_get, mock_orchestrate):
         mock_get.side_effect = [
             MockResponse(
                 200,
@@ -118,6 +133,7 @@ class TeamFormationAppTests(unittest.TestCase):
             ),
             requests.RequestException("timeout"),
         ]
+        mock_orchestrate.return_value = (None, "failed to process forms")
 
         response = self.client.get("/team-formation?section_id=sec-4")
 
@@ -126,9 +142,12 @@ class TeamFormationAppTests(unittest.TestCase):
         self.assertEqual(body["code"], 502)
         self.assertEqual(body["message"], "failed to fetch formation config")
 
+    @patch("app.orchestrate_form_submissions_and_reputation")
     @patch("app.solve_teams")
     @patch("app.requests.get")
-    def test_solver_failure_returns_422_without_debug_data(self, mock_get, mock_solve):
+    def test_solver_failure_returns_422_without_debug_data(
+        self, mock_get, mock_solve, mock_orchestrate
+    ):
         mock_get.side_effect = [
             MockResponse(
                 200,
@@ -139,6 +158,10 @@ class TeamFormationAppTests(unittest.TestCase):
                 {"section_id": "sec-5", "criteria": {"num_groups": 2}, "topics": [], "skills": []},
             ),
         ]
+        mock_orchestrate.return_value = (
+            {"code": 200, "data": {"section_id": "sec-5", "students": []}},
+            None,
+        )
         mock_solve.return_value = {
             "status": "INVALID_INPUT",
             "section_id": "sec-5",
@@ -157,9 +180,10 @@ class TeamFormationAppTests(unittest.TestCase):
         self.assertEqual(body["message"], "team formation could not be generated")
         self.assertNotIn("data", body)
 
+    @patch("app.orchestrate_form_submissions_and_reputation")
     @patch("app.solve_teams")
     @patch("app.requests.get")
-    def test_solver_failure_with_debug_includes_data(self, mock_get, mock_solve):
+    def test_solver_failure_with_debug_includes_data(self, mock_get, mock_solve, mock_orchestrate):
         mock_get.side_effect = [
             MockResponse(
                 200,
@@ -170,6 +194,10 @@ class TeamFormationAppTests(unittest.TestCase):
                 {"section_id": "sec-6", "criteria": {"num_groups": 2}, "topics": [], "skills": []},
             ),
         ]
+        mock_orchestrate.return_value = (
+            {"code": 200, "data": {"section_id": "sec-6", "students": []}},
+            None,
+        )
         mock_solve.return_value = {
             "status": "INFEASIBLE",
             "section_id": "sec-6",
