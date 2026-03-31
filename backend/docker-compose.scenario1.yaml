@@ -133,6 +133,7 @@ services:
       CRITERIA_URL: "http://criteria-service:3004/criteria"
       TOPIC_URL: "http://topic-service:3003/topic"
       SKILL_URL: "http://skill-service:3002/skill"
+      FRONTEND_ORIGIN: "http://localhost:5173"
     depends_on:
       - criteria-service
       - topic-service
@@ -148,14 +149,13 @@ services:
       OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
-      STUDENT_FORM_SUBMISSION_URL: "http://student-form-service:3015/student-form/submission"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
       TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
       COMPETENCE_URL: "http://student-competence-service:3008/competence"
+      FRONTEND_ORIGIN: "http://localhost:5173"
     depends_on:
       - enrollment-service
       - student-form-data-service
-      - student-form-service
       - student-topic-preference-service
       - reputation-service
       - student-competence-service
@@ -172,6 +172,7 @@ services:
       TEAM_URL: "http://team-service:3007/team"
       REQUEST_TIMEOUT: 8
       PORT: 4002
+      FRONTEND_ORIGIN: "http://localhost:5173"
     depends_on:
       - student-profile-service
       - formation-config-service

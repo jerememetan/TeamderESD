@@ -199,9 +199,10 @@ function Teams() {
     [backendTeams, rosterById, courseId, backendSectionId],
   );
 
-  const initialVisibleTeams = backendVisibleTeams.length
-    ? backendVisibleTeams
-    : mockVisibleTeams;
+  const initialVisibleTeams = useMemo(
+    () => (backendVisibleTeams.length ? backendVisibleTeams : mockVisibleTeams),
+    [backendVisibleTeams, mockVisibleTeams],
+  );
   const teamDataSource = backendVisibleTeams.length ? "backend" : "mock";
 
   useEffect(() => {
@@ -656,12 +657,22 @@ function Teams() {
                     selectedSwapMember?.member.id === member.id;
 
                   return (
-                    <button
+                    <div
                       key={member.id}
-                      type="button"
+                      role={swapMode ? "button" : undefined}
+                      tabIndex={swapMode ? 0 : undefined}
                       onClick={() =>
                         handleMemberSwapClick(selectedTeam, member)
                       }
+                      onKeyDown={(event) => {
+                        if (!swapMode) {
+                          return;
+                        }
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleMemberSwapClick(selectedTeam, member);
+                        }
+                      }}
                       className={`${styles.memberCard} ${pendingRequest ? styles.memberCardAlert : ""} ${swapMode ? styles.memberCardInteractive : ""} ${isSelectedForSwap ? styles.memberCardSelected : ""} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
                       style={{ "--td-stagger-delay": `${index * 50}ms` }}
                     >
@@ -717,7 +728,7 @@ function Teams() {
                           </Button>
                         ) : null}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
