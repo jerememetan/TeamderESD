@@ -219,6 +219,7 @@ function Teams() {
     if (!editableTeams.some((team) => team.id === selectedTeamId)) {
       setSelectedTeamId(editableTeams[0]?.id ?? null);
     }
+
   }, [editableTeams, selectedTeamId]);
 
   const visibleTeams = editableTeams;
@@ -299,7 +300,8 @@ function Teams() {
     setTeamMessage("");
 
     try {
-      const generatedTeams = await generateTeamsForSection(backendSectionId);
+      const generatedTeams = await generateTeamsForSection(backendSectionId); 
+      // TODO: PENDING FIX FROM JIN RAE (422 Error)
       setBackendTeams(generatedTeams);
       setTeamMessage("Backend teams generated and persisted successfully.");
     } catch (error) {
@@ -322,7 +324,7 @@ function Teams() {
   const handleCancelSelection = () => {
     setSelectedSwapMember(null);
   };
-
+// TODO: ADD SWAP API THINGY IDK
   const handleMemberSwapClick = (team, member) => {
     if (!swapMode) {
       return;
@@ -365,7 +367,7 @@ function Teams() {
     ? `${selectedCourse.code} G${selectedGroup.section_number} teams`
     : `${selectedCourse.code} teams`;
   const heroSubtitle = selectedGroup
-    ? `Review the teams for ${selectedGroup.label}, compare them against the live section roster, and start the final peer evaluation round when the project is done.`
+    ? `Review the teams for ${selectedCourse.code} G${selectedGroup.section_number}, compare them against the live section roster, and start the final peer evaluation round when the project is done.`
     : "See every team in this course, check whether students have confirmed, and review swap requests.";
   const backLink = "/instructor/courses";
   const rosterSourceTone = rosterError

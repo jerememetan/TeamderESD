@@ -52,10 +52,6 @@ function Courses() {
           <h2 className={chrome.title}>Manage my courses</h2>
         </div>
         {/* Button for Add course Not done yet */}
-        <Button className={chrome.primaryAction}>
-          <Plus className={chrome.buttonIcon} />
-          Add Course
-        </Button>
       </section>
 
       <div className={styles.courseList}>
