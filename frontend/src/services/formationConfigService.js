@@ -53,6 +53,6 @@ export async function saveFormationConfig({ courseId, sectionId, criteria, topic
       skills,
     }),
   });
-
+  console.log("RESPONSE", response);
   return handleResponse(response, 'Unable to save formation config.');
 }

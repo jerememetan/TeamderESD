@@ -33,13 +33,24 @@ def aggregate():
     criteria_data = payload.get("criteria")
     if not criteria_data or not isinstance(criteria_data, dict):
         return jsonify({"error": "Missing or invalid criteria. Please provide a valid criteria object."}), 400
-    resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
-    if resp.status_code == 200 and resp.json()["data"]:
-        put_resp = requests.put(CRITERIA_URL + f"?section_id={section_id}", json=criteria_data)
-        results["criteria"] = put_resp.json()
+    try:
+        resp = requests.get(CRITERIA_URL, params={"section_id": section_id}, timeout=5)
+    except Exception as e:
+        return jsonify({"error": f"Failed to reach criteria service: {str(e)}"}), 502
+
+    resp_json = safe_json(resp)
+    if resp.status_code == 200 and resp_json.get("data"):
+        try:
+            put_resp = requests.put(CRITERIA_URL + f"?section_id={section_id}", json=criteria_data, timeout=5)
+        except Exception as e:
+            return jsonify({"error": f"Failed to update criteria service: {str(e)}"}), 502
+        results["criteria"] = safe_json(put_resp)
     else:
-        post_resp = requests.post(CRITERIA_URL, json=criteria_data)
-        results["criteria"] = post_resp.json()
+        try:
+            post_resp = requests.post(CRITERIA_URL, json=criteria_data, timeout=5)
+        except Exception as e:
+            return jsonify({"error": f"Failed to create criteria in service: {str(e)}"}), 502
+        results["criteria"] = safe_json(post_resp)
 
     # --- Project Topics ---
     topics = payload.get("topics", [])

@@ -31,7 +31,8 @@ import { buildDefaultState } from "./logic/buildDefaultState";
 import { normalizeLoadedConfig } from "./logic/normalizeLoadedConfig";
 import { buildSavePayload, buildPublishPayload } from "./logic/payloads";
 import { sendFormLinks } from "./service/notificationService";
-
+import {fetchCourseByCode} from "../../../services/courseService";
+import {getSectionById} from "../../../services/sectionService";
 function CreateForm() {
   // takes course Id and Group ID from the params (already configured)
   const { courseId, groupId } = useParams();
@@ -67,16 +68,12 @@ function CreateForm() {
     return { course, frontendGroupId };
   })();
 
-  const [selectedCourse, setSelectedCourse] = useState(
-    () => resolved.course || null,
-  );
-  const selectedGroup = selectedCourse?.groups.find(
-    (group) => group.id === resolved.frontendGroupId,
-  );
+  const [selectedCourse, setSelectedCourse] = useState(null);
+
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const existingForm = mockForms[resolved.frontendGroupId || ""];
   // i think this is linked already?????
-  const backendCourseId = getBackendCourseId(courseId || "");
-  const backendSectionId = getBackendSectionId(groupId || "");
+
   const defaultState = useMemo(
     () => buildDefaultState(selectedGroup, existingForm),
     [selectedGroup, existingForm],
@@ -92,6 +89,32 @@ function CreateForm() {
   const [activePanel, setActivePanel] = useState("parameters");
 
   useEffect(() => {
+      async function fetchCourse(){
+        
+        try {
+          const course = await fetchCourseByCode(courseId);
+          setSelectedCourse(course);
+        } catch(error){
+          console.log("course not found: " + courseId, error);
+        }
+  
+      }
+      fetchCourse();
+    }, [courseId])
+
+  useEffect(() =>{
+    async function fetchSection(){
+      try{
+        const section = await getSectionById(groupId);
+        setSelectedGroup(section);
+      } catch(error){
+        console.log("section not found:"+ error );
+      }
+    }
+    fetchSection();
+    }, [selectedCourse])
+
+  useEffect(() => {
     setFormState(defaultState);
   }, [defaultState]);
 
@@ -99,15 +122,15 @@ function CreateForm() {
     let isMounted = true;
     // loads config
     async function loadConfig() {
+
       if (!selectedCourse || !selectedGroup) {
         return;
       }
-
       setIsLoading(true);
       setErrorMessage("");
       setSaveMessage("");
       // tries to get Course Id but if it fails it will use a mock source
-      if (!backendCourseId || !backendSectionId) {
+      if (!courseId || !courseId) {
         setLoadSource("mock");
         setIsLoading(false);
         setErrorMessage("Missing backend UUID mapping for this course group.");
@@ -115,7 +138,8 @@ function CreateForm() {
       }
 
       try {
-        const response = await fetchFormationConfig(backendSectionId);
+        const response = await fetchFormationConfig(groupId);
+        console.log("EXTRACTED",response);
         if (!isMounted) {
           return;
         }
@@ -150,13 +174,10 @@ function CreateForm() {
       isMounted = false;
     };
   }, [
-    backendCourseId,
-    backendSectionId,
     defaultState,
     selectedCourse,
     selectedGroup,
   ]);
-
   if (!selectedCourse || !selectedGroup) {
     return <div className={styles.notFound}>Course group not found</div>;
   }
@@ -246,23 +267,23 @@ function CreateForm() {
     setIsSaving(true);
     setSaveMessage("");
     setErrorMessage("");
+    const backendCourseId =
+      // prefer actual backend UUIDs returned from the course service
+      (selectedCourse && (selectedCourse.id || selectedCourse.course_id)) ||
+      // fallback to static mapping
+      getBackendCourseId(courseId) || null;
 
-    if (!backendCourseId || !backendSectionId) {
-      setErrorMessage(
-        "Missing backend UUID mapping for this course group. Update frontend/src/data/backendIds.js before saving.",
-      );
-      setIsSaving(false);
-      return false;
-    }
+    const backendSectionId =
+      // prefer actual backend UUID returned from the section service
+      (selectedGroup && (selectedGroup.id || selectedGroup.section_id)) ||
+      // fallback to static mapping using the frontend group key
+      getBackendSectionId(resolved.frontendGroupId || groupId) || groupId || null;
 
-    const payload = buildSavePayload(
-      formState,
-      backendCourseId,
-      backendSectionId,
-    );
-
+    const payload = buildSavePayload(formState, backendCourseId, backendSectionId);
     try {
+      // console.log("current Save Payload",payload);
       await saveFormationConfig(payload);
+      console.log("SUBMITTED PAYLOAD", payload);
       setLoadSource("backend");
       setSaveMessage(
         mode === "publish"
@@ -286,13 +307,6 @@ function CreateForm() {
   );
 
   const handlePublish = async () => {
-    if (!backendCourseId || !backendSectionId) {
-      setErrorMessage(
-        "Missing backend UUID mapping for this course group. Update frontend/src/data/backendIds.js before publishing.",
-      );
-      return;
-    }
-
     setIsPublishingLinks(true);
     setErrorMessage("");
     setSaveMessage("");
@@ -306,8 +320,8 @@ function CreateForm() {
 
       const publishPayload = buildPublishPayload(
         formState,
-        backendCourseId,
-        backendSectionId,
+        courseId,
+        groupId,
       );
 
       const result = await sendFormLinks(publishPayload);
@@ -585,7 +599,7 @@ function CreateForm() {
         <div>
           <p className={chrome.kicker}>[GROUP FORM]</p>
           <h2 className={chrome.title}>
-            {selectedGroup.code} - {selectedCourse.name}
+            {selectedCourse.code} G{selectedGroup.section_number} - {selectedCourse.name}
           </h2>
           <p className={chrome.subtitle}>
             Configure the solver inputs for this group using the sidebar
@@ -604,7 +618,7 @@ function CreateForm() {
           <p className={styles.statusLabel}>Integration mapping</p>
           <p className={styles.statusText}>
             Frontend group ID <strong>{selectedGroup.id}</strong> maps to
-            backend section_id <strong>{backendSectionId ?? "missing"}</strong>.
+            backend section_id <strong>{groupId ?? "missing"}</strong>.
           </p>
         </div>
         <p className={styles.summaryMeta}>
