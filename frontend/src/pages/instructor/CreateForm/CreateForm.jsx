@@ -18,6 +18,7 @@ import chrome from "../../../styles/instructorChrome.module.css";
 import {
   getBackendCourseId,
   getBackendSectionId,
+  backendSectionIds,
 } from "../../../data/backendIds";
 import { mockCourses, mockForms } from "../../../data/mockData";
 import {
@@ -28,16 +29,51 @@ import styles from "./CreateForm.module.css";
 import { WEIGHT_FIELDS, DEFAULT_WEIGHTS } from "./logic/weights";
 import { buildDefaultState } from "./logic/buildDefaultState";
 import { normalizeLoadedConfig } from "./logic/normalizeLoadedConfig";
+import { buildSavePayload, buildPublishPayload } from "./logic/payloads";
+import { sendFormLinks } from "./service/notificationService";
 
 function CreateForm() {
   // takes course Id and Group ID from the params (already configured)
   const { courseId, groupId } = useParams();
-  // Need to change this to get course from courseService instead
+  // Resolve selected course/group from params. Support frontend codes/ids
+  // (eg. course code 'CS3240' and group id '1-g1') or backend UUIDs in the URL.
+  const resolved = (() => {
+    let course =
+      mockCourses.find((c) => c.code === courseId) ||
+      mockCourses.find((c) => c.id === courseId) ||
+      null;
+    let frontendGroupId = groupId;
+
+    if (!course) {
+      // If `groupId` looks like a backend UUID, reverse-lookup frontend key
+      const frontendKey = Object.keys(backendSectionIds).find(
+        (k) => backendSectionIds[k] === groupId,
+      );
+      if (frontendKey) {
+        frontendGroupId = frontendKey;
+        course =
+          mockCourses.find((c) => c.groups.some((g) => g.id === frontendKey)) ||
+          null;
+      }
+
+      // fallback: find a course containing the provided groupId directly
+      if (!course) {
+        course =
+          mockCourses.find((c) => c.groups.some((g) => g.id === groupId)) ||
+          null;
+      }
+    }
+
+    return { course, frontendGroupId };
+  })();
+
   const [selectedCourse, setSelectedCourse] = useState(
-    () => mockCourses.find((c) => c.code === courseId) || null,
+    () => resolved.course || null,
   );
-  const selectedGroup = selectedCourse?.groups.find((group) => group.id === groupId);
-  const existingForm = mockForms[groupId || ""];
+  const selectedGroup = selectedCourse?.groups.find(
+    (group) => group.id === resolved.frontendGroupId,
+  );
+  const existingForm = mockForms[resolved.frontendGroupId || ""];
   // i think this is linked already?????
   const backendCourseId = getBackendCourseId(courseId || "");
   const backendSectionId = getBackendSectionId(groupId || "");
@@ -61,7 +97,7 @@ function CreateForm() {
 
   useEffect(() => {
     let isMounted = true;
-
+    // loads config
     async function loadConfig() {
       if (!selectedCourse || !selectedGroup) {
         return;
@@ -70,13 +106,11 @@ function CreateForm() {
       setIsLoading(true);
       setErrorMessage("");
       setSaveMessage("");
-
+      // tries to get Course Id but if it fails it will use a mock source
       if (!backendCourseId || !backendSectionId) {
         setLoadSource("mock");
         setIsLoading(false);
-        setErrorMessage(
-          "Missing backend UUID mapping for this course group. Update frontend/src/data/backendIds.js before connecting this group.",
-        );
+        setErrorMessage("Missing backend UUID mapping for this course group.");
         return;
       }
 
@@ -221,41 +255,11 @@ function CreateForm() {
       return false;
     }
 
-    const payload = {
-      courseId: backendCourseId,
-      sectionId: backendSectionId,
-      criteria: {
-        course_id: backendCourseId,
-        section_id: backendSectionId,
-        num_groups: Number(formState.numGroups),
-        school_weight: Number(formState.weights.school_weight),
-        year_weight: formState.mixYear
-          ? Number(formState.weights.year_weight)
-          : 0,
-        gender_weight: formState.mixGender
-          ? Number(formState.weights.gender_weight)
-          : 0,
-        gpa_weight: Number(formState.weights.gpa_weight),
-        reputation_weight: Number(formState.weights.reputation_weight),
-        mbti_weight: Number(formState.weights.mbti_weight),
-        buddy_weight: formState.allowBuddy
-          ? Number(formState.weights.buddy_weight)
-          : 0,
-        topic_weight: Number(formState.weights.topic_weight),
-        skill_weight: Number(formState.weights.skill_weight),
-        randomness: Number(formState.weights.randomness),
-      },
-      topics: formState.topics
-        .map((topic) => topic.topic_label.trim())
-        .filter(Boolean)
-        .map((topic_label) => ({ topic_label })),
-      skills: formState.skills
-        .map((skill) => ({
-          skill_label: skill.skill_label.trim(),
-          skill_importance: Number(skill.skill_importance),
-        }))
-        .filter((skill) => skill.skill_label),
-    };
+    const payload = buildSavePayload(
+      formState,
+      backendCourseId,
+      backendSectionId,
+    );
 
     try {
       await saveFormationConfig(payload);
@@ -300,59 +304,13 @@ function CreateForm() {
         );
       }
 
-      const payload = {
-        section_id: backendSectionId,
-        criteria: {
-          course_id: backendCourseId,
-          section_id: backendSectionId,
-          num_groups: Number(formState.numGroups),
-          school_weight: Number(formState.weights.school_weight),
-          year_weight: formState.mixYear
-            ? Number(formState.weights.year_weight)
-            : 0,
-          gender_weight: formState.mixGender
-            ? Number(formState.weights.gender_weight)
-            : 0,
-          gpa_weight: Number(formState.weights.gpa_weight),
-          reputation_weight: Number(formState.weights.reputation_weight),
-          mbti_weight: Number(formState.weights.mbti_weight),
-          buddy_weight: formState.allowBuddy
-            ? Number(formState.weights.buddy_weight)
-            : 0,
-          topic_weight: Number(formState.weights.topic_weight),
-          skill_weight: Number(formState.weights.skill_weight),
-          randomness: Number(formState.weights.randomness),
-        },
-        custom_entries: formState.skills
-          .filter((skill) => skill.skill_label.trim())
-          .map((skill, index) => ({
-            key: `skill_${index + 1}`,
-            label: skill.skill_label.trim(),
-            input_type: "number",
-            required: true,
-            weight: Number(skill.skill_importance || 0),
-          })),
-        base_form_url: `${window.location.origin}/student/fill-form`,
-      };
-
-      const response = await fetch(
-        `${FORMATION_NOTIFICATION_API_BASE}/send-form-links`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
+      const publishPayload = buildPublishPayload(
+        formState,
+        backendCourseId,
+        backendSectionId,
       );
 
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(
-          errorBody?.message ||
-            "Failed to generate and send student form links",
-        );
-      }
-
-      const result = await response.json();
+      const result = await sendFormLinks(publishPayload);
       const data = result?.data || {};
       setSaveMessage(
         `Published. Generated ${data.generated_links_count ?? 0} link(s); notification success: ${data.success_count ?? 0}, failure: ${data.failure_count ?? 0}.`,
