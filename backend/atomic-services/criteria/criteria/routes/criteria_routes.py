@@ -16,6 +16,10 @@ def get_criteria():
     if section_id:
         query = query.filter_by(section_id=section_id)
     if course_id:
+        try:
+            course_id = int(course_id)
+        except ValueError:
+            return jsonify({"code": 400, "error": "course_id must be an integer."}), 400
         query = query.filter_by(course_id=course_id)
     criteria = query.all()
     return jsonify({

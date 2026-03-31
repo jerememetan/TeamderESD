@@ -16,6 +16,41 @@ def safe_json(resp):
     except Exception:
         return {}
 
+
+def error_body_preview(resp, limit=300):
+    try:
+        text = (resp.text or "").strip()
+    except Exception:
+        return None
+    if not text:
+        return None
+    return text[:limit]
+
+
+def downstream_error(service_name, resp, fallback_message):
+    payload = safe_json(resp)
+    if payload:
+        return jsonify(
+            {
+                "error": fallback_message,
+                "details": {
+                    "service": service_name,
+                    "status_code": resp.status_code,
+                    "payload": payload,
+                },
+            }
+        ), 502
+    return jsonify(
+        {
+            "error": fallback_message,
+            "details": {
+                "service": service_name,
+                "status_code": resp.status_code,
+                "raw_body": error_body_preview(resp),
+            },
+        }
+    ), 502
+
 CRITERIA_URL = os.getenv("CRITERIA_URL", "http://localhost:3004/criteria")
 TOPIC_URL = os.getenv("TOPIC_URL", "http://localhost:3003/topic")
 SKILL_URL = os.getenv("SKILL_URL", "http://localhost:3002/skill")
@@ -33,24 +68,32 @@ def aggregate():
     criteria_data = payload.get("criteria")
     if not criteria_data or not isinstance(criteria_data, dict):
         return jsonify({"error": "Missing or invalid criteria. Please provide a valid criteria object."}), 400
+    criteria_payload = {
+        **criteria_data,
+        "course_id": course_id,
+        "section_id": section_id,
+    }
     try:
-        resp = requests.get(CRITERIA_URL, params={"section_id": section_id}, timeout=5)
-    except Exception as e:
-        return jsonify({"error": f"Failed to reach criteria service: {str(e)}"}), 502
+        resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
+    except requests.RequestException:
+        return jsonify({"error": "Unable to reach criteria service"}), 502
 
-    resp_json = safe_json(resp)
-    if resp.status_code == 200 and resp_json.get("data"):
-        try:
-            put_resp = requests.put(CRITERIA_URL + f"?section_id={section_id}", json=criteria_data, timeout=5)
-        except Exception as e:
-            return jsonify({"error": f"Failed to update criteria service: {str(e)}"}), 502
-        results["criteria"] = safe_json(put_resp)
-    else:
-        try:
-            post_resp = requests.post(CRITERIA_URL, json=criteria_data, timeout=5)
-        except Exception as e:
-            return jsonify({"error": f"Failed to create criteria in service: {str(e)}"}), 502
-        results["criteria"] = safe_json(post_resp)
+    if resp.status_code != 200:
+        return downstream_error("criteria", resp, "Failed to read existing criteria")
+
+    criteria_lookup = safe_json(resp)
+    existing = criteria_lookup.get("data") if isinstance(criteria_lookup, dict) else None
+    try:
+        if existing:
+            write_resp = requests.put(CRITERIA_URL + f"?section_id={section_id}", json=criteria_payload)
+        else:
+            write_resp = requests.post(CRITERIA_URL, json=criteria_payload)
+    except requests.RequestException:
+        return jsonify({"error": "Unable to write criteria"}), 502
+
+    if write_resp.status_code < 200 or write_resp.status_code >= 300:
+        return downstream_error("criteria", write_resp, "Failed to save criteria")
+    results["criteria"] = safe_json(write_resp)
 
     # --- Project Topics ---
     topics = payload.get("topics", [])
@@ -78,28 +121,39 @@ def aggregate_get():
     if not section_id:
         return jsonify({"error": "Missing section_id in query params"}), 400
 
-    crit_resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
+    try:
+        crit_resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
+    except requests.RequestException:
+        return jsonify({"error": "Unable to reach criteria service"}), 502
     crit_data = None
     course_id = None
     if crit_resp.status_code == 200:
-        crit_json = crit_resp.json()
+        crit_json = safe_json(crit_resp)
         if crit_json.get("data"):
             crit_data = crit_json["data"][0] if isinstance(crit_json["data"], list) and crit_json["data"] else crit_json["data"]
             course_id = crit_data.get("course_id")
             crit_data.pop("course_id", None)
             crit_data.pop("section_id", None)
+    elif crit_resp.status_code >= 500:
+        return downstream_error("criteria", crit_resp, "Failed to fetch criteria")
 
-    topic_resp = requests.get(TOPIC_URL, params={"section_id": section_id})
+    try:
+        topic_resp = requests.get(TOPIC_URL, params={"section_id": section_id})
+    except requests.RequestException:
+        return jsonify({"error": "Unable to reach topic service"}), 502
     topics = []
     if topic_resp.status_code == 200:
-        topic_json = topic_resp.json()
+        topic_json = safe_json(topic_resp)
         for t in topic_json.get("data", []):
             topics.append({"topic_label": t.get("topic_label")})
 
-    skill_resp = requests.get(SKILL_URL, params={"section_id": section_id})
+    try:
+        skill_resp = requests.get(SKILL_URL, params={"section_id": section_id})
+    except requests.RequestException:
+        return jsonify({"error": "Unable to reach skill service"}), 502
     skills = []
     if skill_resp.status_code == 200:
-        skill_json = skill_resp.json()
+        skill_json = safe_json(skill_resp)
         for s in skill_json.get("data", []):
             skills.append({
                 "skill_label": s.get("skill_label"),
