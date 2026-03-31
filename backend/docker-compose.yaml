@@ -135,9 +135,9 @@ services:
       PORT: 3016
       RABBIT_HOST: rabbitmq
       RABBIT_PORT: 5672
-      NOTIFICATION_EXCHANGE: notification_topic
+      NOTIFICATION_EXCHANGE: notification.topic
       NOTIFICATION_EXCHANGE_TYPE: topic
-      NOTIFICATION_ROUTING_KEY: FormLinkNotification
+      NOTIFICATION_ROUTING_KEY: notification.email
     ports:
       - "3016:3016"
     depends_on:
@@ -179,9 +179,15 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: teamder-rabbitmq
+    restart: unless-stopped
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   # Composite
 
@@ -294,6 +300,9 @@ services:
       - student-form-service
       - student-service
       - notification-service
+
+volumes:
+  rabbitmq_data:
 
 
 

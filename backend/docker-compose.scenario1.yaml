@@ -128,6 +128,19 @@ services:
     ports:
       - "3015:3015"
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: teamder-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
 
 
   # Composite
@@ -185,6 +198,9 @@ services:
     depends_on:
       - student-profile-service
       - formation-config-service
+
+volumes:
+  rabbitmq_data:
 
 
 
