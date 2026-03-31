@@ -1,5 +1,5 @@
 import os
-
+from flask_cors import CORS
 from dotenv import load_dotenv
 from flask import Flask
 
@@ -17,6 +17,8 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
+    
+    CORS(app)
 
     from .routes.swap_request_routes import swap_request_bp
 
