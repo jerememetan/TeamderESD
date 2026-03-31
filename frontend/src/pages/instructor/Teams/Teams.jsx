@@ -72,7 +72,7 @@ function Teams() {
   useEffect(() =>{
     async function fetchSection(){
       try{
-        const section = await fetchCourseByCode(courseId);
+        const section = await getSectionById(backendSectionId);
         setSelectedGroup(section);
       } catch(error){
         console.log("section not found:"+ error );
@@ -205,10 +205,10 @@ function Teams() {
   const teamDataSource = backendVisibleTeams.length ? "backend" : "mock";
 
   useEffect(() => {
-    setEditableTeams(initialVisibleTeams);
+    setEditableTeams(backendVisibleTeams);
     setSelectedSwapMember(null);
     setSwapMode(false);
-  }, [initialVisibleTeams]);
+  }, [backendVisibleTeams]);
 
   useEffect(() => {
     if (!editableTeams.length) {
@@ -240,7 +240,6 @@ function Teams() {
   if (!selectedCourse) {
     return <div className={styles.notFound}>Course not found</div>;
   }
-
   const handleApprove = (requestId) => {
     setSwapRequestList((currentRequests) =>
       currentRequests.map((request) =>
@@ -286,7 +285,7 @@ function Teams() {
     });
 
     setPeerRound(getPeerEvaluationSummary(round.id));
-    setTeamMessage(`Peer evaluation round started for ${selectedGroup.code}.`);
+    setTeamMessage(`Peer evaluation round started for ${selectedCourse.code}.`);
   };
 
   const handleGenerateTeams = async () => {
@@ -363,7 +362,7 @@ function Teams() {
   };
 
   const heroTitle = selectedGroup
-    ? `${selectedGroup.code} teams`
+    ? `${selectedCourse.code} G${selectedGroup.section_number} teams`
     : `${selectedCourse.code} teams`;
   const heroSubtitle = selectedGroup
     ? `Review the teams for ${selectedGroup.label}, compare them against the live section roster, and start the final peer evaluation round when the project is done.`
@@ -434,7 +433,7 @@ function Teams() {
         <ModuleBlock
           componentId="MOD-T0"
           eyebrow="Section Roster"
-          title={`${selectedGroup.code}`}
+          title={`${selectedCourse.code} G${selectedGroup.section_number}`}
           metric={backendStudents.length}
           metricLabel="Students from student-profile"
           className={motionStyles.staggerItem}
