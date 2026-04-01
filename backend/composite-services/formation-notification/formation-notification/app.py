@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 import logging
 import os
 import re
@@ -7,7 +19,11 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from amqp_helper import publish_notification_message
-from invoke_http import call_http, extract_data
+from invoke_http import call_http, extract_data, put_section_stage
+from schemas import (
+    FormationNotificationRequestSchema,
+    FormationNotificationResponseSchema,
+)
 
 app = Flask(__name__)
 
@@ -217,10 +233,22 @@ def _resolve_status_code(created: List[Dict[str, Any]], failed: List[Dict[str, A
     return 207
 
 
+def _should_update_section_stage(created: List[Dict[str, Any]], failed: List[Dict[str, Any]]) -> bool:
+    # Trigger section stage update only when notifications were published
+    # and all non-successes are limited to form creation failures.
+    if not created:
+        return False
+    allowed_failures = {"form creation failed"}
+    return all(row.get("reason") in allowed_failures for row in failed)
+
+
+register_swagger(app, 'formation-notification-service')
+
 @app.route("/health", methods=["GET"])
 def health():
     # Basic health check for the formation-notification composite service.
     return jsonify({"status": "ok", "service": "formation-notification-service"}), 200
+
 
 
 @app.route("/formation-notifications", methods=["POST"])
@@ -300,8 +328,9 @@ def create_formation_notifications():
         # No students: probe Section service to give a helpful message
         reason = _determine_empty_section_reason(section_id)
         response = _build_response(section_id, created=[], failed=[])
+        # Return 200 OK with explanatory message when no enrollments found
         response["message"] = reason
-        return jsonify(response), 404
+        return jsonify(response), 200
 
     created: List[Dict[str, Any]] = []
     failed: List[Dict[str, Any]] = []
@@ -387,10 +416,38 @@ def create_formation_notifications():
         )
 
     response_body = _build_response(section_id, created=created, failed=failed)
+
+    if _should_update_section_stage(created=created, failed=failed):
+        section_update_resp = put_section_stage(
+            section_base_url=SECTION_URL,
+            section_id=section_id,
+            stage="collecting",
+            timeout=REQUEST_TIMEOUT,
+        )
+        if not section_update_resp["ok"]:
+            logger.error(
+                "section stage update failed",
+                extra={
+                    "section_id": section_id,
+                    "status_code": section_update_resp.get("status_code"),
+                    "error": section_update_resp.get("error"),
+                },
+            )
+            response_body["message"] = "notifications published but failed to update section stage"
+            response_body["section_stage_updated"] = False
+            return jsonify(response_body), 502
+        response_body["section_stage_updated"] = True
+
     status_code = _resolve_status_code(created=created, failed=failed)
     return jsonify(response_body), status_code
+
+
+# OpenAPI annotations
+create_formation_notifications._openapi_request_schema = FormationNotificationRequestSchema
+create_formation_notifications._openapi_response_schema = FormationNotificationResponseSchema
 
 
 if __name__ == "__main__":
     # Run for local development. In production the app is run by a WSGI server.
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "4004")), debug=True)
+

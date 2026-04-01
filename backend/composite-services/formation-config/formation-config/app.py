@@ -1,7 +1,20 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import os
+from schemas import FormationRequestSchema, FormationResponseSchema, FormationGetResponseSchema
 
 
 app = Flask(__name__)
@@ -55,6 +68,8 @@ CRITERIA_URL = os.getenv("CRITERIA_URL", "http://localhost:3004/criteria")
 TOPIC_URL = os.getenv("TOPIC_URL", "http://localhost:3003/topic")
 SKILL_URL = os.getenv("SKILL_URL", "http://localhost:3002/skill")
 
+register_swagger(app, 'formation-config-service')
+
 @app.route("/formation-config", methods=["POST"])
 def aggregate():
     payload = request.get_json()
@@ -97,23 +112,56 @@ def aggregate():
 
     # --- Project Topics ---
     topics = payload.get("topics", [])
-    requests.delete(TOPIC_URL, params={"section_id": section_id})
+    try:
+        topic_delete_resp = requests.delete(TOPIC_URL, params={"section_id": section_id})
+    except requests.RequestException:
+        return jsonify({"error": "Unable to clear topics"}), 502
+
+    if topic_delete_resp.status_code < 200 or topic_delete_resp.status_code >= 300:
+        return downstream_error("topic", topic_delete_resp, "Failed to clear topics")
+
     for topic in topics:
         if "section_id" not in topic:
             topic["section_id"] = section_id
-        post_resp = requests.post(TOPIC_URL, json=topic)
+        try:
+            post_resp = requests.post(TOPIC_URL, json=topic)
+        except requests.RequestException:
+            return jsonify({"error": "Unable to save topics"}), 502
+
+        if post_resp.status_code < 200 or post_resp.status_code >= 300:
+            return downstream_error("topic", post_resp, "Failed to save topics")
         results["topics"].append(safe_json(post_resp))
 
     # --- Skills ---
     skills = payload.get("skills", [])
-    requests.delete(SKILL_URL, params={"section_id": section_id})
+    try:
+        skill_delete_resp = requests.delete(SKILL_URL, params={"section_id": section_id})
+    except requests.RequestException:
+        return jsonify({"error": "Unable to clear skills"}), 502
+
+    if skill_delete_resp.status_code < 200 or skill_delete_resp.status_code >= 300:
+        return downstream_error("skill", skill_delete_resp, "Failed to clear skills")
+
     for skill in skills:
         if "section_id" not in skill:
             skill["section_id"] = section_id
-        post_resp = requests.post(SKILL_URL, json=skill)
+        try:
+            post_resp = requests.post(SKILL_URL, json=skill)
+        except requests.RequestException:
+            return jsonify({"error": "Unable to save skills"}), 502
+
+        if post_resp.status_code < 200 or post_resp.status_code >= 300:
+            return downstream_error("skill", post_resp, "Failed to save skills")
         results["skills"].append(safe_json(post_resp))
 
+
     return jsonify(results), 200
+
+
+# Attach OpenAPI schemas for swagger_helper
+aggregate._openapi_request_schema = FormationRequestSchema
+aggregate._openapi_response_schema = FormationResponseSchema
+
 
 @app.route("/formation-config", methods=["GET"])
 def aggregate_get():
@@ -169,5 +217,9 @@ def aggregate_get():
     }
     return jsonify(result), 200
 
+
+aggregate_get._openapi_response_schema = FormationGetResponseSchema
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 4000)), debug=True)
+

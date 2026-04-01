@@ -18,3 +18,15 @@ def get_enrollments():
         "code": 200,
         "data": many_response_schema.dump(enrollments)
     }), 200
+
+
+from marshmallow import Schema, fields
+
+
+# Attach OpenAPI schema annotation for swagger_helper to pick up
+class EnrollmentListEnvelopeSchema(Schema):
+    code = fields.Integer()
+    data = fields.List(fields.Nested(EnrollmentResponseSchema()))
+
+
+get_enrollments._openapi_response_schema = EnrollmentListEnvelopeSchema()

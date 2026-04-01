@@ -1,7 +1,12 @@
-from ..schemas.reputation_schema import ReputationCreateSchema, ReputationResponseSchema
+from ..schemas.reputation_schema import (
+    ReputationCreateSchema,
+    ReputationResponseSchema,
+    ReputationUpdateSchema,
+)
 from flask import Blueprint, request, jsonify
 from ..models.reputation_model import Reputation, db
 from marshmallow import ValidationError
+from marshmallow import Schema, fields
 
 reputation_bp = Blueprint("reputation", __name__)
 response_schema = ReputationResponseSchema()
@@ -15,6 +20,15 @@ def get_reputations():
         "data": many_response_schema.dump(reputations),
         "meta": {}
     }), 200
+
+
+# OpenAPI envelope for GET /reputation
+class ReputationListEnvelope(Schema):
+    data = fields.List(fields.Nested(ReputationResponseSchema()))
+    meta = fields.Dict()
+
+
+get_reputations._openapi_response_schema = ReputationListEnvelope()
 
 
 @reputation_bp.route("", methods=["POST"])
@@ -39,6 +53,10 @@ def create_reputation():
         "meta": {}
     }), 201
 
+
+create_reputation._openapi_request_schema = ReputationCreateSchema()
+create_reputation._openapi_response_schema = ReputationListEnvelope()
+
 @reputation_bp.route("/<int:student_id>", methods=["GET"])
 def get_reputation_by_student_id(student_id):
     reputation = Reputation.query.get(student_id)
@@ -48,6 +66,9 @@ def get_reputation_by_student_id(student_id):
         "data": response_schema.dump(reputation),
         "meta": {}
     }), 200
+
+
+get_reputation_by_student_id._openapi_response_schema = ReputationListEnvelope()
 
 
 # PUT route to update reputation score
@@ -68,3 +89,7 @@ def update_reputation_score(student_id):
         "data": response_schema.dump(reputation),
         "meta": {}
     }), 200
+
+
+update_reputation_score._openapi_request_schema = ReputationUpdateSchema()
+update_reputation_score._openapi_response_schema = ReputationListEnvelope()

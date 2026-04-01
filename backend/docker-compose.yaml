@@ -7,6 +7,7 @@ services:
       context: ./atomic-services/student
     container_name: teamder-student-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3001
       OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student
     ports:
@@ -17,6 +18,7 @@ services:
       context: ./atomic-services/course
     container_name: teamder-course-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3017
       OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course
     ports:
@@ -27,6 +29,7 @@ services:
       context: ./atomic-services/section
     container_name: teamder-section-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3018
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -37,6 +40,7 @@ services:
       context: ./atomic-services/skill
     container_name: teamder-skill-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3002
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -47,6 +51,7 @@ services:
       context: ./atomic-services/project-topic
     container_name: teamder-project-topic-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3003
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -57,6 +62,7 @@ services:
       context: ./atomic-services/criteria
     container_name: teamder-criteria-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3004
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -67,6 +73,7 @@ services:
       context: ./atomic-services/enrollment
     container_name: teamder-enrollment-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3005
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -77,6 +84,7 @@ services:
       context: ./atomic-services/reputation
     container_name: teamder-reputation-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3006
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -87,6 +95,7 @@ services:
       context: ./atomic-services/team
     container_name: teamder-team-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3007
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -96,6 +105,7 @@ services:
     build: ./atomic-services/student-competence
     container_name: teamder-student-competence-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3008
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -105,6 +115,7 @@ services:
     build: ./atomic-services/student-topic-preference
     container_name: teamder-student-topic-preference-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3009
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -114,6 +125,7 @@ services:
     build: ./atomic-services/student-form-data
     container_name: teamder-student-form-data-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3010
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -123,6 +135,7 @@ services:
     build: ./atomic-services/student-form
     container_name: teamder-student-form-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3015
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -134,6 +147,7 @@ services:
     env_file:
       - ./scenario3.env
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3011
     ports:
       - "3011:3011"
@@ -148,6 +162,7 @@ services:
       context: ./atomic-services/swap-constraints
     container_name: teamder-swap-constraints-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3012
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -158,6 +173,7 @@ services:
       context: ./atomic-services/team-swap
     container_name: teamder-team-swap-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3013
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
@@ -167,6 +183,7 @@ services:
     build: ./atomic-services/notification
     container_name: teamder-notification-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3016
       RABBIT_HOST: rabbitmq
       RABBIT_PORT: 5672
@@ -206,13 +223,16 @@ services:
     ports:
       - "4000:4000"
     environment:
+      ENABLE_SWAGGER: "true"
       CRITERIA_URL: "http://criteria-service:3004/criteria"
       TOPIC_URL: "http://topic-service:3003/topic"
       SKILL_URL: "http://skill-service:3002/skill"
+      SECTION_URL: "http://section-service:3018/section"
     depends_on:
       - criteria-service
       - topic-service
       - skill-service
+      - section-service
 
   student-profile-service:
     build:
@@ -221,6 +241,7 @@ services:
     ports:
       - "4001:4001"
     environment:
+      ENABLE_SWAGGER: "true"
       OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
@@ -243,11 +264,13 @@ services:
     ports:
       - "4002:4002"
     environment:
+      ENABLE_SWAGGER: "true"
       STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
       FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
       STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
       TEAM_URL: "http://team-service:3007/team"
+      SECTION_URL: "http://section-service:3018/section"
       REQUEST_TIMEOUT: 8
       PORT: 4002
     depends_on:
@@ -257,13 +280,12 @@ services:
       - reputation-service
       - team-service
 
-      # â”€â”€ Scenario 2: Dashboard Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   analytics-service:
     build:
       context: ./atomic-services/analytics
     container_name: teamder-analytics-service
     environment:
+      ENABLE_SWAGGER: "true"
       PORT: 3014
     ports:
       - "3014:3014"
@@ -275,6 +297,7 @@ services:
     ports:
       - "4003:4003"
     environment:
+      ENABLE_SWAGGER: "true"
       TEAM_URL: "http://team-service:3007/team"
       STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
       STUDENT_FORM_SUBMISSIONS_URL: "http://student-form-service:3015/student-form/submissions"
@@ -300,6 +323,7 @@ services:
     ports:
       - "4004:4004"
     environment:
+      ENABLE_SWAGGER: "true"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
       STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
@@ -324,6 +348,47 @@ services:
       - student-form-service
       - student-service
       - rabbitmq
+
+  swap-orchestrator-service:
+    build:
+      context: ./composite-services/swap-orchestrator
+    container_name: teamder-swap-orchestrator-service
+    ports:
+      - "4005:4005"
+    environment:
+      ENABLE_SWAGGER: "true"
+      PORT: 4005
+      SUPABASE_URL: ${SUPABASE_URL}
+      FRONTEND_ORIGIN: "http://localhost:5173"
+      SWAP_REQUEST_URL: "http://swap-request-service:3011/swap-request"
+      SWAP_CONSTRAINTS_URL: "http://swap-constraints-service:3012/swap-constraints"
+      TEAM_URL: "http://team-service:3007/team"
+      TEAM_SWAP_OPTIMIZE_URL: "http://team-swap-service:3013/team-swap/optimize"
+      ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
+      STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
+      STUDENT_BULK_URL: "http://student-service:3001/api/students/bulk-info"
+      REQUEST_TIMEOUT: 10
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      SWAP_EVENT_EXCHANGE: swap_topic
+      SWAP_EVENT_EXCHANGE_TYPE: topic
+    depends_on:
+      - swap-request-service
+      - swap-constraints-service
+      - team-service
+      - team-swap-service
+      - enrollment-service
+      - student-service
+      - rabbitmq
+
+  docs-index-service:
+    build:
+      context: ./docs/swagger-index
+    container_name: teamder-docs-index-service
+    ports:
+      - "4010:4010"
+    environment:
+      PORT: 4010
 
   # RabbitMQ
 

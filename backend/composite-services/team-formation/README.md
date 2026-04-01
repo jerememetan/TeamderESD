@@ -8,7 +8,7 @@ This document explains how the `team-formation` composite microservice forms tea
 
 Runtime flow:
 
-1. `GET /team-formation?section_id=...` receives request.
+1. `POST /team-formation` receives request body with `section_id`.
 2. Fetches student profile data from `student-profile` composite service.
 3. Fetches criteria/topics/skills from `formation-config` composite service.
 4. Runs CP-SAT model to assign each student to exactly one team.
@@ -354,7 +354,15 @@ Mitigations:
 
 ## 10. REST Contracts (Team Formation Service)
 
-### GET /team-formation?section_id=<uuid>
+### POST /team-formation
+
+Request body:
+
+```json
+{
+  "section_id": "<uuid>"
+}
+```
 
 Behavior:
 
@@ -363,7 +371,7 @@ Behavior:
 
 Common failures:
 
-- `400` missing `section_id`.
+- `400` missing `section_id` in request body.
 - `502` fetch failure from upstream composites.
 - `502` persist failure to team atomic service.
 - `422` infeasible/invalid formation.

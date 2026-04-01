@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 import os
 
 import requests
@@ -31,6 +43,8 @@ def proxy_request(path, method="GET", payload=None):
 
     return jsonify(data), response.status_code
 
+
+register_swagger(app, 'course-service')
 
 @app.get("/health")
 def health():
@@ -66,3 +80,4 @@ def delete_course(course_code):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=True)
+

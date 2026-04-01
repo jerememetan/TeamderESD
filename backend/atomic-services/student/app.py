@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 import os
 
 import requests
@@ -29,40 +41,28 @@ def proxy_request(path, method="GET", payload=None):
         data = {"message": response.text or "Empty response"}
 
     return jsonify(data), response.status_code
-
+register_swagger(app, 'student-service')
 
 @app.get("/health")
 def health():
     return jsonify({"status": "ok", "service": "student-service"})
-
-
 @app.get("/api/students")
 def get_students():
     return proxy_request("/student/")
-
-
 @app.get("/api/students/<int:student_id>")
 def get_student(student_id):
     return proxy_request(f"/student/{student_id}/")
-
-
 @app.post("/api/students")
 def create_student():
     return proxy_request("/student/", method="POST", payload=request.get_json())
-
-
 @app.put("/api/students/<int:student_id>")
 def update_student(student_id):
     return proxy_request(
         f"/student/{student_id}/", method="PUT", payload=request.get_json()
     )
-
-
 @app.delete("/api/students/<int:student_id>")
 def delete_student(student_id):
     return proxy_request(f"/student/{student_id}/", method="DELETE")
-
-
 @app.post("/api/students/bulk-info")
 def get_students_bulk():
     return proxy_request(
@@ -72,3 +72,4 @@ def get_students_bulk():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=True)
+

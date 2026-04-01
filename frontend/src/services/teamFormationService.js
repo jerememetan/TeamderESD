@@ -26,14 +26,14 @@ async function handleResponse(response, fallbackMessage) {
 }
 
 export async function generateTeamsForSection(sectionId) {
-  const response = await fetch(
-    `${TEAM_FORMATION_URL}?section_id=${encodeURIComponent(sectionId)}`,
-    {
-      headers: {
-        Accept: 'application/json',
-      },
+  const response = await fetch(TEAM_FORMATION_URL, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
     },
-  );
+    body: JSON.stringify({ section_id: sectionId }),
+  });
 
   const payload = await handleResponse(response, 'Unable to generate teams for this section.');
   return payload?.data?.teams ?? [];

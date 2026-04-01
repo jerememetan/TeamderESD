@@ -1,5 +1,9 @@
-flask
+﻿flask
 requests
 python-dotenv
 ortools
 flask-cors==6.0.0
+marshmallow
+flask-openapi3
+pydantic
+

@@ -217,11 +217,17 @@ Simple health endpoint.
 }
 ```
 
-### GET /team-formation
+### POST /team-formation
 
 Generates teams for a section, persists them to team atomic service, and returns the team service response.
 
-### Query Parameters
+### Input JSON Body
+```json
+{
+  "section_id": "11111111-1111-1111-1111-111111111111"
+}
+```
+
 - `section_id` (required): UUID for the section
 
 ### Headers
@@ -229,7 +235,12 @@ Generates teams for a section, persists them to team atomic service, and returns
 
 ### Example
 ```http
-GET http://localhost:4002/team-formation?section_id=11111111-1111-1111-1111-111111111111
+POST http://localhost:4002/team-formation
+Content-Type: application/json
+
+{
+  "section_id": "11111111-1111-1111-1111-111111111111"
+}
 ```
 
 ### Success Response (typically 201)
@@ -399,14 +410,14 @@ POST http://localhost:4004/formation-notifications
 Content-Type: application/json
 
 {
-  "section_id": "IS213-2026-01"
+  "section_id": "UUID"
 }
 ```
 
 ### Success Response (201)
 ```json
 {
-  "section_id": "IS213-2026-01",
+  "section_id": "UUID",
   "notifications_created": [
     {
       "student_id": 101,

@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from sqlalchemy import and_
 from ..models.form_data_model import FormData, db
 from ..schemas.form_data_schema import FormDataCreateSchema, FormDataResponseSchema
-from marshmallow import ValidationError
+from marshmallow import ValidationError, fields
 
 form_data_bp = Blueprint('form_data', __name__)
 create_schema = FormDataCreateSchema()
@@ -49,3 +49,16 @@ def get_form_data():
         return jsonify({"data": response_schema.dump(obj)}), 200
     else:
         return jsonify({"error": {"code": "NOT_FOUND", "message": "Form data not found"}}), 404
+
+
+class FormDataCreateEnvelope(FormDataCreateSchema):
+    data = fields.Nested(FormDataResponseSchema())
+
+
+class FormDataResponseEnvelope(FormDataResponseSchema):
+    data = fields.Nested(FormDataResponseSchema())
+
+
+create_or_update_form_data._openapi_request_schema = FormDataCreateSchema()
+create_or_update_form_data._openapi_response_schema = FormDataCreateEnvelope()
+get_form_data._openapi_response_schema = FormDataResponseEnvelope()

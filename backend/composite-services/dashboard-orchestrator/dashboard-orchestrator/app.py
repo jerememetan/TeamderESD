@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 """
 Dashboard Orchestrator Composite Service
 
@@ -21,7 +33,7 @@ app = Flask(__name__)
 # Enable CORS for dashboard endpoints to allow frontend origin access
 CORS(app, resources={r"/dashboard*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}})
 
-# ── Upstream service URLs (overridden via docker-compose env) ────────
+# â”€â”€ Upstream service URLs (overridden via docker-compose env) â”€â”€â”€â”€â”€â”€â”€â”€
 
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team")
 STUDENT_PROFILE_URL = os.getenv("STUDENT_PROFILE_URL", "http://localhost:4001/student-profile")
@@ -61,6 +73,8 @@ def _fetch(url, params=None, label="service"):
     except requests.exceptions.RequestException as e:
         return None, f"failed to fetch {label}: {str(e)}"
 
+
+register_swagger(app, 'dashboard-orchestrator-service')
 
 @app.route("/dashboard", methods=["GET"])
 def get_dashboard():
@@ -106,7 +120,7 @@ def get_dashboard():
             },
         }), 200
 
-    # ── 1. Fetch teams ───────────────────────────────────────────────
+    # â”€â”€ 1. Fetch teams â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     team_data, err = _fetch(
         TEAM_URL, params={"section_id": section_id}, label="team service"
     )
@@ -125,7 +139,7 @@ def get_dashboard():
             }
         }), 200
 
-    # ── 2. Fetch student profiles ────────────────────────────────────
+    # â”€â”€ 2. Fetch student profiles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     profile_data, err = _fetch(
         STUDENT_PROFILE_URL, params={"section_id": section_id}, label="student profile service"
     )
@@ -134,7 +148,7 @@ def get_dashboard():
 
     students = profile_data.get("data", {}).get("students", [])
 
-    # ── 2b. Fetch student form submissions (optional) ────────────────
+    # â”€â”€ 2b. Fetch student form submissions (optional) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     form_submissions_data, err = _fetch(
         STUDENT_FORM_SUBMISSIONS_URL,
         params={"section_id": section_id},
@@ -144,11 +158,11 @@ def get_dashboard():
     if form_submissions_data:
         form_submissions = form_submissions_data.get("data", [])
 
-    # ── 3. Fetch criteria ────────────────────────────────────────────
+    # â”€â”€ 3. Fetch criteria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     criteria_data, err = _fetch(
         CRITERIA_URL, params={"section_id": section_id}, label="criteria service"
     )
-    # Criteria is optional for analytics — proceed even if it fails
+    # Criteria is optional for analytics â€” proceed even if it fails
     criteria = {}
     if criteria_data:
         crit_list = criteria_data.get("data", [])
@@ -157,7 +171,7 @@ def get_dashboard():
         elif isinstance(crit_list, dict):
             criteria = crit_list
 
-    # ── 4. Fetch skill definitions ───────────────────────────────────
+    # â”€â”€ 4. Fetch skill definitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     skill_data, err = _fetch(
         SKILL_URL, params={"section_id": section_id}, label="skill service"
     )
@@ -170,7 +184,7 @@ def get_dashboard():
                 "skill_importance": s.get("skill_importance"),
             })
 
-    # ── 5. Fetch topic definitions ───────────────────────────────────
+    # â”€â”€ 5. Fetch topic definitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     topic_data, err = _fetch(
         TOPIC_URL, params={"section_id": section_id}, label="topic service"
     )
@@ -182,7 +196,7 @@ def get_dashboard():
                 "topic_label": t.get("topic_label"),
             })
 
-    # ── 6. POST to Analytics Service ─────────────────────────────────
+    # â”€â”€ 6. POST to Analytics Service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     analytics_payload = {
         "section_id": section_id,
         "teams": teams,
@@ -207,6 +221,7 @@ def get_dashboard():
     return jsonify(analytics_result), analytics_result.get("code", 200)
 
 
+
 @app.route("/dashboard/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "dashboard-orchestrator-service"}), 200
@@ -214,3 +229,4 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 4003)), debug=True)
+

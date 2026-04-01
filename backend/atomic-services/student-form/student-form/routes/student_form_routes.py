@@ -5,7 +5,7 @@ from ..schemas.student_form_schema import (
     StudentFormResponseSchema,
     StudentFormUpdateSchema,
 )
-from marshmallow import ValidationError
+from marshmallow import ValidationError, fields
 
 student_form_bp = Blueprint('student_form', __name__)
 create_schema = StudentFormCreateSchema()
@@ -119,3 +119,21 @@ def delete_student_form():
         db.session.rollback()
         err_msg = str(e)
         return jsonify({"error": {"code": "SERVER_ERROR", "message": err_msg}}), 500
+
+
+class StudentFormCreateEnvelope(StudentFormCreateSchema):
+    data = fields.List(fields.Nested(StudentFormResponseSchema()))
+
+
+class StudentFormListEnvelope(StudentFormResponseSchema):
+    data = fields.List(fields.Nested(StudentFormResponseSchema()))
+
+
+create_or_update_student_form._openapi_request_schema = StudentFormCreateSchema()
+create_or_update_student_form._openapi_response_schema = StudentFormCreateEnvelope()
+get_student_form._openapi_response_schema = StudentFormListEnvelope()
+get_submitted_forms._openapi_response_schema = StudentFormListEnvelope()
+get_unsubmitted_forms._openapi_response_schema = StudentFormListEnvelope()
+update_student_form_submitted._openapi_request_schema = StudentFormUpdateSchema()
+update_student_form_submitted._openapi_response_schema = StudentFormResponseSchema()
+delete_student_form._openapi_response_schema = StudentFormListEnvelope()

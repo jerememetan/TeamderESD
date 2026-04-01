@@ -93,7 +93,7 @@ Allow the instructor teams page to load persisted backend teams and trigger back
 ### Mapping decisions
 - Frontend `groupId` maps to backend `section_id`
 - The frontend team page first requests persisted teams from `GET /team?section_id=...`
-- The page can trigger backend generation through `GET /team-formation?section_id=...`
+- The page can trigger backend generation through `POST /team-formation` with JSON body `{ "section_id": "..." }`
 - Numeric backend `student_id` memberships are enriched on the frontend using the already-fetched `student-profile` roster
 
 ### UI behavior

@@ -1,9 +1,21 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 """
 Analytics Atomic Service
 
 Accepts a POST payload with teams, student profiles, and formation config.
 Returns per-team metrics and section-wide summary analytics.
-No database, no external calls — pure computation.
+No database, no external calls â€” pure computation.
 """
 
 from flask import Flask, request, jsonify
@@ -13,6 +25,8 @@ from analytics.engine import compute_team_metrics, compute_section_metrics
 
 app = Flask(__name__)
 
+
+register_swagger(app, 'analytics-service')
 
 @app.route("/analytics", methods=["POST"])
 def analyse():
@@ -63,6 +77,7 @@ def analyse():
     }), 200
 
 
+
 @app.route("/analytics/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "analytics-service"}), 200
@@ -70,3 +85,4 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 3014)), debug=True)
+
