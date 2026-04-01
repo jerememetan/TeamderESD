@@ -370,36 +370,7 @@ function Analytics() {
 
       </section>
 
-      <ModuleBlock
-        componentId="MOD-A9"
-        eyebrow="Signal Review"
-        title="Operational Insights"
-      >
-        <div className={styles.insightList}>
-          <div className={styles.insightRow}>
-            <SystemTag tone="success">Stable balance</SystemTag>
-            <p className={styles.insightText}>
-              This console evaluates one teaching group at a time instead of
-              mixing all groups together.
-            </p>
-          </div>
-          <div className={styles.insightRow}>
-            <SystemTag tone="neutral">Live roster</SystemTag>
-            <p className={styles.insightText}>
-              This page now uses student-profile to pull the current roster for{" "}
-              {selectedGroup.code} when the backend is available.
-            </p>
-          </div>
-          <div className={styles.insightRow}>
-            <SystemTag hazard>Next integration</SystemTag>
-            <p className={styles.insightText}>
-              Team membership is still mock-backed. The next backend slice
-              should connect team-formation and team persistence so roster and
-              team assignments come from the same source.
-            </p>
-          </div>
-        </div>
-      </ModuleBlock>
+
     </div>
   );
 }
