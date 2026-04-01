@@ -42,6 +42,7 @@ FORMATION_CONFIG_URL = os.getenv(
     "FORMATION_CONFIG_URL", "http://localhost:4000/formation-config"
 ).rstrip("/")
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team").rstrip("/")
+SECTION_URL = os.getenv("SECTION_URL", "http://localhost:3018/section").rstrip("/")
 STUDENT_FORM_URL = os.getenv("STUDENT_FORM_URL", "http://localhost:3015/student-form").rstrip("/")
 REPUTATION_URL = os.getenv("REPUTATION_URL", "http://localhost:3006/reputation").rstrip("/")
 SOLVER_TIME_LIMIT_S = float(os.getenv("SOLVER_TIME_LIMIT_S", "10"))
@@ -417,6 +418,31 @@ def fetch_formation_config(section_id: str) -> tuple[Optional[Dict[str, Any]], O
     return payload, None
 
 
+def set_section_completed(section_id: str) -> Optional[str]:
+    try:
+        response = http_put(f"{SECTION_URL}/{section_id}", {"stage": "completed"})
+    except requests.RequestException:
+        logger.exception(
+            "failed to call section service (PUT)",
+            extra={"section_id": section_id, "url": SECTION_URL},
+        )
+        return "failed to update section stage"
+
+    payload = safe_json(response)
+    if response.status_code < 200 or response.status_code >= 300:
+        logger.error(
+            "section service PUT returned non-2xx",
+            extra={
+                "section_id": section_id,
+                "status_code": response.status_code,
+                "payload": payload,
+            },
+        )
+        return "failed to update section stage"
+
+    return None
+
+
 register_swagger(app, 'team-formation-service')
 
 @app.route("/health", methods=["GET"])
@@ -465,6 +491,14 @@ def get_team_formation():
                 extra={"section_id": section_id, "url": TEAM_URL},
             )
             return jsonify({"code": 502, "message": "failed to persist teams"}), 502
+
+        if team_response.status_code < 200 or team_response.status_code >= 300:
+            team_payload = safe_json(team_response)
+            return jsonify(team_payload), team_response.status_code
+
+        section_error = set_section_completed(section_id)
+        if section_error is not None:
+            return jsonify({"code": 502, "message": section_error}), 502
 
         team_payload = safe_json(team_response)
         return jsonify(team_payload), team_response.status_code

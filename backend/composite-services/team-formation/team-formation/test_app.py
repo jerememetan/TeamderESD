@@ -29,9 +29,11 @@ class TeamFormationAppTests(unittest.TestCase):
 
     @patch("app.orchestrate_form_submissions_and_reputation")
     @patch("app.solve_teams")
+    @patch("app.requests.put")
+    @patch("app.requests.post")
     @patch("app.requests.get")
     def test_default_success_returns_only_section_and_teams(
-        self, mock_get, mock_solve, mock_orchestrate
+        self, mock_get, mock_post, mock_put, mock_solve, mock_orchestrate
     ):
         mock_get.side_effect = [
             MockResponse(
@@ -56,6 +58,17 @@ class TeamFormationAppTests(unittest.TestCase):
             "solver_stats": {"wall_time_s": 1.0},
             "diagnostics": {"warnings": [], "errors": []},
         }
+        mock_post.return_value = MockResponse(
+            200,
+            {
+                "code": 200,
+                "data": {
+                    "section_id": "sec-1",
+                    "teams": [{"team_index": 1, "student_ids": [1, 2]}],
+                },
+            },
+        )
+        mock_put.return_value = MockResponse(200, {"code": 200})
 
         response = self.client.get("/team-formation?section_id=sec-1")
 
@@ -70,8 +83,12 @@ class TeamFormationAppTests(unittest.TestCase):
 
     @patch("app.orchestrate_form_submissions_and_reputation")
     @patch("app.solve_teams")
+    @patch("app.requests.put")
+    @patch("app.requests.post")
     @patch("app.requests.get")
-    def test_debug_success_includes_extended_fields(self, mock_get, mock_solve, mock_orchestrate):
+    def test_debug_success_includes_extended_fields(
+        self, mock_get, mock_post, mock_put, mock_solve, mock_orchestrate
+    ):
         mock_get.side_effect = [
             MockResponse(
                 200,
@@ -95,6 +112,20 @@ class TeamFormationAppTests(unittest.TestCase):
             "solver_stats": {"wall_time_s": 0.5},
             "diagnostics": {"warnings": [], "errors": []},
         }
+        mock_post.return_value = MockResponse(
+            200,
+            {
+                "code": 200,
+                "data": {
+                    "status": "FEASIBLE",
+                    "num_groups": 1,
+                    "objective": {"total_score": 2},
+                    "solver_stats": {"wall_time_s": 0.5},
+                    "diagnostics": {"warnings": [], "errors": []},
+                },
+            },
+        )
+        mock_put.return_value = MockResponse(200, {"code": 200})
 
         response = self.client.get(
             "/team-formation?section_id=sec-2",
@@ -109,6 +140,88 @@ class TeamFormationAppTests(unittest.TestCase):
         self.assertIn("objective", body["data"])
         self.assertIn("solver_stats", body["data"])
         self.assertIn("diagnostics", body["data"])
+
+    @patch("app.orchestrate_form_submissions_and_reputation")
+    @patch("app.solve_teams")
+    @patch("app.requests.put")
+    @patch("app.requests.post")
+    @patch("app.requests.get")
+    def test_team_persist_non_2xx_does_not_update_section_stage(
+        self, mock_get, mock_post, mock_put, mock_solve, mock_orchestrate
+    ):
+        mock_get.side_effect = [
+            MockResponse(
+                200,
+                {"code": 200, "data": {"section_id": "sec-7", "students": []}},
+            ),
+            MockResponse(
+                200,
+                {"section_id": "sec-7", "criteria": {"num_groups": 1}, "topics": [], "skills": []},
+            ),
+        ]
+        mock_orchestrate.return_value = (
+            {"code": 200, "data": {"section_id": "sec-7", "students": []}},
+            None,
+        )
+        mock_solve.return_value = {
+            "status": "OPTIMAL",
+            "section_id": "sec-7",
+            "num_groups": 1,
+            "teams": [{"team_index": 1, "student_ids": [1]}],
+            "objective": {"total_score": 10},
+            "solver_stats": {"wall_time_s": 0.2},
+            "diagnostics": {"warnings": [], "errors": []},
+        }
+        mock_post.return_value = MockResponse(500, {"code": 500, "message": "persist failed"})
+
+        response = self.client.get("/team-formation?section_id=sec-7")
+
+        self.assertEqual(response.status_code, 500)
+        body = response.get_json()
+        self.assertEqual(body["code"], 500)
+        self.assertEqual(body["message"], "persist failed")
+        mock_put.assert_not_called()
+
+    @patch("app.orchestrate_form_submissions_and_reputation")
+    @patch("app.solve_teams")
+    @patch("app.requests.put")
+    @patch("app.requests.post")
+    @patch("app.requests.get")
+    def test_section_stage_update_failure_returns_502(
+        self, mock_get, mock_post, mock_put, mock_solve, mock_orchestrate
+    ):
+        mock_get.side_effect = [
+            MockResponse(
+                200,
+                {"code": 200, "data": {"section_id": "sec-8", "students": []}},
+            ),
+            MockResponse(
+                200,
+                {"section_id": "sec-8", "criteria": {"num_groups": 1}, "topics": [], "skills": []},
+            ),
+        ]
+        mock_orchestrate.return_value = (
+            {"code": 200, "data": {"section_id": "sec-8", "students": []}},
+            None,
+        )
+        mock_solve.return_value = {
+            "status": "OPTIMAL",
+            "section_id": "sec-8",
+            "num_groups": 1,
+            "teams": [{"team_index": 1, "student_ids": [1]}],
+            "objective": {"total_score": 10},
+            "solver_stats": {"wall_time_s": 0.2},
+            "diagnostics": {"warnings": [], "errors": []},
+        }
+        mock_post.return_value = MockResponse(200, {"code": 200, "data": {"section_id": "sec-8"}})
+        mock_put.return_value = MockResponse(500, {"code": 500, "message": "section update failed"})
+
+        response = self.client.get("/team-formation?section_id=sec-8")
+
+        self.assertEqual(response.status_code, 502)
+        body = response.get_json()
+        self.assertEqual(body["code"], 502)
+        self.assertEqual(body["message"], "failed to update section stage")
 
     @patch("app.orchestrate_form_submissions_and_reputation")
     @patch("app.requests.get")

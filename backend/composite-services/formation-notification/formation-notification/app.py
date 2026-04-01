@@ -19,7 +19,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from amqp_helper import publish_notification_message
-from invoke_http import call_http, extract_data
+from invoke_http import call_http, extract_data, put_section_stage
 from .schemas import (
     FormationNotificationRequestSchema,
     FormationNotificationResponseSchema,
@@ -233,6 +233,15 @@ def _resolve_status_code(created: List[Dict[str, Any]], failed: List[Dict[str, A
     return 207
 
 
+def _should_update_section_stage(created: List[Dict[str, Any]], failed: List[Dict[str, Any]]) -> bool:
+    # Trigger section stage update only when notifications were published
+    # and all non-successes are limited to form creation failures.
+    if not created:
+        return False
+    allowed_failures = {"form creation failed"}
+    return all(row.get("reason") in allowed_failures for row in failed)
+
+
 register_swagger(app, 'formation-notification-service')
 
 @app.route("/health", methods=["GET"])
@@ -407,6 +416,28 @@ def create_formation_notifications():
         )
 
     response_body = _build_response(section_id, created=created, failed=failed)
+
+    if _should_update_section_stage(created=created, failed=failed):
+        section_update_resp = put_section_stage(
+            section_base_url=SECTION_URL,
+            section_id=section_id,
+            stage="setup",
+            timeout=REQUEST_TIMEOUT,
+        )
+        if not section_update_resp["ok"]:
+            logger.error(
+                "section stage update failed",
+                extra={
+                    "section_id": section_id,
+                    "status_code": section_update_resp.get("status_code"),
+                    "error": section_update_resp.get("error"),
+                },
+            )
+            response_body["message"] = "notifications published but failed to update section stage"
+            response_body["section_stage_updated"] = False
+            return jsonify(response_body), 502
+        response_body["section_stage_updated"] = True
+
     status_code = _resolve_status_code(created=created, failed=failed)
     return jsonify(response_body), status_code
 
