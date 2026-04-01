@@ -31,8 +31,8 @@ import { buildDefaultState } from "./logic/buildDefaultState";
 import { normalizeLoadedConfig } from "./logic/normalizeLoadedConfig";
 import { buildSavePayload } from "./logic/payloads";
 import { sendFormLinks } from "./service/notificationService";
-import {fetchCourseByCode} from "../../../services/courseService";
-import {getSectionById} from "../../../services/sectionService";
+import { fetchCourseByCode } from "../../../services/courseService";
+import { getSectionById } from "../../../services/sectionService";
 import { fetchEnrollmentCountBySectionId } from "../../../services/enrollmentService";
 function CreateForm() {
   // takes course Id and Group ID from the params (already configured)
@@ -68,7 +68,7 @@ function CreateForm() {
 
     return { course, frontendGroupId };
   })();
-  
+
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const existingForm = mockForms[resolved.frontendGroupId || ""];
@@ -86,55 +86,54 @@ function CreateForm() {
   const [isPublishingLinks, setIsPublishingLinks] = useState(false);
   const [activePanel, setActivePanel] = useState("parameters");
   const [studentCount, setStudentCount] = useState(0);
-  console.log("SELECTED GROUP",selectedGroup);
-  console.log("SELECTED COURSE",selectedCourse);
-  useEffect(()=>{
-    async function fetchStudentCount(){
+  
+  
+  useEffect(() => {
+    async function fetchStudentCount() {
       try {
         const res = await fetchEnrollmentCountBySectionId(groupId);
         setStudentCount(res);
-      } catch(error){
-        console.log("EnrollmentCountPullFailed:"+ error);
+      } catch (error) {
+        console.log("EnrollmentCountPullFailed:" + error);
       }
     }
+    
     fetchStudentCount();
-  }, [courseId])
+    console.log("STUDENT COUNT", studentCount);
+  }, [groupId]);
 
   useEffect(() => {
-      async function fetchCourse(){
-        
-        try {
-          const course = await fetchCourseByCode(courseId);
-          setSelectedCourse(course);
-        } catch(error){
-          console.log("course not found: " + courseId, error);
-        }
-  
+    async function fetchCourse() {
+      try {
+        const course = await fetchCourseByCode(courseId);
+        setSelectedCourse(course);
+      } catch (error) {
+        console.log("course not found: " + courseId, error);
       }
-      fetchCourse();
-    }, [courseId])
+    }
+    
+    fetchCourse();
+    console.log("SELECTED COURSE", selectedCourse);
+  }, [courseId]);
 
-  useEffect(() =>{
-    async function fetchSection(){
-      try{
+  useEffect(() => {
+    async function fetchSection() {
+      try {
         const section = await getSectionById(groupId);
         setSelectedGroup(section);
-      } catch(error){
-        console.log("section not found:"+ error );
+      } catch (error) {
+        console.log("section not found:" + error);
       }
     }
     fetchSection();
-    }, [selectedCourse])
+    console.log("SELECTED GROUP", selectedGroup);
+  }, [selectedCourse]);
 
-  useEffect(() => {
-    setFormState(defaultState);
-  }, [defaultState]);
 
   useEffect(() => {
     let isMounted = true;
     // loads config
     async function loadConfig() {
-
       if (!selectedCourse || !selectedGroup) {
         return;
       }
@@ -151,7 +150,7 @@ function CreateForm() {
 
       try {
         const response = await fetchFormationConfig(groupId);
-        
+
         if (!isMounted) {
           return;
         }
@@ -185,11 +184,7 @@ function CreateForm() {
     return () => {
       isMounted = false;
     };
-  }, [
-    defaultState,
-    selectedCourse,
-    selectedGroup,
-  ]);
+  }, [defaultState, selectedCourse, selectedGroup]);
   if (!selectedCourse || !selectedGroup) {
     return <div className={styles.notFound}>Loading course...</div>;
   }
@@ -209,7 +204,10 @@ function CreateForm() {
   };
 
   const createClientId = (prefix) => {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+    ) {
       return `${prefix}-${crypto.randomUUID()}`;
     }
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -249,7 +247,7 @@ function CreateForm() {
         {
           id: createClientId("skill"),
           skill_label: "",
-          skill_importance: 0.25,
+          skill_importance: 0.0,
         },
       ],
     }));
@@ -294,17 +292,23 @@ function CreateForm() {
       // prefer actual backend UUIDs returned from the course service
       (selectedCourse && (selectedCourse.id || selectedCourse.course_id)) ||
       // fallback to static mapping
-      getBackendCourseId(courseId) || null;
+      getBackendCourseId(courseId) ||
+      null;
 
     const backendSectionId =
       // prefer actual backend UUID returned from the section service
       (selectedGroup && (selectedGroup.id || selectedGroup.section_id)) ||
       // fallback to static mapping using the frontend group key
-      getBackendSectionId(resolved.frontendGroupId || groupId) || groupId || null;
+      getBackendSectionId(resolved.frontendGroupId || groupId) ||
+      groupId ||
+      null;
 
-    const payload = buildSavePayload(formState, backendCourseId, backendSectionId);
+    const payload = buildSavePayload(
+      formState,
+      backendCourseId,
+      backendSectionId,
+    );
     try {
-
       await saveFormationConfig(payload);
       console.log("SUBMITTED PAYLOAD", payload);
       setLoadSource("backend");
@@ -314,6 +318,7 @@ function CreateForm() {
           : "Group form draft saved to formation-config.",
       );
       return true;
+
     } catch (error) {
       setErrorMessage(`Save failed. ${error.message}`);
       return false;
@@ -340,11 +345,12 @@ function CreateForm() {
           "Unable to save formation-config before notification dispatch.",
         );
       }
-
-      const result = await sendFormLinks({"section_id": groupId});
-      const data = result?.data || {};
+      // just need a JSON of section_id : your actual section id
+      const result = await sendFormLinks({ "section_id": groupId });
+      const data = result || {};
+      console.log("PUBLISH OUTPUT",data);
       setSaveMessage(
-        `Published. Generated ${data.generated_links_count ?? 0} link(s); notification success: ${data.success_count ?? 0}, failure: ${data.failure_count ?? 0}.`,
+        `Published. Generated ${data.summary.total_students ?? 0} link(s); notification success: ${data.summary.success_count ?? 0}, failure: ${data.summary.failure_count ?? 0}.`,
       );
     } catch (error) {
       setErrorMessage(`Publish failed. ${error.message}`);
@@ -409,7 +415,7 @@ function CreateForm() {
               className={styles.input}
             />
           </label>
-          <div className={styles.toggleGrid}>
+          {/* <div className={styles.toggleGrid}>
             <label className={styles.toggle}>
               <input
                 type="checkbox"
@@ -440,7 +446,7 @@ function CreateForm() {
               />{" "}
               <span>Allow buddy requests</span>
             </label>
-          </div>
+          </div> */}
         </div>
       ),
     },
@@ -616,7 +622,8 @@ function CreateForm() {
         <div>
           <p className={chrome.kicker}>[GROUP FORM]</p>
           <h2 className={chrome.title}>
-            {selectedCourse.code} G{selectedGroup.section_number} - {selectedCourse.name}
+            {selectedCourse.code} G{selectedGroup.section_number} -{" "}
+            {selectedCourse.name}
           </h2>
           <p className={chrome.subtitle}>
             Configure the solver inputs for this group using the sidebar
@@ -632,15 +639,13 @@ function CreateForm() {
 
       <div className={styles.statusPanel}>
         <div>
-          <p className={styles.statusLabel}>Integration mapping</p>
-          <p className={styles.statusText}>
-            Frontend group ID <strong>{selectedGroup.id}</strong> maps to
-            backend section_id <strong>{groupId ?? "missing"}</strong>.
+          <p className={styles.statusLabel}>Form Creation</p>
+          <p className={styles.statusText}> Creating form for 
+            <strong> {selectedCourse.code}G{selectedGroup.section_number}</strong>
           </p>
         </div>
-        <p className={styles.summaryMeta}>
-          {studentCount} students
-        </p>
+
+        <p className={styles.summaryMeta}>Total Students: {studentCount} students</p>
       </div>
 
       {errorMessage ? (

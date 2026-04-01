@@ -33,7 +33,6 @@ export async function sendFormLinks(payload) {
     },
     body: JSON.stringify(payload),
   });
-
   return handleResponse(response, "Failed to generate or send form links.");
 }
 

@@ -52,14 +52,14 @@ export const WEIGHT_FIELDS = [
 ];
 
 export const DEFAULT_WEIGHTS = {
-  school_weight: 0.15,
-  year_weight: 0.8,
-  gender_weight: 0.8,
-  gpa_weight: 0.4,
-  reputation_weight: 0.3,
-  mbti_weight: 0.2,
-  buddy_weight: 0.8,
-  topic_weight: 0.65,
-  skill_weight: 1,
-  randomness: 0.1,
+  school_weight: 0.0,
+  year_weight: 0.0,
+  gender_weight: 0.0,
+  gpa_weight: 0.0,
+  reputation_weight: 0.0,
+  mbti_weight: 0.0,
+  buddy_weight: 0.0,
+  topic_weight: 0.0,
+  skill_weight: 0,
+  randomness: 0.0,
 };
