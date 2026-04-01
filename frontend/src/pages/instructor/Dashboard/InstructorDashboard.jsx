@@ -8,31 +8,18 @@ import styles from "./InstructorDashboard.module.css";
 import { useEffect, useState } from "react";
 import { fetchDashboardCoursesWithEnrollments } from "./service/dashboardService";
 
-
 // Instruct Dashboard
 function InstructorDashboard() {
-  // Initiate Courses, loading, total students, swap requests, and groups state
-  const [courses, setCourses] = useState(0);
+  // Dashboard data (returned from composite GET /dashboard)
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [totalStudents, setTotalStudents] = useState(0);
-  const [swapRequest, setSwapRequest] = useState(0); // Placeholder
-  const [group, setGroup] = useState(0);
+  const [error, setError] = useState(null);
   useEffect(() => {
     fetchDashboardCoursesWithEnrollments()
-      .then((dashboardCourses) => {
-        // gets courses, loading, enrolled students, swap requests
-        setCourses(dashboardCourses.totalCourses);
-        setTotalStudents(dashboardCourses.totalStudents);
-        setGroup(dashboardCourses.totalGroups);
-        setSwapRequest(dashboardCourses.pendingSwapRequests);
-        console.log(dashboardCourses);
+      .then((data) => {
+        setDashboardData(data || {});
       })
-      .catch(() => {
-        setCourses(0);
-        setTotalStudents(0);
-        setGroup(0);
-        setSwapRequest(0);
-      })
+      .catch((err) => setError(err?.message || String(err)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -42,10 +29,10 @@ function InstructorDashboard() {
         <div>
           <h2 className={styles.title}>Instructor Dashboard</h2>
         </div>
-        {swapRequest > 0 ? (
+        {dashboardData?.pendingSwapRequests > 0 ? (
           <SystemTag hazard>
-            {swapRequest} swap request
-            {swapRequest > 1 ? "s" : ""} to review
+            {dashboardData?.pendingSwapRequests} swap request
+            {dashboardData?.pendingSwapRequests > 1 ? "s" : ""} to review
           </SystemTag>
         ) : (
           <SystemTag tone="success">Everything looks up to date</SystemTag>
@@ -55,26 +42,36 @@ function InstructorDashboard() {
       <section className={styles.statsGrid}>
         {loading ? (
           <div>Loading stats...</div>
+        ) : error ? (
+          <div className={styles.rosterError}>
+            Dashboard load failed: {error}
+          </div>
         ) : (
           [
             {
               title: "Total Courses",
-              metric: String(courses).padStart(2, "0"),
+              metric: String(dashboardData?.totalCourses ?? 0).padStart(2, "0"),
               accent: "blue",
             },
             {
               title: "Total Groups",
-              metric: String(group).padStart(2, "0"),
+              metric: String(dashboardData?.totalGroups ?? 0).padStart(2, "0"),
               accent: "green",
             },
             {
               title: "Total Students",
-              metric: String(totalStudents).padStart(3, "0"),
+              metric: String(dashboardData?.totalStudents ?? 0).padStart(
+                3,
+                "0",
+              ),
               accent: "blue",
             },
             {
               title: "Total Pending Swaps",
-              metric: String(swapRequest).padStart(2, "0"),
+              metric: String(dashboardData?.pendingSwapRequests ?? 0).padStart(
+                2,
+                "0",
+              ),
               accent: "orange",
             },
           ].map((item, index) => (

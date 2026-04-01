@@ -14,8 +14,12 @@ Orchestrates the instructor team dashboard flow:
 from flask import Flask, request, jsonify
 import requests
 import os
+import json
+from flask_cors import CORS
 
 app = Flask(__name__)
+# Enable CORS for dashboard endpoints to allow frontend origin access
+CORS(app, resources={r"/dashboard*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}})
 
 # ── Upstream service URLs (overridden via docker-compose env) ────────
 
@@ -28,7 +32,12 @@ CRITERIA_URL = os.getenv("CRITERIA_URL", "http://localhost:3004/criteria")
 SKILL_URL = os.getenv("SKILL_URL", "http://localhost:3002/skill")
 TOPIC_URL = os.getenv("TOPIC_URL", "http://localhost:3003/topic")
 ANALYTICS_URL = os.getenv("ANALYTICS_URL", "http://localhost:3014/analytics")
+COURSES_URL = os.getenv("COURSES_URL", "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/")
+# Prefer internal Docker service hostnames when running under compose
+SECTIONS_URL = os.getenv("SECTION_URL", "http://section-service:3018/section")
+ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://enrollment-service:3005/enrollment")
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 8))
+COURSE_SERVICE_INTERNAL = os.getenv("COURSE_SERVICE_INTERNAL", "http://course-service:3017/api/courses")
 
 
 def _fetch(url, params=None, label="service"):
@@ -36,7 +45,19 @@ def _fetch(url, params=None, label="service"):
     try:
         resp = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
-        return resp.json(), None
+        try:
+            return resp.json(), None
+        except ValueError:
+            # Some upstreams (eg. OutSystems) may return JSON with a UTF-8 BOM.
+            # Try decoding with utf-8-sig and parse explicitly.
+            try:
+                text = resp.content.decode("utf-8-sig")
+            except Exception:
+                text = resp.text
+            try:
+                return json.loads(text), None
+            except Exception as exc:
+                return None, f"failed to parse {label} response: {str(exc)}"
     except requests.exceptions.RequestException as e:
         return None, f"failed to fetch {label}: {str(e)}"
 
@@ -44,8 +65,46 @@ def _fetch(url, params=None, label="service"):
 @app.route("/dashboard", methods=["GET"])
 def get_dashboard():
     section_id = request.args.get("section_id")
+    # If no section_id provided, return a global dashboard summary
     if not section_id:
-        return jsonify({"code": 400, "message": "section_id is required"}), 400
+        # Fetch courses, sections, and enrollments and compute totals
+        # Try the configured COURSES_URL (prefer OutSystems). If it fails
+        # or returns unparsable data, fall back to the internal course-service
+        # proxy which itself proxies OutSystems.
+        courses_data, err = _fetch(COURSES_URL, label="courses service")
+        if err or not courses_data:
+            # Attempt internal proxy as a fallback
+            fallback_data, fallback_err = _fetch(COURSE_SERVICE_INTERNAL, label="course-service proxy")
+            if fallback_err or not fallback_data:
+                # return original error if present, else fallback error
+                return jsonify({"code": 502, "message": err or fallback_err}), 502
+            courses_data = fallback_data
+
+        sections_data, err = _fetch(SECTIONS_URL, label="sections service")
+        if err:
+            return jsonify({"code": 502, "message": err}), 502
+
+        enrollments_data, err = _fetch(ENROLLMENT_URL, label="enrollment service")
+        if err:
+            return jsonify({"code": 502, "message": err}), 502
+
+        courses = courses_data.get("data", {}).get("Courses", []) if isinstance(courses_data, dict) else []
+        sections = sections_data.get("data", []) if isinstance(sections_data, dict) else []
+        enrollments = enrollments_data.get("data", []) if isinstance(enrollments_data, dict) else []
+
+        total_courses = len(courses)
+        total_groups = len([s for s in sections if s.get("is_active") is True])
+        total_students = len(enrollments)
+
+        return jsonify({
+            "code": 200,
+            "data": {
+                "totalCourses": total_courses,
+                "totalGroups": total_groups,
+                "totalStudents": total_students,
+                "pendingSwapRequests": 0,
+            },
+        }), 200
 
     # ── 1. Fetch teams ───────────────────────────────────────────────
     team_data, err = _fetch(

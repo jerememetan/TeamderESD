@@ -1,21 +1,21 @@
-import { getDashboardStats } from "../logic/dashboardStats";
-import { fetchAllEnrollments } from "../../../../services/enrollmentService";
-import { fetchAllCourses } from "../../../../services/courseService";
-import { fetchAllSections } from "../../../../services/sectionService";
-// Gets courses via http://127.0.0.1:3017/api/courses
-// Gets section via http://127.0.0.1:3018/section
-// gets enrollment via http://localhost:3005/enrollment
-// gets swapRequests via http://localhost:3011/swap-request
+const DASHBOARD_URL =
+  import.meta.env.VITE_DASHBOARD_URL ?? "http://localhost:4003/dashboard";
 
 export async function fetchDashboardCoursesWithEnrollments() {
-  // Fetch courses, sections, and enrollments, then build the dashboard structure
-  // fetch all relevant information from the api, get the json data
+  const res = await fetch(DASHBOARD_URL, {
+    headers: { Accept: "application/json" },
+  });
+  const payload = await res.json().catch(() => ({}));
+  // If the composite returned a top-level data object with totals, use it.
+  if (payload && payload.data) {
+    return payload.data;
+  }
 
-  const courseArr = await fetchAllCourses();
-  const sectionArr = await fetchAllSections();
-  const enrollments = await fetchAllEnrollments();
-  // const swapRequestRes = [await fetch("http://localhost:3011/swap-request");]
-  // const swapRequest = swapRequestRes.json();
-  // const swapArr = swapRequest.data?.Courses || [];
-  return getDashboardStats(courseArr, sectionArr, enrollments, []);
+  // Fallback: return empty totals
+  return {
+    totalCourses: 0,
+    totalGroups: 0,
+    totalStudents: 0,
+    pendingSwapRequests: 0,
+  };
 }

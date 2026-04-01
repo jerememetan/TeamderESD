@@ -1,4 +1,4 @@
-const TEAM_URL = import.meta.env.VITE_TEAM_URL ?? 'http://localhost:3007/team';
+const TEAM_URL = import.meta.env.VITE_TEAM_URL ?? 'http://localhost:4002/teams';
 
 async function parseJson(response) {
   const text = await response.text();
