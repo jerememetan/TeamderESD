@@ -76,3 +76,19 @@ def call_http(
         "error": None,
         "error_type": None,
     }
+
+
+def put_section_stage(
+    section_base_url: str,
+    section_id: str,
+    stage: str,
+    timeout: float,
+) -> Dict[str, Any]:
+    section_url = f"{section_base_url.rstrip('/')}/{section_id}"
+    return call_http(
+        method="PUT",
+        url=section_url,
+        payload={"stage": stage},
+        timeout=timeout,
+        expected_statuses={200},
+    )

@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 import json
 import os
 import time
@@ -1178,6 +1190,8 @@ def _ensure_schema_initialized():
         return {"status": 500, "message": f"failed to initialize orchestrator schema: {str(error)}"}
 
 
+register_swagger(app, 'swap-orchestrator-service')
+
 @app.before_request
 def _bootstrap_schema():
     error = _ensure_schema_initialized()
@@ -1186,9 +1200,11 @@ def _bootstrap_schema():
     return None
 
 
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "swap-orchestrator-service"}), 200
+
 
 
 @app.route("/swap-orchestrator/cycles", methods=["POST"])
@@ -1277,6 +1293,7 @@ def create_cycle():
     )
 
 
+
 @app.route("/swap-orchestrator/cycles", methods=["GET"])
 def list_cycles():
     section_id = request.args.get("section_id")
@@ -1302,6 +1319,7 @@ def list_cycles():
     return jsonify({"code": 200, "data": {"cycles": serialized, "transitions": transitions}}), 200
 
 
+
 @app.route("/swap-orchestrator/cycles/refresh", methods=["POST"])
 def refresh_cycles():
     cycles = SwapCycle.query.filter(SwapCycle.status.in_([CYCLE_STATUS_SCHEDULED, CYCLE_STATUS_OPEN])).all()
@@ -1313,6 +1331,7 @@ def refresh_cycles():
             transitions.append({"cycle_id": str(cycle.cycle_id), "transition": transition})
 
     return jsonify({"code": 200, "data": {"updated": len(transitions), "transitions": transitions}}), 200
+
 
 
 @app.route("/swap-orchestrator/cycles/<uuid:cycle_id>", methods=["GET"])
@@ -1361,6 +1380,7 @@ def get_cycle(cycle_id):
         ),
         200,
     )
+
 
 
 @app.route("/swap-orchestrator/cycles/<uuid:cycle_id>/requests", methods=["POST"])
@@ -1472,6 +1492,7 @@ def submit_swap_request(cycle_id):
     )
 
 
+
 @app.route("/swap-orchestrator/cycles/<uuid:cycle_id>/requests", methods=["GET"])
 def list_cycle_requests(cycle_id):
     cycle = SwapCycle.query.get(cycle_id)
@@ -1519,6 +1540,7 @@ def list_cycle_requests(cycle_id):
         ),
         200,
     )
+
 
 
 @app.route(
@@ -1655,6 +1677,7 @@ def decide_swap_request(cycle_id, swap_request_id):
     )
 
 
+
 @app.route("/swap-orchestrator/cycles/<uuid:cycle_id>/proposal/generate", methods=["POST"])
 def generate_proposal(cycle_id):
     cycle = SwapCycle.query.get(cycle_id)
@@ -1697,6 +1720,7 @@ def generate_proposal(cycle_id):
     return jsonify({"code": 200, "data": {"cycle": _serialize_cycle(cycle), "proposal": proposal_payload}}), 200
 
 
+
 @app.route("/swap-orchestrator/cycles/<uuid:cycle_id>/proposal", methods=["GET"])
 def get_proposal(cycle_id):
     cycle = SwapCycle.query.get(cycle_id)
@@ -1722,6 +1746,7 @@ def get_proposal(cycle_id):
         ),
         200,
     )
+
 
 
 @app.route("/swap-orchestrator/cycles/<uuid:cycle_id>/proposal/confirm", methods=["POST"])
@@ -1867,6 +1892,7 @@ def confirm_proposal(cycle_id):
     )
 
 
+
 @app.route("/swap-orchestrator/cycles/<uuid:cycle_id>/proposal/reject", methods=["POST"])
 def reject_proposal(cycle_id):
     cycle = SwapCycle.query.get(cycle_id)
@@ -1898,6 +1924,7 @@ def reject_proposal(cycle_id):
     db.session.commit()
 
     return jsonify({"code": 200, "data": {"cycle": _serialize_cycle(cycle), "proposal_rejected": True}}), 200
+
 
 
 @app.route("/swap-orchestrator/student-team", methods=["GET"])
@@ -1947,3 +1974,4 @@ if __name__ == "__main__":
     if init_error:
         print(f"Swap orchestrator startup warning: {init_error['message']}")
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "4005")), debug=True)
+

@@ -1,6 +1,10 @@
-flask
+﻿flask
 requests
 python-dotenv
 flask-cors==6.0.0
 pika
+marshmallow
+
+flask-openapi3
+pydantic
 

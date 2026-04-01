@@ -4,7 +4,7 @@ from ..models.competence_model import Competence
 from ..app import db
 from ..schemas.competence_schema import CompetenceBatchSchema, CompetenceCreateSchema, CompetenceResponseSchema
 
-from marshmallow import ValidationError
+from marshmallow import ValidationError, fields
 create_schema = CompetenceCreateSchema()
 response_schema = CompetenceResponseSchema()
 many_response_schema = CompetenceResponseSchema(many=True)
@@ -57,3 +57,18 @@ def get_competences():
         query = query.filter_by(skill_id=skill_id)
     results = query.all()
     return jsonify({"code": 200, "data": many_response_schema.dump(results)}), 200
+
+
+class CompetenceBatchEnvelopeSchema(CompetenceBatchSchema):
+    code = fields.Integer()
+    data = fields.List(fields.Nested(CompetenceResponseSchema()))
+
+
+class CompetenceListEnvelopeSchema(CompetenceResponseSchema):
+    code = fields.Integer()
+    data = fields.List(fields.Nested(CompetenceResponseSchema()))
+
+
+create_competences._openapi_request_schema = CompetenceBatchSchema()
+create_competences._openapi_response_schema = CompetenceBatchEnvelopeSchema()
+get_competences._openapi_response_schema = CompetenceListEnvelopeSchema()

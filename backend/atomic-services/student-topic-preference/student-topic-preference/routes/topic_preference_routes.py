@@ -11,6 +11,19 @@ many_response_schema = TopicPreferenceResponseSchema(many=True)
 
 topic_preference_bp = Blueprint('topic_preference', __name__)
 
+# Envelope schemas for OpenAPI
+from marshmallow import Schema, fields
+
+
+class TopicPreferenceListEnvelopeSchema(Schema):
+    code = fields.Integer()
+    data = fields.List(fields.Nested(TopicPreferenceResponseSchema))
+
+
+class TopicPreferenceCreateEnvelopeSchema(Schema):
+    code = fields.Integer()
+    data = fields.List(fields.Nested(TopicPreferenceResponseSchema))
+
 @topic_preference_bp.route("", methods=["POST"])
 def create_topic_preferences():
     payload = request.get_json()
@@ -55,3 +68,10 @@ def get_topic_preferences():
         query = query.filter_by(topic_id=topic_id)
     results = query.all()
     return jsonify({"code": 200, "data": many_response_schema.dump(results)}), 200
+
+
+# Attach OpenAPI marshmallow schemas to view functions
+create_topic_preferences._openapi_request_schema = TopicPreferenceBatchSchema()
+create_topic_preferences._openapi_response_schema = TopicPreferenceCreateEnvelopeSchema()
+
+get_topic_preferences._openapi_response_schema = TopicPreferenceListEnvelopeSchema()

@@ -2,6 +2,7 @@ from ..schemas.criteria_schema import CriteriaCreateSchema, CriteriaResponseSche
 from flask import Blueprint, request, jsonify
 from ..app import db
 from ..models.criteria_model import Criteria
+from marshmallow import fields
 
 criteria_bp = Blueprint("criteria", __name__)
 create_schema = CriteriaCreateSchema()
@@ -26,6 +27,71 @@ def get_criteria():
      "code": 200,
      "data": many_response_schema.dump(criteria)   
     }), 200
+
+class CriteriaListEnvelopeSchema(CriteriaResponseSchema):
+    code = fields.Integer()
+    data = fields.List(fields.Nested(CriteriaResponseSchema()))
+
+get_criteria._openapi_response_schema = CriteriaListEnvelopeSchema()
+
+
+# OpenAPI annotations for GET /criteria
+get_criteria.__openapi__ = {
+    "summary": "List criteria",
+    "description": "Returns a list of criteria filtered by optional query parameters.",
+    "parameters": [
+        {
+            "name": "section_id",
+            "in": "query",
+            "required": False,
+            "schema": {"type": "string", "format": "uuid"},
+            "description": "UUID of the section to filter by"
+        },
+        {
+            "name": "course_id",
+            "in": "query",
+            "required": False,
+            "schema": {"type": "integer"},
+            "description": "Integer course id to filter by"
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "List of criteria",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "code": {"type": "integer"},
+                            "data": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "section_id": {"type": "string", "format": "uuid"},
+                                        "course_id": {"type": "integer"},
+                                        "num_groups": {"type": "integer"},
+                                        "school_weight": {"type": "number"},
+                                        "year_weight": {"type": "number"},
+                                        "gender_weight": {"type": "number"},
+                                        "gpa_weight": {"type": "number"},
+                                        "reputation_weight": {"type": "number"},
+                                        "mbti_weight": {"type": "number"},
+                                        "buddy_weight": {"type": "number"},
+                                        "topic_weight": {"type": "number"},
+                                        "skill_weight": {"type": "number"},
+                                        "randomness": {"type": "number"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
     
 @criteria_bp.route("", methods=["POST"])
 def create_criteria():
@@ -54,6 +120,69 @@ def create_criteria():
         "code": 201,
         "data": response_schema.dump(criteria)
     }), 201
+
+class CriteriaCreateEnvelopeSchema(CriteriaCreateSchema):
+    code = fields.Integer()
+    data = fields.Nested(CriteriaResponseSchema())
+
+create_criteria._openapi_request_schema = CriteriaCreateSchema()
+create_criteria._openapi_response_schema = CriteriaCreateEnvelopeSchema()
+
+
+# OpenAPI annotations for POST /criteria
+create_criteria.__openapi__ = {
+    "summary": "Create criteria",
+    "description": "Create a new criteria row. Body must follow CriteriaCreateSchema.",
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "required": ["course_id", "section_id", "num_groups"],
+                    "properties": {
+                        "course_id": {"type": "integer"},
+                        "section_id": {"type": "string", "format": "uuid"},
+                        "num_groups": {"type": "integer"},
+                        "school_weight": {"type": "number"},
+                        "year_weight": {"type": "number"},
+                        "gender_weight": {"type": "number"},
+                        "gpa_weight": {"type": "number"},
+                        "reputation_weight": {"type": "number"},
+                        "mbti_weight": {"type": "number"},
+                        "buddy_weight": {"type": "number"},
+                        "topic_weight": {"type": "number"},
+                        "skill_weight": {"type": "number"},
+                        "randomness": {"type": "number"}
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "201": {
+            "description": "Created criteria",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "code": {"type": "integer"},
+                            "data": {
+                                "type": "object",
+                                "properties": {
+                                    "section_id": {"type": "string", "format": "uuid"},
+                                    "course_id": {"type": "integer"},
+                                    "num_groups": {"type": "integer"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @criteria_bp.route("", methods=["PUT"])
 def update_criteria():
@@ -84,3 +213,58 @@ def update_criteria():
         db.session.rollback()
         return jsonify({"code": 500, "error": str(e)}), 500
     
+# OpenAPI annotations for PUT /criteria
+update_criteria.__openapi__ = {
+    "summary": "Update criteria",
+    "description": "Update criteria for a section. `section_id` must be provided as query parameter.",
+    "parameters": [
+        {
+            "name": "section_id",
+            "in": "query",
+            "required": True,
+            "schema": {"type": "string", "format": "uuid"},
+            "description": "Section UUID of the criteria to update"
+        }
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "num_groups": {"type": "integer"},
+                        "school_weight": {"type": "number"},
+                        "year_weight": {"type": "number"},
+                        "gender_weight": {"type": "number"},
+                        "gpa_weight": {"type": "number"},
+                        "reputation_weight": {"type": "number"},
+                        "mbti_weight": {"type": "number"},
+                        "buddy_weight": {"type": "number"},
+                        "topic_weight": {"type": "number"},
+                        "skill_weight": {"type": "number"},
+                        "randomness": {"type": "number"}
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "Updated criteria",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "code": {"type": "integer"},
+                            "data": {"type": "object"}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+update_criteria._openapi_request_schema = CriteriaCreateSchema()
+update_criteria._openapi_response_schema = CriteriaResponseSchema()
