@@ -12,6 +12,7 @@ PAIR_METRIC_SCALE = 1_000
 IMPORTANCE_SCALE = 1_000
 SCORE_DENOMINATOR = WEIGHT_SCALE * CRITERION_SCALE
 EPSILON = 1e-9
+INT32_MAX = 2_147_483_647
 
 CRITERION_KEYS = (
     "buddy_weight",
@@ -53,12 +54,18 @@ def scaled_int(value: float, scale: int) -> int:
 
 
 def derive_seed(seed: Optional[int], section_id: Optional[str]) -> int:
+    def _to_signed_int32(value: int) -> int:
+        normalized = int(value) & 0xFFFFFFFF
+        if normalized > INT32_MAX:
+            normalized -= 0x1_0000_0000
+        return normalized
+
     if seed is not None:
-        return int(seed)
+        return _to_signed_int32(seed)
     if not section_id:
         return 0
     digest = hashlib.sha256(section_id.encode("utf-8")).hexdigest()
-    return int(digest[:8], 16)
+    return _to_signed_int32(int(digest[:8], 16))
 
 
 def parse_solver_config(

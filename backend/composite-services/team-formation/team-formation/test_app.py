@@ -20,7 +20,7 @@ class TeamFormationAppTests(unittest.TestCase):
         self.client = app.test_client()
 
     def test_missing_section_id_returns_400(self):
-        response = self.client.get("/team-formation")
+        response = self.client.post("/team-formation", json={})
 
         self.assertEqual(response.status_code, 400)
         body = response.get_json()
@@ -70,7 +70,7 @@ class TeamFormationAppTests(unittest.TestCase):
         )
         mock_put.return_value = MockResponse(200, {"code": 200})
 
-        response = self.client.get("/team-formation?section_id=sec-1")
+        response = self.client.post("/team-formation", json={"section_id": "sec-1"})
 
         self.assertEqual(response.status_code, 200)
         body = response.get_json()
@@ -127,8 +127,9 @@ class TeamFormationAppTests(unittest.TestCase):
         )
         mock_put.return_value = MockResponse(200, {"code": 200})
 
-        response = self.client.get(
-            "/team-formation?section_id=sec-2",
+        response = self.client.post(
+            "/team-formation",
+            json={"section_id": "sec-2"},
             headers={"X-Debug-Mode": "yes"},
         )
 
@@ -174,7 +175,7 @@ class TeamFormationAppTests(unittest.TestCase):
         }
         mock_post.return_value = MockResponse(500, {"code": 500, "message": "persist failed"})
 
-        response = self.client.get("/team-formation?section_id=sec-7")
+        response = self.client.post("/team-formation", json={"section_id": "sec-7"})
 
         self.assertEqual(response.status_code, 500)
         body = response.get_json()
@@ -216,7 +217,7 @@ class TeamFormationAppTests(unittest.TestCase):
         mock_post.return_value = MockResponse(200, {"code": 200, "data": {"section_id": "sec-8"}})
         mock_put.return_value = MockResponse(500, {"code": 500, "message": "section update failed"})
 
-        response = self.client.get("/team-formation?section_id=sec-8")
+        response = self.client.post("/team-formation", json={"section_id": "sec-8"})
 
         self.assertEqual(response.status_code, 502)
         body = response.get_json()
@@ -229,7 +230,7 @@ class TeamFormationAppTests(unittest.TestCase):
         mock_get.return_value = MockResponse(500, {"message": "fail"})
         mock_orchestrate.return_value = (None, "failed to process forms")
 
-        response = self.client.get("/team-formation?section_id=sec-3")
+        response = self.client.post("/team-formation", json={"section_id": "sec-3"})
 
         self.assertEqual(response.status_code, 502)
         body = response.get_json()
@@ -248,7 +249,7 @@ class TeamFormationAppTests(unittest.TestCase):
         ]
         mock_orchestrate.return_value = (None, "failed to process forms")
 
-        response = self.client.get("/team-formation?section_id=sec-4")
+        response = self.client.post("/team-formation", json={"section_id": "sec-4"})
 
         self.assertEqual(response.status_code, 502)
         body = response.get_json()
@@ -285,7 +286,7 @@ class TeamFormationAppTests(unittest.TestCase):
             "diagnostics": {"errors": ["bad input"], "warnings": []},
         }
 
-        response = self.client.get("/team-formation?section_id=sec-5")
+        response = self.client.post("/team-formation", json={"section_id": "sec-5"})
 
         self.assertEqual(response.status_code, 422)
         body = response.get_json()
@@ -321,8 +322,9 @@ class TeamFormationAppTests(unittest.TestCase):
             "diagnostics": {"errors": [], "warnings": ["no solution"]},
         }
 
-        response = self.client.get(
-            "/team-formation?section_id=sec-6",
+        response = self.client.post(
+            "/team-formation",
+            json={"section_id": "sec-6"},
             headers={"X-Debug-Mode": "true"},
         )
 

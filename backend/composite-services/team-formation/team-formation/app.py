@@ -20,7 +20,12 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from solver import filter_solver_result_for_api, is_solver_success_status, solve_teams
-from schemas import TeamFormationSuccessSchema, ErrorSchema, TeamFormationDebugSchema
+from schemas import (
+    TeamFormationSuccessSchema,
+    TeamFormationRequestSchema,
+    ErrorSchema,
+    TeamFormationDebugSchema,
+)
 
 app = Flask(__name__)
 CORS(
@@ -420,7 +425,7 @@ def fetch_formation_config(section_id: str) -> tuple[Optional[Dict[str, Any]], O
 
 def set_section_completed(section_id: str) -> Optional[str]:
     try:
-        response = http_put(f"{SECTION_URL}/{section_id}", {"stage": "completed"})
+        response = http_put(f"{SECTION_URL}/{section_id}", {"stage": "formed"})
     except requests.RequestException:
         logger.exception(
             "failed to call section service (PUT)",
@@ -451,11 +456,16 @@ def health():
 
 
 
-@app.route("/team-formation", methods=["GET"])
+@app.route("/team-formation", methods=["POST"])
 def get_team_formation():
-    section_id = request.args.get("section_id")
-    if not section_id:
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        payload = {}
+
+    section_id = payload.get("section_id")
+    if not isinstance(section_id, str) or not section_id.strip():
         return jsonify({"code": 400, "message": "section_id is required"}), 400
+    section_id = section_id.strip()
 
     debug = is_debug_mode()
 
@@ -519,6 +529,7 @@ def get_team_formation():
 
 # attach OpenAPI response schemas
 get_team_formation._openapi_response_schema = TeamFormationSuccessSchema
+get_team_formation._openapi_request_schema = TeamFormationRequestSchema
 
 
 if __name__ == "__main__":

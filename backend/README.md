@@ -3,8 +3,8 @@
 This file lists the local HTTP endpoints for the atomic and composite microservices (localhost).
 
 Atomic services
-- student-service: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student/
-- course-service: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course/
+- student-service: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/#/
+- course-service: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/#/
 - skill-service: http://localhost:3002 - /skill (GET/POST), /skill/{id}
 - topic-service: http://localhost:3003 - /topic (GET/POST), /topic/{id}
 - criteria-service: http://localhost:3004 - /criteria (GET/POST/PUT)
@@ -25,7 +25,7 @@ Atomic services
 Composite services
 - formation-config-service: http://localhost:4000 - /formation-config (GET/POST)
 - student-profile-service: http://localhost:4001 - /student-profile (GET)
-- team-formation-service: http://localhost:4002 - /team-formation (GET; orchestrates student-form consumption and reputation updates before solve)
+- team-formation-service: http://localhost:4002 - /team-formation (POST; orchestrates student-form consumption and reputation updates before solve)
 - dashboard-orchestrator-service: http://localhost:4003 - /dashboard, /dashboard/health
 - formation-notification-service: http://localhost:4004 - /formation-notifications, /health
 - swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/*

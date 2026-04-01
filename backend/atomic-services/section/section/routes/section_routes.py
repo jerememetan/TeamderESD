@@ -128,10 +128,6 @@ def update_section(section_id):
 
         db.session.commit()
         return jsonify({"code": 200, "data": response_schema.dump(section)}), 200
-
-
-    update_section._openapi_request_schema = SectionUpdateSchema()
-    update_section._openapi_response_schema = SectionResponseSchema()
     except IntegrityError as error:
         db.session.rollback()
         return jsonify({
@@ -141,6 +137,10 @@ def update_section(section_id):
     except Exception as error:
         db.session.rollback()
         return jsonify({"code": 400, "error": {"message": str(error)}}), 400
+
+
+update_section._openapi_request_schema = SectionUpdateSchema()
+update_section._openapi_response_schema = SectionResponseSchema()
 
 
 @section_bp.route("/<section_id>", methods=["DELETE"])

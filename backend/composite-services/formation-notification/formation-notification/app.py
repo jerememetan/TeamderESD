@@ -20,7 +20,7 @@ from flask_cors import CORS
 
 from amqp_helper import publish_notification_message
 from invoke_http import call_http, extract_data, put_section_stage
-from .schemas import (
+from schemas import (
     FormationNotificationRequestSchema,
     FormationNotificationResponseSchema,
 )
@@ -421,7 +421,7 @@ def create_formation_notifications():
         section_update_resp = put_section_stage(
             section_base_url=SECTION_URL,
             section_id=section_id,
-            stage="setup",
+            stage="collecting",
             timeout=REQUEST_TIMEOUT,
         )
         if not section_update_resp["ok"]:

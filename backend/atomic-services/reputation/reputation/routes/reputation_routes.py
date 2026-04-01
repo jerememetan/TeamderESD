@@ -1,4 +1,8 @@
-from ..schemas.reputation_schema import ReputationCreateSchema, ReputationResponseSchema
+from ..schemas.reputation_schema import (
+    ReputationCreateSchema,
+    ReputationResponseSchema,
+    ReputationUpdateSchema,
+)
 from flask import Blueprint, request, jsonify
 from ..models.reputation_model import Reputation, db
 from marshmallow import ValidationError

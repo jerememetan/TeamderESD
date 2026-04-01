@@ -21,6 +21,10 @@ class TeamFormationSuccessSchema(Schema):
     data = fields.Nested(DataSchema, required=True)
 
 
+class TeamFormationRequestSchema(Schema):
+    section_id = fields.String(required=True)
+
+
 class ErrorSchema(Schema):
     code = fields.Integer(required=True)
     message = fields.String(required=True)

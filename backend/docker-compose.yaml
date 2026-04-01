@@ -227,10 +227,12 @@ services:
       CRITERIA_URL: "http://criteria-service:3004/criteria"
       TOPIC_URL: "http://topic-service:3003/topic"
       SKILL_URL: "http://skill-service:3002/skill"
+      SECTION_URL: "http://section-service:3018/section"
     depends_on:
       - criteria-service
       - topic-service
       - skill-service
+      - section-service
 
   student-profile-service:
     build:
@@ -268,6 +270,7 @@ services:
       STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
       TEAM_URL: "http://team-service:3007/team"
+      SECTION_URL: "http://section-service:3018/section"
       REQUEST_TIMEOUT: 8
       PORT: 4002
     depends_on:

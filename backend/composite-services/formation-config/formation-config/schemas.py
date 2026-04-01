@@ -27,7 +27,7 @@ class SkillSchema(Schema):
 
 
 class FormationRequestSchema(Schema):
-    course_id = fields.UUID(required=True)
+    course_id = fields.Integer(required=True)
     section_id = fields.UUID(required=True)
     criteria = fields.Nested(CriteriaSchema, required=True)
     topics = fields.List(fields.Nested(TopicSchema), required=False)
