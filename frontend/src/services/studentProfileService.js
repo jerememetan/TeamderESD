@@ -26,6 +26,7 @@ async function handleResponse(response, fallbackMessage) {
 }
 
 export async function fetchStudentProfile(sectionId) {
+  console.log("fetching:", sectionId)
   const response = await fetch(
     `${STUDENT_PROFILE_URL}?section_id=${encodeURIComponent(sectionId)}`,
     {

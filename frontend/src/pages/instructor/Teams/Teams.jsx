@@ -575,7 +575,7 @@ function Teams() {
                     ) : null}
                   </div>
                   <p className={styles.teamMeta}>
-                    {team.groupId} :: {team.members.length} members
+                    {team.members.length} members
                   </p>
                   <SystemTag
                     tone={
