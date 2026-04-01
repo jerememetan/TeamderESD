@@ -300,8 +300,9 @@ def create_formation_notifications():
         # No students: probe Section service to give a helpful message
         reason = _determine_empty_section_reason(section_id)
         response = _build_response(section_id, created=[], failed=[])
+        # Return 200 OK with explanatory message when no enrollments found
         response["message"] = reason
-        return jsonify(response), 404
+        return jsonify(response), 200
 
     created: List[Dict[str, Any]] = []
     failed: List[Dict[str, Any]] = []

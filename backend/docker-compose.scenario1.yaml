@@ -222,6 +222,38 @@ services:
       - reputation-service
       - team-service
 
+  formation-notification-service:
+    build:
+      context: ./composite-services/formation-notification
+    container_name: teamder-formation-notification-service
+    ports:
+      - "4004:4004"
+    environment:
+      ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
+      STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
+      STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
+      SECTION_URL: "http://section-service:3018/section"
+      FORM_LINK_URL_TEMPLATE: "http://localhost:5173/student/{student_id}/form/{form_id}"
+      FORM_LINK_SUBJECT: "Action Required: Complete Your Teamder Student Form"
+      FORM_LINK_GENERIC_MESSAGE: "Please complete your Teamder student form using the link provided."
+      FORM_LINK_TEMPLATE_KEY: "student_form_link_v1"
+      RABBITMQ_HOST: "rabbitmq"
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: "guest"
+      RABBITMQ_PASSWORD: "guest"
+      RABBITMQ_VHOST: "/"
+      NOTIFICATION_EXCHANGE: "notification.topic"
+      NOTIFICATION_EXCHANGE_TYPE: "topic"
+      NOTIFICATION_ROUTING_KEY: "notification.email"
+      REQUEST_TIMEOUT: 10
+      PORT: 4004
+    depends_on:
+      - enrollment-service
+      - section-service
+      - student-form-service
+      - student-service
+      - rabbitmq
+
 # RabbitMQ
   rabbitmq:
     image: rabbitmq:3-management

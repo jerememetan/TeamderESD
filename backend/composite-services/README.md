@@ -399,14 +399,14 @@ POST http://localhost:4004/formation-notifications
 Content-Type: application/json
 
 {
-  "section_id": "IS213-2026-01"
+  "section_id": "UUID"
 }
 ```
 
 ### Success Response (201)
 ```json
 {
-  "section_id": "IS213-2026-01",
+  "section_id": "UUID",
   "notifications_created": [
     {
       "student_id": 101,
