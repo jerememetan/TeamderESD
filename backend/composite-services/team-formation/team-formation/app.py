@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 import logging
 import os
 from uuid import uuid4
@@ -8,6 +20,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from solver import filter_solver_result_for_api, is_solver_success_status, solve_teams
+from schemas import TeamFormationSuccessSchema, ErrorSchema, TeamFormationDebugSchema
 
 app = Flask(__name__)
 CORS(
@@ -404,9 +417,12 @@ def fetch_formation_config(section_id: str) -> tuple[Optional[Dict[str, Any]], O
     return payload, None
 
 
+register_swagger(app, 'team-formation-service')
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "team-formation-service"}), 200
+
 
 
 @app.route("/team-formation", methods=["GET"])
@@ -467,5 +483,10 @@ def get_team_formation():
     return jsonify({"code": 422, "message": "team formation could not be generated"}), 422
 
 
+# attach OpenAPI response schemas
+get_team_formation._openapi_response_schema = TeamFormationSuccessSchema
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "4002")), debug=True)
+

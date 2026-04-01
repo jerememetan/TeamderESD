@@ -1,7 +1,10 @@
-flask
+﻿flask
 flask_sqlalchemy
 marshmallow
 python-dotenv
 sqlalchemy
 psycopg2-binary
 ortools
+flask-openapi3
+pydantic
+

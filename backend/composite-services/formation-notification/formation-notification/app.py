@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 import logging
 import os
 import re
@@ -8,6 +20,10 @@ from flask_cors import CORS
 
 from amqp_helper import publish_notification_message
 from invoke_http import call_http, extract_data
+from .schemas import (
+    FormationNotificationRequestSchema,
+    FormationNotificationResponseSchema,
+)
 
 app = Flask(__name__)
 
@@ -217,10 +233,13 @@ def _resolve_status_code(created: List[Dict[str, Any]], failed: List[Dict[str, A
     return 207
 
 
+register_swagger(app, 'formation-notification-service')
+
 @app.route("/health", methods=["GET"])
 def health():
     # Basic health check for the formation-notification composite service.
     return jsonify({"status": "ok", "service": "formation-notification-service"}), 200
+
 
 
 @app.route("/formation-notifications", methods=["POST"])
@@ -392,6 +411,12 @@ def create_formation_notifications():
     return jsonify(response_body), status_code
 
 
+# OpenAPI annotations
+create_formation_notifications._openapi_request_schema = FormationNotificationRequestSchema
+create_formation_notifications._openapi_response_schema = FormationNotificationResponseSchema
+
+
 if __name__ == "__main__":
     # Run for local development. In production the app is run by a WSGI server.
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "4004")), debug=True)
+

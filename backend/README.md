@@ -28,6 +28,14 @@ Composite services
 - team-formation-service: http://localhost:4002 - /team-formation (GET; orchestrates student-form consumption and reputation updates before solve)
 - dashboard-orchestrator-service: http://localhost:4003 - /dashboard, /dashboard/health
 - formation-notification-service: http://localhost:4004 - /formation-notifications, /health
+- swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/*
+
+Swagger docs
+- Per service:
+  - Swagger UI: `http://localhost:<service-port>/docs`
+  - OpenAPI JSON: `http://localhost:<service-port>/openapi.json`
+- Central docs index: http://localhost:4010/docs-index
+- Swagger exposure is config-gated with `ENABLE_SWAGGER` (enabled in local compose files by default).
 
 RabbitMQ management UI: http://localhost:15672 (guest/guest)
 

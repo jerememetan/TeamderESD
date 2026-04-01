@@ -1,3 +1,16 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
+from schemas import StudentProfileResponseSchema
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -249,9 +262,12 @@ def compose_profile(base_profile, details):
     }
 
 
+register_swagger(app, 'student-profile-service')
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "service": "student-profile-service"}), 200
+
 
 
 @app.route("/student-profile", methods=["GET"])
@@ -361,5 +377,10 @@ def get_student_profile():
     return jsonify({"code": 200, "data": {"section_id": section_id, "students": students}}), 200
 
 
+# attach OpenAPI schema for documentation
+get_student_profile._openapi_response_schema = StudentProfileResponseSchema
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "4001")), debug=True)
+

@@ -1,7 +1,20 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import os
+from .schemas import FormationRequestSchema, FormationResponseSchema, FormationGetResponseSchema
 
 
 app = Flask(__name__)
@@ -54,6 +67,8 @@ def downstream_error(service_name, resp, fallback_message):
 CRITERIA_URL = os.getenv("CRITERIA_URL", "http://localhost:3004/criteria")
 TOPIC_URL = os.getenv("TOPIC_URL", "http://localhost:3003/topic")
 SKILL_URL = os.getenv("SKILL_URL", "http://localhost:3002/skill")
+
+register_swagger(app, 'formation-config-service')
 
 @app.route("/formation-config", methods=["POST"])
 def aggregate():
@@ -115,6 +130,12 @@ def aggregate():
 
     return jsonify(results), 200
 
+
+# Attach OpenAPI schemas for swagger_helper
+aggregate._openapi_request_schema = FormationRequestSchema
+aggregate._openapi_response_schema = FormationResponseSchema
+
+
 @app.route("/formation-config", methods=["GET"])
 def aggregate_get():
     section_id = request.args.get("section_id")
@@ -169,5 +190,9 @@ def aggregate_get():
     }
     return jsonify(result), 200
 
+
+aggregate_get._openapi_response_schema = FormationGetResponseSchema
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 4000)), debug=True)
+

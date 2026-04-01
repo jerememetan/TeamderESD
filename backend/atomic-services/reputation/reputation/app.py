@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 from flask import Flask
 from .models.reputation_model import db
 from dotenv import load_dotenv
@@ -11,9 +23,10 @@ def create_app():
     db.init_app(app)
     from .routes.reputation_routes import reputation_bp
     app.register_blueprint(reputation_bp, url_prefix="/reputation")
+    register_swagger(app, 'reputation-service')
     return app
-
 if __name__ == '__main__':
     app = create_app()
     PORT = os.getenv("PORT", 3006)
     app.run(host='0.0.0.0', port=PORT, debug=False)
+

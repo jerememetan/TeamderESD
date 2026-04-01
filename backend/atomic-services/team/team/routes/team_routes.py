@@ -45,6 +45,10 @@ def create_teams():
         }
     }), 201
 
+# OpenAPI annotations
+create_teams._openapi_request_schema = TeamCreateSchema
+create_teams._openapi_response_schema = TeamsBySectionResponseSchema
+
 @team_bp.route("/<uuid:team_id>", methods=["GET"])
 def get_team_by_id(team_id):
     team = Team.query.get(team_id)
@@ -52,6 +56,8 @@ def get_team_by_id(team_id):
         return jsonify({"code": 404, "message": "Team not found"}), 404
     team.students = TeamStudent.query.filter_by(team_id=team.team_id).all()
     return jsonify({"code": 200, "data": response_schema.dump(team)}), 200
+
+get_team_by_id._openapi_response_schema = TeamResponseSchema
 
 @team_bp.route("", methods=["GET"])
 def get_teams_by_section():
@@ -68,3 +74,5 @@ def get_teams_by_section():
             "teams": [response_schema.dump(team) for team in teams]
         }
     }), 200
+
+get_teams_by_section._openapi_response_schema = TeamsBySectionResponseSchema

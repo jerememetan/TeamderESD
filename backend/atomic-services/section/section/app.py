@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -19,10 +31,10 @@ def create_app():
     from .routes.section_routes import section_bp
 
     app.register_blueprint(section_bp, url_prefix="/section")
+    register_swagger(app, 'section-service')
     return app
-
-
 if __name__ == "__main__":
     app = create_app()
     PORT = os.getenv("PORT", 3018)
     app.run(host="0.0.0.0", port=PORT, debug=False)
+

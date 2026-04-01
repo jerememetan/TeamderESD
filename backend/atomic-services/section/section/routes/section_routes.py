@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 section_bp = Blueprint("section", __name__)
 response_schema = SectionResponseSchema()
 many_response_schema = SectionResponseSchema(many=True)
+from marshmallow import Schema, fields
 
 
 @section_bp.route("", methods=["GET"])
@@ -27,6 +28,15 @@ def get_sections():
     return jsonify({"code": 200, "data": many_response_schema.dump(sections)}), 200
 
 
+# OpenAPI envelope schema for list responses
+class SectionListEnvelopeSchema(Schema):
+    code = fields.Integer()
+    data = fields.List(fields.Nested(SectionResponseSchema()))
+
+
+get_sections._openapi_response_schema = SectionListEnvelopeSchema()
+
+
 @section_bp.route("/<section_id>", methods=["GET"])
 def get_section(section_id):
     section = Section.query.filter_by(id=section_id).first()
@@ -34,6 +44,9 @@ def get_section(section_id):
         return jsonify({"code": 404, "error": {"message": "Section not found"}}), 404
 
     return jsonify({"code": 200, "data": response_schema.dump(section)}), 200
+
+
+get_section._openapi_response_schema = SectionResponseSchema()
 
 # input: requires body to have 
 @section_bp.route("", methods=["POST"])
@@ -75,6 +88,26 @@ def create_section():
         return jsonify({"code": 400, "error": {"message": str(error)}}), 400
 
 
+# Request schema for creating/updating a section
+class SectionCreateSchema(Schema):
+    id = fields.UUID(required=False)
+    section_number = fields.Integer(required=True)
+    course_id = fields.Integer(required=True)
+    is_active = fields.Boolean(required=False)
+    stage = fields.String(required=False)
+
+
+class SectionUpdateSchema(Schema):
+    section_number = fields.Integer(required=False)
+    course_id = fields.Integer(required=False)
+    is_active = fields.Boolean(required=False)
+    stage = fields.String(required=False)
+
+
+create_section._openapi_request_schema = SectionCreateSchema()
+create_section._openapi_response_schema = SectionResponseSchema()
+
+
 @section_bp.route("/<section_id>", methods=["PUT"])
 def update_section(section_id):
     section = Section.query.filter_by(id=section_id).first()
@@ -95,6 +128,10 @@ def update_section(section_id):
 
         db.session.commit()
         return jsonify({"code": 200, "data": response_schema.dump(section)}), 200
+
+
+    update_section._openapi_request_schema = SectionUpdateSchema()
+    update_section._openapi_response_schema = SectionResponseSchema()
     except IntegrityError as error:
         db.session.rollback()
         return jsonify({
@@ -115,3 +152,11 @@ def delete_section(section_id):
     db.session.delete(section)
     db.session.commit()
     return jsonify({"code": 200, "data": {"deleted": True, "id": section_id}}), 200
+
+
+class DeleteSectionResponseSchema(Schema):
+    code = fields.Integer()
+    data = fields.Dict()
+
+
+delete_section._openapi_response_schema = DeleteSectionResponseSchema()

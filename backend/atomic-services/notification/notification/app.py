@@ -1,3 +1,15 @@
+﻿from pathlib import Path
+import sys
+
+_SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
+for _candidate in _SWAGGER_PATH_CANDIDATES:
+    if (_candidate / "swagger_helper.py").exists():
+        _candidate_str = str(_candidate)
+        if _candidate_str not in sys.path:
+            sys.path.append(_candidate_str)
+        break
+
+from swagger_helper import register_swagger
 import json
 import logging
 import os
@@ -13,6 +25,7 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pika.exceptions import AMQPConnectionError
+from marshmallow import Schema, fields
 
 load_dotenv()
 
@@ -494,6 +507,68 @@ def _start_consumer_thread_if_enabled(debug_enabled: bool = False) -> None:
     thread.start()
 
 
+register_swagger(app, 'notification-service')
+
+
+# Marshmallow schemas for OpenAPI annotations
+class RecipientSchema(Schema):
+    student_id = fields.Integer(allow_none=True)
+    email = fields.String(required=True)
+    form_url = fields.String(required=True)
+    section_id = fields.UUID(allow_none=True)
+
+
+class SendFormLinksRequestSchema(Schema):
+    recipients = fields.List(fields.Nested(RecipientSchema), required=True)
+
+
+class StatusSchema(Schema):
+    student_id = fields.Integer(allow_none=True)
+    email = fields.String(allow_none=True)
+    delivery_status = fields.String()
+    message = fields.String()
+
+
+class SendFormLinksResponseDataSchema(Schema):
+    success_count = fields.Integer()
+    failure_count = fields.Integer()
+    statuses = fields.List(fields.Nested(StatusSchema))
+
+
+class SendFormLinksEnvelopeSchema(Schema):
+    code = fields.Integer()
+    data = fields.Nested(SendFormLinksResponseDataSchema)
+
+
+class PublishDirectEmailRequestSchema(Schema):
+    to = fields.String(required=True)
+    subject = fields.String(required=True)
+    body = fields.String(required=True)
+    is_html = fields.Boolean()
+    reply_to = fields.String()
+    headers = fields.Dict()
+    metadata = fields.Dict()
+
+
+class PublishDirectEmailResponseSchema(Schema):
+    code = fields.Integer()
+    message = fields.String()
+
+
+class HealthConsumerSchema(Schema):
+    enabled = fields.Boolean()
+    queue = fields.String()
+    routing_keys = fields.List(fields.String())
+    prefetch = fields.Integer()
+
+
+class HealthSchema(Schema):
+    status = fields.String()
+    service = fields.String()
+    consumer = fields.Nested(HealthConsumerSchema)
+    metrics = fields.Dict()
+
+
 @app.route("/health", methods=["GET"])
 def health():
     with _metrics_lock:
@@ -515,6 +590,10 @@ def health():
         ),
         200,
     )
+
+
+    health._openapi_response_schema = HealthSchema()
+
 
 
 @app.route("/notification/send-form-link", methods=["POST"])
@@ -591,6 +670,11 @@ def send_form_links():
     )
 
 
+    send_form_links._openapi_request_schema = SendFormLinksRequestSchema()
+    send_form_links._openapi_response_schema = SendFormLinksEnvelopeSchema()
+
+
+
 @app.route("/notification/publish-email", methods=["POST"])
 def publish_direct_email():
     payload = request.get_json() or {}
@@ -617,7 +701,12 @@ def publish_direct_email():
     return jsonify({"code": 200, "message": "email queued"}), 200
 
 
+publish_direct_email._openapi_request_schema = PublishDirectEmailRequestSchema()
+publish_direct_email._openapi_response_schema = PublishDirectEmailResponseSchema()
+
+
 if __name__ == "__main__":
     debug_enabled = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     _start_consumer_thread_if_enabled(debug_enabled=debug_enabled)
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3016")), debug=debug_enabled)
+

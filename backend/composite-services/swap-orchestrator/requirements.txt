@@ -1,4 +1,4 @@
-flask
+﻿flask
 requests
 python-dotenv
 flask-cors==6.0.0
@@ -6,3 +6,6 @@ flask_sqlalchemy
 sqlalchemy
 psycopg2-binary
 pika
+flask-openapi3
+pydantic
+
