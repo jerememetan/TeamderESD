@@ -29,15 +29,16 @@ import styles from "./CreateForm.module.css";
 import { WEIGHT_FIELDS, DEFAULT_WEIGHTS } from "./logic/weights";
 import { buildDefaultState } from "./logic/buildDefaultState";
 import { normalizeLoadedConfig } from "./logic/normalizeLoadedConfig";
-import { buildSavePayload, buildPublishPayload } from "./logic/payloads";
+import { buildSavePayload } from "./logic/payloads";
 import { sendFormLinks } from "./service/notificationService";
 import {fetchCourseByCode} from "../../../services/courseService";
 import {getSectionById} from "../../../services/sectionService";
+import { fetchEnrollmentCountBySectionId } from "../../../services/enrollmentService";
 function CreateForm() {
   // takes course Id and Group ID from the params (already configured)
   const { courseId, groupId } = useParams();
   // Resolve selected course/group from params. Support frontend codes/ids
-  // (eg. course code 'CS3240' and group id '1-g1') or backend UUIDs in the URL.
+  // fetchEnrollmentCountBySectionId
   const resolved = (() => {
     let course =
       mockCourses.find((c) => c.code === courseId) ||
@@ -67,18 +68,15 @@ function CreateForm() {
 
     return { course, frontendGroupId };
   })();
-
+  
   const [selectedCourse, setSelectedCourse] = useState(null);
-
   const [selectedGroup, setSelectedGroup] = useState(null);
   const existingForm = mockForms[resolved.frontendGroupId || ""];
-  // i think this is linked already?????
 
   const defaultState = useMemo(
     () => buildDefaultState(selectedGroup, existingForm),
     [selectedGroup, existingForm],
   );
-
   const [formState, setFormState] = useState(defaultState);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -87,6 +85,20 @@ function CreateForm() {
   const [saveMessage, setSaveMessage] = useState("");
   const [isPublishingLinks, setIsPublishingLinks] = useState(false);
   const [activePanel, setActivePanel] = useState("parameters");
+  const [studentCount, setStudentCount] = useState(0);
+  console.log("SELECTED GROUP",selectedGroup);
+  console.log("SELECTED COURSE",selectedCourse);
+  useEffect(()=>{
+    async function fetchStudentCount(){
+      try {
+        const res = await fetchEnrollmentCountBySectionId(groupId);
+        setStudentCount(res);
+      } catch(error){
+        console.log("EnrollmentCountPullFailed:"+ error);
+      }
+    }
+    fetchStudentCount();
+  }, [courseId])
 
   useEffect(() => {
       async function fetchCourse(){
@@ -139,7 +151,7 @@ function CreateForm() {
 
       try {
         const response = await fetchFormationConfig(groupId);
-        console.log("EXTRACTED",response);
+        
         if (!isMounted) {
           return;
         }
@@ -179,7 +191,7 @@ function CreateForm() {
     selectedGroup,
   ]);
   if (!selectedCourse || !selectedGroup) {
-    return <div className={styles.notFound}>Course group not found</div>;
+    return <div className={styles.notFound}>Loading course...</div>;
   }
 
   const setStateValue = (field, value) => {
@@ -263,7 +275,7 @@ function CreateForm() {
     const preferredGroupSize = Math.max(2, Number(value) || 2);
     const derivedNumGroups = Math.max(
       1,
-      Math.ceil(selectedGroup.studentsCount / preferredGroupSize),
+      Math.ceil(studentCount / preferredGroupSize),
     );
 
     setFormState((current) => ({
@@ -292,7 +304,7 @@ function CreateForm() {
 
     const payload = buildSavePayload(formState, backendCourseId, backendSectionId);
     try {
-      // console.log("current Save Payload",payload);
+
       await saveFormationConfig(payload);
       console.log("SUBMITTED PAYLOAD", payload);
       setLoadSource("backend");
@@ -329,13 +341,7 @@ function CreateForm() {
         );
       }
 
-      const publishPayload = buildPublishPayload(
-        formState,
-        courseId,
-        groupId,
-      );
-
-      const result = await sendFormLinks(publishPayload);
+      const result = await sendFormLinks({"section_id": groupId});
       const data = result?.data || {};
       setSaveMessage(
         `Published. Generated ${data.generated_links_count ?? 0} link(s); notification success: ${data.success_count ?? 0}, failure: ${data.failure_count ?? 0}.`,
@@ -633,8 +639,7 @@ function CreateForm() {
           </p>
         </div>
         <p className={styles.summaryMeta}>
-          {selectedGroup.studentsCount} students | {selectedGroup.teamsCount}{" "}
-          existing teams
+          {studentCount} students
         </p>
       </div>
 
