@@ -25,6 +25,8 @@ import { getBackendSectionId } from "../../../data/backendIds";
 import { mockCourses, mockTeams } from "../../../data/mockData";
 import { fetchStudentProfile } from "../../../services/studentProfileService";
 import styles from "./Analytics.module.css";
+import { fetchCourseByCode } from "../../../services/courseService";
+import { getSectionById } from "../../../services/sectionService";
 
 function Analytics() {
   const { courseId, groupId } = useParams();
@@ -32,21 +34,56 @@ function Analytics() {
   const [isLoadingRoster, setIsLoadingRoster] = useState(true);
   const [rosterError, setRosterError] = useState("");
 
-  const selectedCourse = mockCourses.find((course) => course.id === courseId);
-  const selectedGroup = selectedCourse?.groups.find(
-    (group) => group.id === groupId,
-  );
+  const [selectedCourse,setSelectedCourse] = useState(null);
+  const [selectedGroup,setSelectedGroup] = useState(null);
   const groupTeams = mockTeams.filter(
     (team) => team.courseId === courseId && team.groupId === groupId,
   );
   const selectedCourseGroups = selectedCourse?.groups ?? [];
   const backendSectionId = getBackendSectionId(groupId || "");
+  useEffect(() =>{
+    async function loadCourse(){
+      if (!groupId){
+        setIsLoadingRoster(false);
+        setRosterError("Missing group ID");
+        return;
+      }
+      setIsLoadingRoster(true);
+      setRosterError("");
+      try {
+        const course = await fetchCourseByCode(courseId);
+        setSelectedCourse(course);
+      } catch(error){
+        console.log("course fetching failed",error);
 
+      }
+    }
+    loadCourse();
+  } ,[courseId, groupId, setSelectedCourse])
+    useEffect(() =>{
+    async function loadGroup(){
+      if (!groupId){
+        setIsLoadingRoster(false);
+        setRosterError("Missing group ID");
+        return;
+      }
+      setIsLoadingRoster(true);
+      setRosterError("");
+      try {
+        const group = await getSectionById(groupId);
+        setSelectedGroup(group);
+      } catch(error){
+        console.log("course fetching failed",error);
+
+      }
+    }
+    loadGroup();
+  }, [groupId, setSelectedGroup])
   useEffect(() => {
     let isMounted = true;
 
     async function loadRoster() {
-      if (!backendSectionId) {
+      if (!groupId) {
         setIsLoadingRoster(false);
         setRosterError("Missing backend section mapping for this group.");
         return;
@@ -56,7 +93,7 @@ function Analytics() {
       setRosterError("");
 
       try {
-        const students = await fetchStudentProfile(backendSectionId);
+        const students = await fetchStudentProfile(groupId);
         if (!isMounted) {
           return;
         }
