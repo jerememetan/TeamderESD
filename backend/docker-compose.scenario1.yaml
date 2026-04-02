@@ -224,7 +224,6 @@ services:
       TOPIC_URL: "http://topic-service:3003/topic"
       SKILL_URL: "http://skill-service:3002/skill"
       SECTION_URL: "http://section-service:3018/section"
-      FRONTEND_ORIGIN: "http://localhost:5173"
     depends_on:
       - criteria-service
       - topic-service
@@ -253,7 +252,6 @@ services:
       REPUTATION_URL: "http://reputation-service:3006/reputation"
       TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
       COMPETENCE_URL: "http://student-competence-service:3008/competence"
-      FRONTEND_ORIGIN: "http://localhost:5173"
     depends_on:
       - enrollment-service
       - student-form-data-service
@@ -285,7 +283,6 @@ services:
       SECTION_URL: "http://section-service:3018/section"
       REQUEST_TIMEOUT: 8
       PORT: 4002
-      FRONTEND_ORIGIN: "http://localhost:5173"
     depends_on:
       - student-profile-service
       - formation-config-service
@@ -337,6 +334,24 @@ services:
       - "4010:4010"
     environment:
       PORT: 4010
+
+  kong-gateway:
+    image: kong:3.8
+    container_name: teamder-kong-gateway
+    restart: unless-stopped
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    volumes:
+      - ./kong/kong.yml:/usr/local/kong/declarative/kong.yml:ro
+    ports:
+      - "8000:8000"
+      - "8001:8001"
 
 # RabbitMQ
   rabbitmq:

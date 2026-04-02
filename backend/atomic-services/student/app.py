@@ -14,7 +14,6 @@ import os
 
 import requests
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 
 
 PORT = int(os.getenv("PORT", "3001"))
@@ -24,7 +23,6 @@ OUTSYSTEMS_BASE_URL = os.getenv(
 )
 
 app = Flask(__name__)
-CORS(app)
 
 
 def proxy_request(path, method="GET", payload=None):

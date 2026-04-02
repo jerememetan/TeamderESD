@@ -17,7 +17,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 
 _p = Path(__file__).resolve()
 # Walk up parents to find composite root (prefer folder containing error_publisher.py
@@ -36,10 +35,6 @@ if str(_COMPOSITE_ROOT) not in sys.path:
 from error_publisher import publish_error_event
 
 app = Flask(__name__)
-CORS(
-    app,
-    resources={r"/student-profile*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}},
-)
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),

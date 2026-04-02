@@ -20,7 +20,6 @@ import pika
 import requests
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint, func, text
 from sqlalchemy.exc import IntegrityError
@@ -29,14 +28,6 @@ from sqlalchemy.exc import IntegrityError
 load_dotenv()
 
 app = Flask(__name__)
-CORS(
-    app,
-    resources={
-        r"/swap-orchestrator*": {
-            "origins": [os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")]
-        }
-    },
-)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SUPABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

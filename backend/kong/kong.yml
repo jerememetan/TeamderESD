@@ -1,0 +1,228 @@
+_format_version: "3.0"
+_transform: true
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - http://localhost:5173
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Authorization
+        - Content-Type
+        - Origin
+        - X-Requested-With
+        - X-Debug-Mode
+      exposed_headers:
+        - Content-Type
+        - Content-Length
+      credentials: true
+      max_age: 3600
+
+services:
+  - name: student-service
+    url: http://student-service:3001
+    routes:
+      - name: student-service-route
+        paths:
+          - /api/students
+        strip_path: false
+
+  - name: course-service
+    url: http://course-service:3017
+    routes:
+      - name: course-service-route
+        paths:
+          - /api/courses
+        strip_path: false
+
+  - name: section-service
+    url: http://section-service:3018
+    routes:
+      - name: section-service-route
+        paths:
+          - /section
+        strip_path: false
+
+  - name: skill-service
+    url: http://skill-service:3002
+    routes:
+      - name: skill-service-route
+        paths:
+          - /skill
+        strip_path: false
+
+  - name: topic-service
+    url: http://topic-service:3003
+    routes:
+      - name: topic-service-route
+        paths:
+          - /topic
+        strip_path: false
+
+  - name: criteria-service
+    url: http://criteria-service:3004
+    routes:
+      - name: criteria-service-route
+        paths:
+          - /criteria
+        strip_path: false
+
+  - name: enrollment-service
+    url: http://enrollment-service:3005
+    routes:
+      - name: enrollment-service-route
+        paths:
+          - /enrollment
+        strip_path: false
+
+  - name: reputation-service
+    url: http://reputation-service:3006
+    routes:
+      - name: reputation-service-route
+        paths:
+          - /reputation
+        strip_path: false
+
+  - name: team-service
+    url: http://team-service:3007
+    routes:
+      - name: team-service-route
+        paths:
+          - /team
+        strip_path: false
+
+  - name: student-competence-service
+    url: http://student-competence-service:3008
+    routes:
+      - name: student-competence-service-route
+        paths:
+          - /competence
+        strip_path: false
+
+  - name: student-topic-preference-service
+    url: http://student-topic-preference-service:3009
+    routes:
+      - name: student-topic-preference-service-route
+        paths:
+          - /topic-preference
+        strip_path: false
+
+  - name: student-form-data-service
+    url: http://student-form-data-service:3010
+    routes:
+      - name: student-form-data-service-route
+        paths:
+          - /form-data
+        strip_path: false
+
+  - name: swap-request-service
+    url: http://swap-request-service:3011
+    routes:
+      - name: swap-request-service-route
+        paths:
+          - /swap-request
+        strip_path: false
+
+  - name: swap-constraints-service
+    url: http://swap-constraints-service:3012
+    routes:
+      - name: swap-constraints-service-route
+        paths:
+          - /swap-constraints
+        strip_path: false
+
+  - name: team-swap-service
+    url: http://team-swap-service:3013
+    routes:
+      - name: team-swap-service-route
+        paths:
+          - /team-swap
+        strip_path: false
+
+  - name: analytics-service
+    url: http://analytics-service:3014
+    routes:
+      - name: analytics-service-route
+        paths:
+          - /analytics
+        strip_path: false
+
+  - name: student-form-service
+    url: http://student-form-service:3015
+    routes:
+      - name: student-form-service-route
+        paths:
+          - /student-form
+        strip_path: false
+
+  - name: notification-service
+    url: http://notification-service:3016
+    routes:
+      - name: notification-service-route
+        paths:
+          - /notification
+        strip_path: false
+
+  - name: error-service
+    url: http://error-service:3019
+    routes:
+      - name: error-service-route
+        paths:
+          - /errors
+        strip_path: false
+
+  - name: formation-config-service
+    url: http://formation-config-service:4000
+    routes:
+      - name: formation-config-service-route
+        paths:
+          - /formation-config
+        strip_path: false
+
+  - name: student-profile-service
+    url: http://student-profile-service:4001
+    routes:
+      - name: student-profile-service-route
+        paths:
+          - /student-profile
+        strip_path: false
+
+  - name: team-formation-service
+    url: http://team-formation-service:4002
+    routes:
+      - name: team-formation-service-route
+        paths:
+          - /team-formation
+        strip_path: false
+
+  - name: dashboard-orchestrator-service
+    url: http://dashboard-orchestrator-service:4003
+    routes:
+      - name: dashboard-orchestrator-service-route
+        paths:
+          - /dashboard
+        strip_path: false
+
+  - name: formation-notification-service
+    url: http://formation-notification-service:4004
+    routes:
+      - name: formation-notification-service-route
+        paths:
+          - /formation-notifications
+        strip_path: false
+
+  - name: swap-orchestrator-service
+    url: http://swap-orchestrator-service:4005
+    routes:
+      - name: swap-orchestrator-service-route
+        paths:
+          - /swap-orchestrator
+        strip_path: false

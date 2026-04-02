@@ -69,31 +69,35 @@ function Teams() {
       (!backendSectionId || request.groupId === backendSectionId),
   );
 
-  useEffect(() =>{
-    async function fetchSection(){
-      try{
-        const section = await getSectionById(backendSectionId);
-        setSelectedGroup(section);
-      } catch(error){
-        console.log("section not found:"+ error );
-      }
-    }
-    fetchSection();
-  }, [selectedCourse])
-
   useEffect(() => {
-    async function fetchCourse(){
-      
-      try {
-        const course = await fetchCourseByCode(courseId);
-        setSelectedCourse(course);
-      } catch(error){
-        console.log("course not found: " + courseId, error);
-      }
+    let isMounted = true;
 
+    async function fetchCourseAndSection() {
+      try {
+        const [course, section] = await Promise.all([
+          fetchCourseByCode(courseId),
+          backendSectionId ? getSectionById(backendSectionId) : Promise.resolve(null),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setSelectedCourse(course);
+        setSelectedGroup(section);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        console.log("course or section not found:", courseId, backendSectionId, error);
+      }
     }
-    fetchCourse();
-  }, [courseId])
+
+    fetchCourseAndSection();
+    return () => {
+      isMounted = false;
+    };
+  }, [courseId, backendSectionId])
 
   useEffect(() => {
     let isMounted = true;

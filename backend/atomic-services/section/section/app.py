@@ -11,7 +11,6 @@ for _candidate in _SWAGGER_PATH_CANDIDATES:
 
 from swagger_helper import register_swagger
 from flask import Flask
-from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 
@@ -24,9 +23,6 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SUPABASE_URL")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
-
-    # Enable CORS for all routes
-    CORS(app)
 
     from .routes.section_routes import section_bp
 

@@ -17,7 +17,6 @@ from typing import Any, Dict, Optional
 
 import requests
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 
 _p = Path(__file__).resolve()
 # Climb ancestors until we find the composite root. Prefer a directory
@@ -44,10 +43,6 @@ from schemas import (
 )
 
 app = Flask(__name__)
-CORS(
-    app,
-    resources={r"/team-formation*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}},
-)
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),

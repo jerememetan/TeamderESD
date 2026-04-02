@@ -4,7 +4,6 @@ import os
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 from sqlalchemy import text
 
 from swagger_helper import register_swagger
@@ -31,7 +30,6 @@ def create_app() -> Flask:
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
-    CORS(app)
 
     with app.app_context():
         if not app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):

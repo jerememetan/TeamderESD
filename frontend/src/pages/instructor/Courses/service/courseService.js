@@ -5,9 +5,11 @@ import { getCoursesStats } from "../logic/getCourseStats"
 import { fetchTeamsBySection} from "../../../../services/teamService";
 
 export async function fetchCourses() {
-  const courseRes = await fetchAllCourses();
-  const sectionArr = await fetchAllSections();
-  const enrollments = await fetchAllEnrollments();
+  const [courseRes, sectionArr, enrollments] = await Promise.all([
+    fetchAllCourses(),
+    fetchAllSections(),
+    fetchAllEnrollments(),
+  ]);
 
   // enrollMap: section_id -> student count
   const enrollMap = enrollments.reduce((acc, e) => {
