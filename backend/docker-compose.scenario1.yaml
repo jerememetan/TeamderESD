@@ -175,6 +175,33 @@ services:
       rabbitmq-setup:
         condition: service_healthy
 
+  error-service:
+    build: ./atomic-services/error
+    container_name: teamder-error-service
+    environment:
+      ENABLE_SWAGGER: "true"
+      PORT: 3019
+      SUPABASE_URL: ${SUPABASE_URL}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_QUEUE_NAME: ${ERROR_QUEUE_NAME:-error.error-log.queue}
+      ERROR_ROUTING_KEYS: ${ERROR_ROUTING_KEYS:-#.error}
+      ERROR_CONSUMER_ENABLED: ${ERROR_CONSUMER_ENABLED:-true}
+      ERROR_CONSUMER_PREFETCH: ${ERROR_CONSUMER_PREFETCH:-10}
+      ERROR_CONSUMER_RETRY_SECONDS: ${ERROR_CONSUMER_RETRY_SECONDS:-3}
+    ports:
+      - "3019:3019"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      rabbitmq-setup:
+        condition: service_healthy
+
   # Composite
 
   formation-config-service:
@@ -185,6 +212,14 @@ services:
       - "4000:4000"
     environment:
       ENABLE_SWAGGER: "true"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
       CRITERIA_URL: "http://criteria-service:3004/criteria"
       TOPIC_URL: "http://topic-service:3003/topic"
       SKILL_URL: "http://skill-service:3002/skill"
@@ -204,6 +239,14 @@ services:
       - "4001:4001"
     environment:
       ENABLE_SWAGGER: "true"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
       OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
@@ -226,6 +269,14 @@ services:
       - "4002:4002"
     environment:
       ENABLE_SWAGGER: "true"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
       STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
       FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
       STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
@@ -250,6 +301,14 @@ services:
       - "4004:4004"
     environment:
       ENABLE_SWAGGER: "true"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
       STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
@@ -258,11 +317,6 @@ services:
       FORM_LINK_SUBJECT: "Action Required: Complete Your Teamder Student Form"
       FORM_LINK_GENERIC_MESSAGE: "Please complete your Teamder student form using the link provided."
       FORM_LINK_TEMPLATE_KEY: "student_form_link_v1"
-      RABBITMQ_HOST: "rabbitmq"
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: "guest"
-      RABBITMQ_PASSWORD: "guest"
-      RABBITMQ_VHOST: "/"
       NOTIFICATION_EXCHANGE: "notification.topic"
       NOTIFICATION_EXCHANGE_TYPE: "topic"
       NOTIFICATION_ROUTING_KEY: "notification.email"

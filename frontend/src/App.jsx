@@ -4,6 +4,7 @@ import Analytics from './pages/instructor/Analytics/Analytics'
 import CreateForm from './pages/instructor/CreateForm/CreateForm'
 import Courses from './pages/instructor/Courses/Courses'
 import InstructorDashboard from './pages/instructor/Dashboard/InstructorDashboard'
+import ErrorLogs from './pages/instructor/ErrorLogs/ErrorLogs'
 import SwapRequests from './pages/instructor/SwapRequests/SwapRequests'
 import Teams from './pages/instructor/Teams/Teams'
 import FillForm from './pages/student/FillForm'
@@ -57,6 +58,10 @@ const router = createBrowserRouter([
       {
         path: 'instructor/swap-requests',
         element: <SwapRequests />,
+      },
+      {
+        path: 'instructor/error-logs',
+        element: <ErrorLogs />,
       },
       {
         path: 'student/form/:formId',

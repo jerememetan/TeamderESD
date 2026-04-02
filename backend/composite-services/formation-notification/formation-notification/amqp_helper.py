@@ -5,6 +5,24 @@ from typing import Any, Dict, Optional, Tuple
 
 import pika
 
+from pathlib import Path
+import sys
+
+_p = Path(__file__).resolve()
+# Walk upward to find the composite root (contains error_publisher.py or is named composite-services).
+_COMPOSITE_ROOT = None
+for ancestor in [_p] + list(_p.parents):
+    candidate = Path(ancestor)
+    if (candidate / "error_publisher.py").exists() or candidate.name == "composite-services":
+        _COMPOSITE_ROOT = candidate
+        break
+if _COMPOSITE_ROOT is None:
+    _COMPOSITE_ROOT = _p.parents[2] if len(_p.parents) > 2 else _p.parent
+if str(_COMPOSITE_ROOT) not in sys.path:
+    sys.path.append(str(_COMPOSITE_ROOT))
+
+from error_publisher import publish_error_event
+
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", os.getenv("RABBIT_HOST", "localhost"))
 RABBITMQ_PORT = int(os.getenv("RABBITMQ_PORT", os.getenv("RABBIT_PORT", "5672")))
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", os.getenv("RABBIT_USER", "guest"))
@@ -16,6 +34,7 @@ NOTIFICATION_EXCHANGE_TYPE = os.getenv("NOTIFICATION_EXCHANGE_TYPE", "topic")
 NOTIFICATION_ROUTING_KEY = os.getenv("NOTIFICATION_ROUTING_KEY", "notification.email")
 AMQP_RETRY_COUNT = int(os.getenv("AMQP_RETRY_COUNT", "3"))
 AMQP_RETRY_WAIT_SECONDS = float(os.getenv("AMQP_RETRY_WAIT_SECONDS", "1.5"))
+SERVICE_NAME = "formation-notification-service"
 
 
 def _connection_parameters() -> pika.ConnectionParameters:
@@ -62,5 +81,15 @@ def publish_notification_message(
         finally:
             if connection and connection.is_open:
                 connection.close()
+
+    publish_error_event(
+        source_service=SERVICE_NAME,
+        downstream_service="rabbitmq",
+        error_code="NOTIFICATION_PUBLISH_FAILED",
+        error_message=last_error or "failed to publish notification",
+        request_context={"routing_key": target_routing_key, "operation": "publish-notification"},
+        response_payload=payload,
+        routing_key=f"{SERVICE_NAME}.error",
+    )
 
     return False, last_error

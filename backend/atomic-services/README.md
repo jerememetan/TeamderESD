@@ -530,6 +530,64 @@ python publish_sample_email.py --to you@example.com --subject "Test" --body "Hel
 ```
 
 See `publish_sample_email.py` and `notification/app.py` for implementation details.
+
+---
+
+## Error Service
+
+- **Base URL:** `/errors` (default port: 3019)
+- **Health:** `GET /health`
+- **Management endpoints:**
+  - `GET /errors` — paginated error log list
+  - `GET /errors/<id>` — single error log
+  - `DELETE /errors/<id>` — soft-delete an error log by marking it `DELETED`
+
+This service is the shared sink for downstream failures published by notification and composite services.
+
+### RabbitMQ topology
+
+- Exchange: `notification.topic` by default — env: `ERROR_EXCHANGE_NAME`
+- Exchange type: `topic` — env: `ERROR_EXCHANGE_TYPE`
+- Durable queue: `error.error-log.queue` — env: `ERROR_QUEUE_NAME`
+- Routing keys: default `#.error` — env: `ERROR_ROUTING_KEYS`
+
+Composite services publish structured error events to the same exchange using:
+
+- `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST`
+- `ERROR_EXCHANGE_NAME`, `ERROR_EXCHANGE_TYPE`, `ERROR_ROUTING_KEY_PREFIX`
+
+The service binds a durable queue to the shared topic exchange and consumes any message whose routing key ends in `.error`.
+
+### Important environment variables
+
+- `PORT`
+- `SUPABASE_URL`
+- `RABBITMQ_HOST` / `RABBIT_HOST`
+- `RABBITMQ_PORT` / `RABBIT_PORT`
+- `RABBITMQ_USER` / `RABBIT_USER`
+- `RABBITMQ_PASSWORD` / `RABBIT_PASSWORD`
+- `RABBITMQ_VHOST` / `RABBIT_VHOST`
+- `ERROR_EXCHANGE_NAME`
+- `ERROR_EXCHANGE_TYPE`
+- `ERROR_QUEUE_NAME`
+- `ERROR_ROUTING_KEYS`
+- `ERROR_CONSUMER_ENABLED`
+- `ERROR_CONSUMER_PREFETCH`
+- `ERROR_CONSUMER_RETRY_SECONDS`
+
+### Message shape
+
+The consumer accepts JSON objects with either of these patterns:
+
+- `error_code`, `error_message`, `correlation_id`, `context_json`
+- `error: { code, message }` plus optional `source_service`, `correlation_id`, `context`, `payload`, and `timestamp`
+
+### Test / run
+
+```bash
+pip install -r error/requirements.txt
+python -m error.app
+```
       - Returns: All student-forms for the section where `submitted=true`.
       - Example:
         ```http
