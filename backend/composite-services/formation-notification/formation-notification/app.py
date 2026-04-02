@@ -18,6 +18,23 @@ from typing import Any, Dict, List, Optional
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+_p = Path(__file__).resolve()
+# Walk up the directory tree to find the composite root. Prefer a parent
+# containing `error_publisher.py` or named `composite-services`. Fall
+# back to the previous heuristic if nothing else is found.
+_COMPOSITE_ROOT = None
+for ancestor in [_p] + list(_p.parents):
+    candidate = Path(ancestor)
+    if (candidate / "error_publisher.py").exists() or candidate.name == "composite-services":
+        _COMPOSITE_ROOT = candidate
+        break
+if _COMPOSITE_ROOT is None:
+    _COMPOSITE_ROOT = _p.parents[2] if len(_p.parents) > 2 else _p.parent
+if str(_COMPOSITE_ROOT) not in sys.path:
+    sys.path.append(str(_COMPOSITE_ROOT))
+
+from error_publisher import publish_error_event
+
 from amqp_helper import publish_notification_message
 from invoke_http import call_http, extract_data, put_section_stage
 from schemas import (
@@ -32,6 +49,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s [formation-notification-service] %(message)s",
 )
 logger = logging.getLogger(__name__)
+SERVICE_NAME = "formation-notification-service"
 
 # Configuration and service endpoints used by this composite
 REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "1000"))
@@ -242,6 +260,26 @@ def _should_update_section_stage(created: List[Dict[str, Any]], failed: List[Dic
     return all(row.get("reason") in allowed_failures for row in failed)
 
 
+def publish_downstream_error(
+    downstream_service: str,
+    error_code: str,
+    error_message: str,
+    *,
+    request_context=None,
+    http_status=None,
+    response_payload=None,
+):
+    publish_error_event(
+        source_service=SERVICE_NAME,
+        downstream_service=downstream_service,
+        error_code=error_code,
+        error_message=error_message,
+        request_context=request_context or {},
+        http_status=http_status,
+        response_payload=response_payload,
+    )
+
+
 register_swagger(app, 'formation-notification-service')
 
 @app.route("/health", methods=["GET"])
@@ -299,6 +337,14 @@ def create_formation_notifications():
             },
         )
         status = 503 if enrollment_resp.get("error_type") in {"timeout", "connection"} else 502
+        publish_downstream_error(
+            "enrollment",
+            "ENROLLMENT_LOOKUP_FAILED",
+            "failed to fetch enrollments",
+            request_context={"section_id": section_id, "operation": "load-enrollments"},
+            http_status=status,
+            response_payload=enrollment_resp,
+        )
         return jsonify(
             {
                 "code": status,
@@ -345,12 +391,27 @@ def create_formation_notifications():
         )
         if not student_resp["ok"]:
             # dependency failure: cannot fetch student details
+            publish_downstream_error(
+                "student",
+                "STUDENT_LOOKUP_FAILED",
+                "student details unavailable",
+                request_context={"section_id": section_id, "student_id": student_id, "operation": "lookup-student"},
+                http_status=student_resp.get("status_code"),
+                response_payload=student_resp,
+            )
             failed.append({"student_id": student_id, "reason": "student details unavailable"})
             continue
 
         email = _extract_student_email(student_resp["payload"])
         if not _is_valid_email(email):
             # missing or invalid email; record as a failed notification
+            publish_downstream_error(
+                "student",
+                "STUDENT_EMAIL_INVALID",
+                "missing email",
+                request_context={"section_id": section_id, "student_id": student_id, "operation": "validate-email"},
+                response_payload=student_resp,
+            )
             failed.append({"student_id": student_id, "reason": "missing email"})
             continue
 
@@ -358,6 +419,12 @@ def create_formation_notifications():
         form_id = _create_form(section_id, student_id)
         if not form_id:
             # dependency failure creating the form
+            publish_downstream_error(
+                "student-form",
+                "STUDENT_FORM_CREATE_FAILED",
+                "form creation failed",
+                request_context={"section_id": section_id, "student_id": student_id, "operation": "create-form"},
+            )
             failed.append({"student_id": student_id, "reason": "form creation failed"})
             continue
 
@@ -402,6 +469,13 @@ def create_formation_notifications():
                     "error": publish_error,
                 },
             )
+            publish_downstream_error(
+                "rabbitmq",
+                "NOTIFICATION_PUBLISH_FAILED",
+                publish_error or "notification publish failed",
+                request_context={"section_id": section_id, "student_id": student_id, "operation": "publish-notification"},
+                response_payload=message_payload,
+            )
             failed.append({"student_id": student_id, "reason": "notification publish failed"})
             continue
 
@@ -432,6 +506,14 @@ def create_formation_notifications():
                     "status_code": section_update_resp.get("status_code"),
                     "error": section_update_resp.get("error"),
                 },
+            )
+            publish_downstream_error(
+                "section",
+                "SECTION_STAGE_UPDATE_FAILED",
+                "failed to update section stage",
+                request_context={"section_id": section_id, "operation": "update-section-stage"},
+                http_status=502,
+                response_payload=section_update_resp,
             )
             response_body["message"] = "notifications published but failed to update section stage"
             response_body["section_stage_updated"] = False

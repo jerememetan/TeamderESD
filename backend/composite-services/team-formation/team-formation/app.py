@@ -19,6 +19,22 @@ import requests
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+_p = Path(__file__).resolve()
+# Climb ancestors until we find the composite root. Prefer a directory
+# that contains `error_publisher.py` or is named `composite-services`.
+_COMPOSITE_ROOT = None
+for ancestor in [_p] + list(_p.parents):
+    candidate = Path(ancestor)
+    if (candidate / "error_publisher.py").exists() or candidate.name == "composite-services":
+        _COMPOSITE_ROOT = candidate
+        break
+if _COMPOSITE_ROOT is None:
+    _COMPOSITE_ROOT = _p.parents[2] if len(_p.parents) > 2 else _p.parent
+if str(_COMPOSITE_ROOT) not in sys.path:
+    sys.path.append(str(_COMPOSITE_ROOT))
+
+from error_publisher import publish_error_event
+
 from solver import filter_solver_result_for_api, is_solver_success_status, solve_teams
 from schemas import (
     TeamFormationSuccessSchema,
@@ -41,6 +57,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger("team-formation-service")
+SERVICE_NAME = "team-formation-service"
 
 REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "8"))
 STUDENT_PROFILE_URL = os.getenv(
@@ -92,6 +109,26 @@ def http_put(url: str, payload: Dict[str, Any]) -> requests.Response:
 
 def http_delete(url: str, params: Optional[Dict[str, Any]] = None) -> requests.Response:
     return requests.delete(url, params=params, timeout=REQUEST_TIMEOUT)
+
+
+def publish_downstream_error(
+    downstream_service: str,
+    error_code: str,
+    error_message: str,
+    *,
+    request_context=None,
+    http_status=None,
+    response_payload=None,
+):
+    publish_error_event(
+        source_service=SERVICE_NAME,
+        downstream_service=downstream_service,
+        error_code=error_code,
+        error_message=error_message,
+        request_context=request_context or {},
+        http_status=http_status,
+        response_payload=response_payload,
+    )
 
 
 def parse_student_id(value: Any) -> Optional[int]:
@@ -149,6 +186,12 @@ def fetch_student_forms(section_id: str) -> tuple[Optional[list[Dict[str, Any]]]
             "failed to call student-form service (GET)",
             extra={"section_id": section_id, "url": STUDENT_FORM_URL},
         )
+        publish_downstream_error(
+            "student-form",
+            "STUDENT_FORM_LOOKUP_UNREACHABLE",
+            "failed to fetch student forms",
+            request_context={"section_id": section_id, "operation": "fetch-student-forms"},
+        )
         return None, "failed to fetch student forms"
 
     payload = safe_json(response)
@@ -160,6 +203,14 @@ def fetch_student_forms(section_id: str) -> tuple[Optional[list[Dict[str, Any]]]
                 "status_code": response.status_code,
                 "payload": payload,
             },
+        )
+        publish_downstream_error(
+            "student-form",
+            "STUDENT_FORM_LOOKUP_FAILED",
+            "failed to fetch student forms",
+            request_context={"section_id": section_id, "operation": "fetch-student-forms"},
+            http_status=response.status_code,
+            response_payload=payload,
         )
         return None, "failed to fetch student forms"
 
@@ -177,6 +228,12 @@ def delete_student_forms(section_id: str) -> Optional[str]:
             "failed to call student-form service (DELETE)",
             extra={"section_id": section_id, "url": STUDENT_FORM_URL},
         )
+        publish_downstream_error(
+            "student-form",
+            "STUDENT_FORM_DELETE_UNREACHABLE",
+            "failed to delete student forms",
+            request_context={"section_id": section_id, "operation": "delete-student-forms"},
+        )
         return "failed to delete student forms"
 
     payload = safe_json(response)
@@ -188,6 +245,14 @@ def delete_student_forms(section_id: str) -> Optional[str]:
                 "status_code": response.status_code,
                 "payload": payload,
             },
+        )
+        publish_downstream_error(
+            "student-form",
+            "STUDENT_FORM_DELETE_FAILED",
+            "failed to delete student forms",
+            request_context={"section_id": section_id, "operation": "delete-student-forms"},
+            http_status=response.status_code,
+            response_payload=payload,
         )
         return "failed to delete student forms"
 
@@ -202,6 +267,12 @@ def initialize_reputation(student_id: int) -> Optional[str]:
             "failed to call reputation service (POST)",
             extra={"student_id": student_id, "url": REPUTATION_URL},
         )
+        publish_downstream_error(
+            "reputation",
+            "REPUTATION_INIT_UNREACHABLE",
+            "failed to initialize reputation",
+            request_context={"student_id": student_id, "operation": "initialize-reputation"},
+        )
         return "failed to initialize reputation"
 
     payload = safe_json(response)
@@ -211,6 +282,14 @@ def initialize_reputation(student_id: int) -> Optional[str]:
     logger.error(
         "reputation service POST returned non-success",
         extra={"student_id": student_id, "status_code": response.status_code, "payload": payload},
+    )
+    publish_downstream_error(
+        "reputation",
+        "REPUTATION_INIT_FAILED",
+        "failed to initialize reputation",
+        request_context={"student_id": student_id, "operation": "initialize-reputation"},
+        http_status=response.status_code,
+        response_payload=payload,
     )
     return "failed to initialize reputation"
 
@@ -226,6 +305,12 @@ def ensure_reputation_exists(student_id: int, known_missing: bool = False) -> Op
             "failed to call reputation service (GET)",
             extra={"student_id": student_id, "url": REPUTATION_URL},
         )
+        publish_downstream_error(
+            "reputation",
+            "REPUTATION_LOOKUP_UNREACHABLE",
+            "failed to fetch reputation",
+            request_context={"student_id": student_id, "operation": "fetch-reputation"},
+        )
         return "failed to fetch reputation"
 
     if response.status_code == 200:
@@ -239,6 +324,14 @@ def ensure_reputation_exists(student_id: int, known_missing: bool = False) -> Op
         "reputation service GET returned non-success",
         extra={"student_id": student_id, "status_code": response.status_code, "payload": payload},
     )
+    publish_downstream_error(
+        "reputation",
+        "REPUTATION_LOOKUP_FAILED",
+        "failed to fetch reputation",
+        request_context={"student_id": student_id, "operation": "fetch-reputation"},
+        http_status=response.status_code,
+        response_payload=payload,
+    )
     return "failed to fetch reputation"
 
 
@@ -249,6 +342,12 @@ def apply_reputation_delta(student_id: int, delta: int) -> Optional[str]:
         logger.exception(
             "failed to call reputation service (PUT)",
             extra={"student_id": student_id, "delta": delta, "url": REPUTATION_URL},
+        )
+        publish_downstream_error(
+            "reputation",
+            "REPUTATION_UPDATE_UNREACHABLE",
+            "failed to update reputation",
+            request_context={"student_id": student_id, "delta": delta, "operation": "update-reputation"},
         )
         return "failed to update reputation"
 
@@ -263,6 +362,12 @@ def apply_reputation_delta(student_id: int, delta: int) -> Optional[str]:
                 "failed to retry reputation update after initialization",
                 extra={"student_id": student_id, "delta": delta, "url": REPUTATION_URL},
             )
+            publish_downstream_error(
+                "reputation",
+                "REPUTATION_UPDATE_UNREACHABLE",
+                "failed to update reputation",
+                request_context={"student_id": student_id, "delta": delta, "operation": "retry-update-reputation"},
+            )
             return "failed to update reputation"
         if retry_response.status_code == 200:
             return None
@@ -276,6 +381,14 @@ def apply_reputation_delta(student_id: int, delta: int) -> Optional[str]:
                 "payload": payload,
             },
         )
+        publish_downstream_error(
+            "reputation",
+            "REPUTATION_UPDATE_FAILED",
+            "failed to update reputation",
+            request_context={"student_id": student_id, "delta": delta, "operation": "retry-update-reputation"},
+            http_status=retry_response.status_code,
+            response_payload=payload,
+        )
         return "failed to update reputation"
 
     if response.status_code != 200:
@@ -288,6 +401,14 @@ def apply_reputation_delta(student_id: int, delta: int) -> Optional[str]:
                 "status_code": response.status_code,
                 "payload": payload,
             },
+        )
+        publish_downstream_error(
+            "reputation",
+            "REPUTATION_UPDATE_FAILED",
+            "failed to update reputation",
+            request_context={"student_id": student_id, "delta": delta, "operation": "update-reputation"},
+            http_status=response.status_code,
+            response_payload=payload,
         )
         return "failed to update reputation"
 
@@ -370,6 +491,12 @@ def fetch_student_profile(section_id: str) -> tuple[Optional[Dict[str, Any]], Op
             "failed to call student-profile service",
             extra={"section_id": section_id, "url": STUDENT_PROFILE_URL},
         )
+        publish_downstream_error(
+            "student-profile",
+            "STUDENT_PROFILE_LOOKUP_UNREACHABLE",
+            "failed to fetch student profile",
+            request_context={"section_id": section_id, "operation": "fetch-student-profile"},
+        )
         return None, "failed to fetch student profile"
 
     payload = safe_json(response)
@@ -381,6 +508,14 @@ def fetch_student_profile(section_id: str) -> tuple[Optional[Dict[str, Any]], Op
                 "status_code": response.status_code,
                 "payload": payload,
             },
+        )
+        publish_downstream_error(
+            "student-profile",
+            "STUDENT_PROFILE_LOOKUP_FAILED",
+            "failed to fetch student profile",
+            request_context={"section_id": section_id, "operation": "fetch-student-profile"},
+            http_status=response.status_code,
+            response_payload=payload,
         )
         return None, "failed to fetch student profile"
 
@@ -402,6 +537,12 @@ def fetch_formation_config(section_id: str) -> tuple[Optional[Dict[str, Any]], O
             "failed to call formation-config service",
             extra={"section_id": section_id, "url": FORMATION_CONFIG_URL},
         )
+        publish_downstream_error(
+            "formation-config",
+            "FORMATION_CONFIG_LOOKUP_UNREACHABLE",
+            "failed to fetch formation config",
+            request_context={"section_id": section_id, "operation": "fetch-formation-config"},
+        )
         return None, "failed to fetch formation config"
 
     payload = safe_json(response)
@@ -413,6 +554,14 @@ def fetch_formation_config(section_id: str) -> tuple[Optional[Dict[str, Any]], O
                 "status_code": response.status_code,
                 "payload": payload,
             },
+        )
+        publish_downstream_error(
+            "formation-config",
+            "FORMATION_CONFIG_LOOKUP_FAILED",
+            "failed to fetch formation config",
+            request_context={"section_id": section_id, "operation": "fetch-formation-config"},
+            http_status=response.status_code,
+            response_payload=payload,
         )
         return None, "failed to fetch formation config"
 
@@ -434,6 +583,12 @@ def set_section_completed(section_id: str) -> Optional[str]:
             "failed to call section service (PUT)",
             extra={"section_id": section_id, "url": SECTION_URL},
         )
+        publish_downstream_error(
+            "section",
+            "SECTION_UPDATE_UNREACHABLE",
+            "failed to update section stage",
+            request_context={"section_id": section_id, "operation": "set-section-completed"},
+        )
         return "failed to update section stage"
 
     payload = safe_json(response)
@@ -445,6 +600,14 @@ def set_section_completed(section_id: str) -> Optional[str]:
                 "status_code": response.status_code,
                 "payload": payload,
             },
+        )
+        publish_downstream_error(
+            "section",
+            "SECTION_UPDATE_FAILED",
+            "failed to update section stage",
+            request_context={"section_id": section_id, "operation": "set-section-completed"},
+            http_status=response.status_code,
+            response_payload=payload,
         )
         return "failed to update section stage"
 
