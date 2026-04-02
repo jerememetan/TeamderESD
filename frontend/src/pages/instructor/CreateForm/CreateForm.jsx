@@ -26,7 +26,14 @@ import {
   saveFormationConfig,
 } from "../../../services/formationConfigService";
 import styles from "./CreateForm.module.css";
-import { WEIGHT_FIELDS, DEFAULT_WEIGHTS } from "./logic/weights";
+import {
+  WEIGHT_FIELDS,
+  clampWeightValue,
+  getNegativeWeightWarning,
+  getWeightDescription,
+  getWeightField,
+  getWeightSliderBounds,
+} from "./logic/weights";
 import { buildDefaultState } from "./logic/buildDefaultState";
 import { normalizeLoadedConfig } from "./logic/normalizeLoadedConfig";
 import { buildSavePayload } from "./logic/payloads";
@@ -194,11 +201,12 @@ function CreateForm() {
   };
 
   const setWeightValue = (weightKey, value) => {
+    const nextValue = clampWeightValue(weightKey, value);
     setFormState((current) => ({
       ...current,
       weights: {
         ...current.weights,
-        [weightKey]: Number(value),
+        [weightKey]: nextValue,
       },
     }));
   };
@@ -269,21 +277,6 @@ function CreateForm() {
     }));
   };
 
-  const handlePreferredGroupSizeChange = (value) => {
-    const preferredGroupSize = Math.max(2, Number(value) || 2);
-    const derivedNumGroups = Math.max(
-      1,
-      Math.ceil(studentCount / preferredGroupSize),
-    );
-
-    setFormState((current) => ({
-      ...current,
-      preferredGroupSize,
-      numGroups: derivedNumGroups,
-      minimumGroupSize: Math.min(current.minimumGroupSize, preferredGroupSize),
-    }));
-  };
-
   const handleSave = async (mode) => {
     setIsSaving(true);
     setSaveMessage("");
@@ -329,10 +322,73 @@ function CreateForm() {
 
   const backendStatusTone =
     loadSource === "backend" ? "success" : errorMessage ? "alert" : "neutral";
-  const activeWeights = WEIGHT_FIELDS.reduce(
-    (sum, field) => sum + Number(formState.weights[field.key] || 0),
-    0,
+  const activeParameterCount = WEIGHT_FIELDS.filter(
+    (field) => Math.abs(Number(formState.weights[field.key] || 0)) > 0.0001,
+  ).length;
+  const priorityWeightFields = WEIGHT_FIELDS.filter(
+    (field) => field.key !== "topic_weight" && field.key !== "skill_weight",
   );
+
+  const renderWeightControl = (weightKey, className = "") => {
+    const field = getWeightField(weightKey);
+    if (!field) {
+      return null;
+    }
+
+    const value = Number(formState.weights[weightKey] || 0);
+    const slider = getWeightSliderBounds(weightKey);
+    const description = getWeightDescription(weightKey, value);
+    const negativeWarning = getNegativeWeightWarning(weightKey, value);
+    const shouldWarnRandomness = weightKey === "randomness" && value > 0.5;
+
+    return (
+      <div
+        key={weightKey}
+        className={`${styles.criterionCard} ${className}`.trim()}
+      >
+        <div className={styles.criterionHeader}>
+          <div>
+            <p className={styles.criterionCode}>{field.label}</p>
+            <p className={styles.helperText}>{field.helper}</p>
+          </div>
+          <SystemTag tone="neutral">{value.toFixed(2)}</SystemTag>
+        </div>
+
+        <input
+          type="range"
+          min={slider.min}
+          max={slider.max}
+          step={slider.step}
+          value={value}
+          onChange={(event) => setWeightValue(weightKey, event.target.value)}
+          className={styles.sliderInput}
+        />
+        <div className={styles.sliderScale}>
+          <span>{slider.min}</span>
+          <span>{slider.max}</span>
+        </div>
+
+        <p className={styles.criterionDescription}>{description}</p>
+
+        {negativeWarning ? (
+          <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+            <AlertTriangle className={styles.warningIcon} />
+            <span>{negativeWarning}</span>
+          </div>
+        ) : null}
+
+        {shouldWarnRandomness ? (
+          <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+            <AlertTriangle className={styles.warningIcon} />
+            <span>
+              Randomness above 0.50 increases exploration in the solver and can
+              increase the time taken to form teams.
+            </span>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   const handlePublish = async () => {
     setIsPublishingLinks(true);
@@ -373,120 +429,63 @@ function CreateForm() {
       metricLabel: "Teams to generate",
       content: (
         <div className={styles.fieldGrid}>
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>Students enrolled</span>
+            <div className={styles.staticValue}>{studentCount}</div>
+          </div>
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Preferred team size</span>
+            <span className={styles.fieldLabel}>Number of groups</span>
             <input
               type="number"
               min="2"
-              value={formState.preferredGroupSize}
-              onChange={(event) =>
-                handlePreferredGroupSizeChange(event.target.value)
-              }
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>Number of teams</span>
-            <input
-              type="number"
-              min="1"
               value={formState.numGroups}
-              onChange={(event) =>
+              onChange={(event) => {
+                const newNumGroups = Math.max(2, Number(event.target.value) || 2);
                 setStateValue(
                   "numGroups",
-                  Math.max(1, Number(event.target.value) || 1),
-                )
-              }
+                  newNumGroups,
+                );
+              }}
               className={styles.input}
             />
           </label>
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>Minimum team size</span>
-            <input
-              type="number"
-              min="2"
-              value={formState.minimumGroupSize}
-              onChange={(event) =>
-                setStateValue(
-                  "minimumGroupSize",
-                  Math.max(2, Number(event.target.value) || 2),
-                )
-              }
-              className={styles.input}
-            />
-          </label>
-          {/* <div className={styles.toggleGrid}>
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                checked={formState.mixGender}
-                onChange={(event) =>
-                  setStateValue("mixGender", event.target.checked)
+          {studentCount > 0 && formState.numGroups > 0 ? (
+            <div className={styles.teamSizeInfo}>
+              {(() => {
+                const baseSize = Math.floor(studentCount / formState.numGroups);
+                const remainder = studentCount % formState.numGroups;
+                if (remainder === 0) {
+                  return (
+                    <p className={styles.infoText}>
+                      <strong>{baseSize}</strong> members per group
+                    </p>
+                  );
                 }
-              />{" "}
-              <span>Balance gender</span>
-            </label>
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                checked={formState.mixYear}
-                onChange={(event) =>
-                  setStateValue("mixYear", event.target.checked)
-                }
-              />{" "}
-              <span>Balance year of study</span>
-            </label>
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                checked={formState.allowBuddy}
-                onChange={(event) =>
-                  setStateValue("allowBuddy", event.target.checked)
-                }
-              />{" "}
-              <span>Allow buddy requests</span>
-            </label>
-          </div> */}
+                return (
+                  <p className={styles.infoText}>
+                    <strong>{baseSize}–{baseSize + 1}</strong> members per group
+                  </p>
+                );
+              })()}
+            </div>
+          ) : null}
         </div>
       ),
     },
     {
       id: "priorities",
       label: "Formation priorities",
-      meta: `${activeWeights.toFixed(2)} total signal`,
+      meta: `${activeParameterCount} parameters active`,
       eyebrow: "Weighting",
       title: "Formation priorities",
       description:
         "Tune how much influence each signal should have during team generation.",
       icon: <SlidersHorizontal className={styles.sectionIcon} />,
-      metric: activeWeights.toFixed(2),
-      metricLabel: "Total weighting signal",
+      metric: activeParameterCount,
+      metricLabel: "Parameters active",
       content: (
         <div className={styles.criteriaList}>
-          {WEIGHT_FIELDS.map((field) => (
-            <div key={field.key} className={styles.criterionCard}>
-              <div className={styles.criterionHeader}>
-                <div>
-                  <p className={styles.criterionCode}>{field.label}</p>
-                  <p className={styles.helperText}>{field.helper}</p>
-                </div>
-                <SystemTag tone="neutral">
-                  {Number(formState.weights[field.key]).toFixed(2)}
-                </SystemTag>
-              </div>
-              <input
-                type="number"
-                min="0"
-                max="1"
-                step="0.05"
-                value={formState.weights[field.key]}
-                onChange={(event) =>
-                  setWeightValue(field.key, event.target.value)
-                }
-                className={styles.input}
-              />
-            </div>
-          ))}
+          {priorityWeightFields.map((field) => renderWeightControl(field.key))}
         </div>
       ),
     },
@@ -508,6 +507,17 @@ function CreateForm() {
       ),
       content: (
         <div className={styles.criteriaList}>
+          {renderWeightControl("topic_weight", styles.fullRow)}
+          {formState.topics.length > 10 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                More than 10 topics are configured. This increases model size
+                and can increase the time taken for team formation.
+              </span>
+            </div>
+          ) : null}
+
           {formState.topics.length ? (
             formState.topics.map((topic, index) => (
               <div key={topic.id} className={styles.criterionCard}>
@@ -535,7 +545,9 @@ function CreateForm() {
               </div>
             ))
           ) : (
-            <p className={styles.emptyState}>No topics added yet.</p>
+            <p className={`${styles.emptyState} ${styles.fullRow}`}>
+              No topics added yet.
+            </p>
           )}
         </div>
       ),
@@ -558,6 +570,17 @@ function CreateForm() {
       ),
       content: (
         <div className={styles.criteriaList}>
+          {renderWeightControl("skill_weight", styles.fullRow)}
+          {formState.skills.length > 10 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                More than 10 skills are configured. This increases model size
+                and can increase the time taken for team formation.
+              </span>
+            </div>
+          ) : null}
+
           {formState.skills.length ? (
             formState.skills.map((skill, index) => (
               <div key={skill.id} className={styles.criterionCard}>
@@ -601,7 +624,9 @@ function CreateForm() {
               </div>
             ))
           ) : (
-            <p className={styles.emptyState}>No skills added yet.</p>
+            <p className={`${styles.emptyState} ${styles.fullRow}`}>
+              No skills added yet.
+            </p>
           )}
         </div>
       ),
