@@ -106,6 +106,21 @@ GET http://localhost:3010/?section_id=22222222-2222-2222-2222-222222222211
 - Errors are returned as `{ "error": "..." }` with appropriate HTTP status codes.
 - The service expects the atomic services to be running and reachable at their configured URLs.
 
+## Shared Error Logging
+
+Composite services publish structured downstream failure events to the shared RabbitMQ error exchange when an atomic dependency is unavailable or returns an unexpected result. The payload includes the failing atomic service, an error code, a message, and request context so the error service can store and display it for troubleshooting.
+
+Each composite service expects these RabbitMQ settings when error publishing is enabled:
+
+- `RABBITMQ_HOST`
+- `RABBITMQ_PORT`
+- `RABBITMQ_USER`
+- `RABBITMQ_PASSWORD`
+- `RABBITMQ_VHOST`
+- `ERROR_EXCHANGE_NAME`
+- `ERROR_EXCHANGE_TYPE`
+- `ERROR_ROUTING_KEY_PREFIX`
+
 ---
 
 # Student Profile Composite Service

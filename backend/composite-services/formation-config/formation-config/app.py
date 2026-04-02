@@ -16,12 +16,30 @@ import requests
 import os
 from schemas import FormationRequestSchema, FormationResponseSchema, FormationGetResponseSchema
 
+_p = Path(__file__).resolve()
+# Walk up to find the composite root directory. Prefer a parent that
+# contains `error_publisher.py` or is named `composite-services`.
+_COMPOSITE_ROOT = None
+for ancestor in [_p] + list(_p.parents):
+    candidate = Path(ancestor)
+    if (candidate / "error_publisher.py").exists() or candidate.name == "composite-services":
+        _COMPOSITE_ROOT = candidate
+        break
+if _COMPOSITE_ROOT is None:
+    _COMPOSITE_ROOT = _p.parents[2] if len(_p.parents) > 2 else _p.parent
+if str(_COMPOSITE_ROOT) not in sys.path:
+    sys.path.append(str(_COMPOSITE_ROOT))
+
+from error_publisher import publish_error_event
+
 
 app = Flask(__name__)
 CORS(
     app,
     resources={r"/formation-config*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}},
 )
+
+SERVICE_NAME = "formation-config-service"
 
 def safe_json(resp):
     try:
@@ -42,6 +60,15 @@ def error_body_preview(resp, limit=300):
 
 def downstream_error(service_name, resp, fallback_message):
     payload = safe_json(resp)
+    publish_error_event(
+        source_service=SERVICE_NAME,
+        downstream_service=service_name,
+        error_code=f"{service_name.upper()}_DOWNSTREAM_ERROR",
+        error_message=fallback_message,
+        http_status=resp.status_code,
+        request_context={"service": service_name, "response_status": resp.status_code},
+        response_payload=payload or error_body_preview(resp),
+    )
     if payload:
         return jsonify(
             {
@@ -91,6 +118,14 @@ def aggregate():
     try:
         resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
     except requests.RequestException:
+        publish_error_event(
+            source_service=SERVICE_NAME,
+            downstream_service="criteria",
+            error_code="CRITERIA_UNREACHABLE",
+            error_message="Unable to reach criteria service",
+            http_status=502,
+            request_context={"section_id": section_id, "operation": "read-existing-criteria"},
+        )
         return jsonify({"error": "Unable to reach criteria service"}), 502
 
     if resp.status_code != 200:
@@ -104,6 +139,14 @@ def aggregate():
         else:
             write_resp = requests.post(CRITERIA_URL, json=criteria_payload)
     except requests.RequestException:
+        publish_error_event(
+            source_service=SERVICE_NAME,
+            downstream_service="criteria",
+            error_code="CRITERIA_WRITE_UNREACHABLE",
+            error_message="Unable to write criteria",
+            http_status=502,
+            request_context={"section_id": section_id, "operation": "write-criteria"},
+        )
         return jsonify({"error": "Unable to write criteria"}), 502
 
     if write_resp.status_code < 200 or write_resp.status_code >= 300:
@@ -115,6 +158,14 @@ def aggregate():
     try:
         topic_delete_resp = requests.delete(TOPIC_URL, params={"section_id": section_id})
     except requests.RequestException:
+        publish_error_event(
+            source_service=SERVICE_NAME,
+            downstream_service="topic",
+            error_code="TOPIC_CLEAR_UNREACHABLE",
+            error_message="Unable to clear topics",
+            http_status=502,
+            request_context={"section_id": section_id, "operation": "clear-topics"},
+        )
         return jsonify({"error": "Unable to clear topics"}), 502
 
     if topic_delete_resp.status_code < 200 or topic_delete_resp.status_code >= 300:
@@ -126,6 +177,14 @@ def aggregate():
         try:
             post_resp = requests.post(TOPIC_URL, json=topic)
         except requests.RequestException:
+            publish_error_event(
+                source_service=SERVICE_NAME,
+                downstream_service="topic",
+                error_code="TOPIC_WRITE_UNREACHABLE",
+                error_message="Unable to save topics",
+                http_status=502,
+                request_context={"section_id": section_id, "operation": "create-topic", "payload": topic},
+            )
             return jsonify({"error": "Unable to save topics"}), 502
 
         if post_resp.status_code < 200 or post_resp.status_code >= 300:
@@ -137,6 +196,14 @@ def aggregate():
     try:
         skill_delete_resp = requests.delete(SKILL_URL, params={"section_id": section_id})
     except requests.RequestException:
+        publish_error_event(
+            source_service=SERVICE_NAME,
+            downstream_service="skill",
+            error_code="SKILL_CLEAR_UNREACHABLE",
+            error_message="Unable to clear skills",
+            http_status=502,
+            request_context={"section_id": section_id, "operation": "clear-skills"},
+        )
         return jsonify({"error": "Unable to clear skills"}), 502
 
     if skill_delete_resp.status_code < 200 or skill_delete_resp.status_code >= 300:
@@ -148,6 +215,14 @@ def aggregate():
         try:
             post_resp = requests.post(SKILL_URL, json=skill)
         except requests.RequestException:
+            publish_error_event(
+                source_service=SERVICE_NAME,
+                downstream_service="skill",
+                error_code="SKILL_WRITE_UNREACHABLE",
+                error_message="Unable to save skills",
+                http_status=502,
+                request_context={"section_id": section_id, "operation": "create-skill", "payload": skill},
+            )
             return jsonify({"error": "Unable to save skills"}), 502
 
         if post_resp.status_code < 200 or post_resp.status_code >= 300:
@@ -172,6 +247,14 @@ def aggregate_get():
     try:
         crit_resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
     except requests.RequestException:
+        publish_error_event(
+            source_service=SERVICE_NAME,
+            downstream_service="criteria",
+            error_code="CRITERIA_FETCH_UNREACHABLE",
+            error_message="Unable to reach criteria service",
+            http_status=502,
+            request_context={"section_id": section_id, "operation": "read-formation-config"},
+        )
         return jsonify({"error": "Unable to reach criteria service"}), 502
     crit_data = None
     course_id = None
@@ -188,6 +271,14 @@ def aggregate_get():
     try:
         topic_resp = requests.get(TOPIC_URL, params={"section_id": section_id})
     except requests.RequestException:
+        publish_error_event(
+            source_service=SERVICE_NAME,
+            downstream_service="topic",
+            error_code="TOPIC_FETCH_UNREACHABLE",
+            error_message="Unable to reach topic service",
+            http_status=502,
+            request_context={"section_id": section_id, "operation": "read-topics"},
+        )
         return jsonify({"error": "Unable to reach topic service"}), 502
     topics = []
     if topic_resp.status_code == 200:
@@ -198,6 +289,14 @@ def aggregate_get():
     try:
         skill_resp = requests.get(SKILL_URL, params={"section_id": section_id})
     except requests.RequestException:
+        publish_error_event(
+            source_service=SERVICE_NAME,
+            downstream_service="skill",
+            error_code="SKILL_FETCH_UNREACHABLE",
+            error_message="Unable to reach skill service",
+            http_status=502,
+            request_context={"section_id": section_id, "operation": "read-skills"},
+        )
         return jsonify({"error": "Unable to reach skill service"}), 502
     skills = []
     if skill_resp.status_code == 200:

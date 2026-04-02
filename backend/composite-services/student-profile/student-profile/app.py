@@ -19,6 +19,22 @@ import requests
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+_p = Path(__file__).resolve()
+# Walk up parents to find composite root (prefer folder containing error_publisher.py
+# or named composite-services). Fall back to the previous heuristic if needed.
+_COMPOSITE_ROOT = None
+for ancestor in [_p] + list(_p.parents):
+    candidate = Path(ancestor)
+    if (candidate / "error_publisher.py").exists() or candidate.name == "composite-services":
+        _COMPOSITE_ROOT = candidate
+        break
+if _COMPOSITE_ROOT is None:
+    _COMPOSITE_ROOT = _p.parents[2] if len(_p.parents) > 2 else _p.parent
+if str(_COMPOSITE_ROOT) not in sys.path:
+    sys.path.append(str(_COMPOSITE_ROOT))
+
+from error_publisher import publish_error_event
+
 app = Flask(__name__)
 CORS(
     app,
@@ -30,6 +46,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger("student-profile-service")
+SERVICE_NAME = "student-profile-service"
 
 REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "8"))
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", "20"))
@@ -69,6 +86,26 @@ def http_get(url, params=None):
 
 def http_post(url, payload=None):
     return requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
+
+
+def publish_downstream_error(
+    downstream_service,
+    error_code,
+    error_message,
+    *,
+    request_context=None,
+    http_status=None,
+    response_payload=None,
+):
+    publish_error_event(
+        source_service=SERVICE_NAME,
+        downstream_service=downstream_service,
+        error_code=error_code,
+        error_message=error_message,
+        request_context=request_context or {},
+        http_status=http_status,
+        response_payload=response_payload,
+    )
 
 
 def normalize_profile(record):
@@ -123,6 +160,14 @@ def load_profiles(student_ids):
             if isinstance(payload, dict)
             else "student profile lookup failed"
         )
+        publish_downstream_error(
+            "student",
+            "STUDENT_BULK_LOOKUP_FAILED",
+            message,
+            request_context={"student_ids": student_ids, "operation": "load-profiles"},
+            http_status=response.status_code,
+            response_payload=payload,
+        )
         return None, message
 
     profiles_by_student_id = {}
@@ -142,6 +187,14 @@ def fetch_form_data(section_id, student_id):
         FORM_DATA_URL, params={"section_id": section_id, "student_id": student_id}
     )
     if response.status_code != 200:
+        publish_downstream_error(
+            "student-form-data",
+            "FORM_DATA_LOOKUP_FAILED",
+            "failed to fetch form data",
+            request_context={"section_id": section_id, "student_id": student_id, "operation": "form-data"},
+            http_status=response.status_code,
+            response_payload=safe_json(response),
+        )
         return None
 
     data = extract_data(safe_json(response))
@@ -151,9 +204,17 @@ def fetch_form_data(section_id, student_id):
     return {"buddy_id": data.get("buddy_id"), "mbti": data.get("mbti")}
 
 
-def fetch_reputation(student_id):
+def fetch_reputation(section_id, student_id):
     response = http_get(f"{REPUTATION_URL}/{student_id}")
     if response.status_code != 200:
+        publish_downstream_error(
+            "reputation",
+            "REPUTATION_LOOKUP_FAILED",
+            "failed to fetch reputation",
+            request_context={"section_id": section_id, "student_id": student_id, "operation": "reputation"},
+            http_status=response.status_code,
+            response_payload=safe_json(response),
+        )
         return None
 
     data = extract_data(safe_json(response))
@@ -170,6 +231,14 @@ def fetch_topic_preferences(section_id, student_id):
         TOPIC_PREFERENCE_URL, params={"section_id": section_id, "student_id": student_id}
     )
     if response.status_code != 200:
+        publish_downstream_error(
+            "student-topic-preference",
+            "TOPIC_PREFERENCE_LOOKUP_FAILED",
+            "failed to fetch topic preferences",
+            request_context={"section_id": section_id, "student_id": student_id, "operation": "topic-preference"},
+            http_status=response.status_code,
+            response_payload=safe_json(response),
+        )
         return None
 
     rows = extract_data(safe_json(response))
@@ -185,6 +254,14 @@ def fetch_competences(section_id, student_id):
         COMPETENCE_URL, params={"section_id": section_id, "student_id": student_id}
     )
     if response.status_code != 200:
+        publish_downstream_error(
+            "student-competence",
+            "COMPETENCE_LOOKUP_FAILED",
+            "failed to fetch competences",
+            request_context={"section_id": section_id, "student_id": student_id, "operation": "competence"},
+            http_status=response.status_code,
+            response_payload=safe_json(response),
+        )
         return None
 
     rows = extract_data(safe_json(response))
@@ -214,7 +291,7 @@ def collect_student_details(section_id, student_id):
 
     fetchers = {
         "form_data": lambda: fetch_form_data(section_id, student_id),
-        "reputation_score": lambda: fetch_reputation(student_id),
+        "reputation_score": lambda: fetch_reputation(section_id, student_id),
         "topic_preferences": lambda: fetch_topic_preferences(section_id, student_id),
         "competences": lambda: fetch_competences(section_id, student_id),
     }
@@ -233,6 +310,12 @@ def collect_student_details(section_id, student_id):
                         "section_id": section_id,
                         "student_id": student_id,
                     },
+                )
+                publish_downstream_error(
+                    key,
+                    f"{str(key).upper()}_FETCH_FAILED",
+                    "downstream fetch failed",
+                    request_context={"section_id": section_id, "student_id": student_id, "operation": key},
                 )
                 continue
 
@@ -280,6 +363,12 @@ def get_student_profile():
         enrollment_response = http_get(ENROLLMENT_URL, params={"section_id": section_id})
     except requests.RequestException:
         logger.exception("failed to call enrollment service", extra={"section_id": section_id})
+        publish_downstream_error(
+            "enrollment",
+            "ENROLLMENT_LOOKUP_UNREACHABLE",
+            "failed to fetch enrollments",
+            request_context={"section_id": section_id, "operation": "load-enrollments"},
+        )
         return jsonify({"code": 502, "message": "failed to fetch enrollments"}), 502
 
     enrollment_payload = safe_json(enrollment_response)
@@ -291,6 +380,14 @@ def get_student_profile():
                 "status_code": enrollment_response.status_code,
                 "payload": enrollment_payload,
             },
+        )
+        publish_downstream_error(
+            "enrollment",
+            "ENROLLMENT_LOOKUP_FAILED",
+            "failed to fetch enrollments",
+            request_context={"section_id": section_id, "operation": "load-enrollments"},
+            http_status=enrollment_response.status_code,
+            response_payload=enrollment_payload,
         )
         return jsonify({"code": 502, "message": "failed to fetch enrollments"}), 502
 
@@ -319,6 +416,12 @@ def get_student_profile():
             "failed to call OutSystems student bulk endpoint",
             extra={"section_id": section_id, "url": STUDENT_BULK_URL},
         )
+        publish_downstream_error(
+            "student",
+            "STUDENT_BULK_LOOKUP_UNREACHABLE",
+            "failed to fetch student profiles",
+            request_context={"section_id": section_id, "operation": "bulk-student-profiles"},
+        )
         return jsonify({"code": 502, "message": "failed to fetch student profiles"}), 502
 
     if profiles_by_student_id is None:
@@ -329,6 +432,13 @@ def get_student_profile():
                 "error": profile_error,
                 "url": STUDENT_BULK_URL,
             },
+        )
+        publish_downstream_error(
+            "student",
+            "STUDENT_BULK_LOOKUP_FAILED",
+            "failed to fetch student profiles",
+            request_context={"section_id": section_id, "operation": "bulk-student-profiles"},
+            response_payload={"error": profile_error},
         )
         return jsonify({"code": 502, "message": "failed to fetch student profiles"}), 502
 

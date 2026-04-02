@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { AlertCircle, BookOpen } from "lucide-react";
+import { AlertCircle, AlertTriangle, BookOpen } from "lucide-react";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
@@ -98,6 +98,12 @@ function InstructorDashboard() {
             title: "View Courses",
             text: "Open your course list to manage groups, forms, and teams.",
           },
+              {
+                to: "/instructor/error-logs",
+                icon: <AlertTriangle className={styles.actionIconAlert} />,
+                title: "Inspect Error Logs",
+                text: "Review RabbitMQ error events and remove logs after triage.",
+              },
           {
             to: "/instructor/swap-requests",
             icon: <AlertCircle className={styles.actionIconAlert} />,

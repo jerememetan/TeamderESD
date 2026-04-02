@@ -21,6 +21,7 @@ Atomic services
 - student-form-service: http://localhost:3015 - /student-form
 - notification-service: http://localhost:3016 - /health, /notification/send-form-link, /notification/publish-email
 - section-service: http://localhost:3018 - /section (GET/POST/PUT/DELETE), /section/{id}
+- error-service: http://localhost:3019 - /errors (GET, GET /errors/<id>, DELETE /errors/<id>)
 
 Composite services
 - formation-config-service: http://localhost:4000 - /formation-config (GET/POST)
@@ -29,6 +30,11 @@ Composite services
 - dashboard-orchestrator-service: http://localhost:4003 - /dashboard, /dashboard/health
 - formation-notification-service: http://localhost:4004 - /formation-notifications, /health
 - swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/*
+
+Shared error logging
+- Error service: http://localhost:3019 - /errors (GET, GET /errors/<id>, DELETE /errors/<id>)
+- Composite services publish structured downstream failures to RabbitMQ using `ERROR_EXCHANGE_NAME`, `ERROR_EXCHANGE_TYPE`, and `ERROR_ROUTING_KEY_PREFIX`.
+- The error service consumes `*.error` routing keys and stores the resulting log entries for the frontend error-log view.
 
 Swagger docs
 - Per service:
