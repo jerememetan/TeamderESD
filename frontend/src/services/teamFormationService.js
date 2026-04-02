@@ -1,32 +1,10 @@
+import { fetchJson, invalidateFetchCache } from './httpClient';
+
 const TEAM_FORMATION_URL =
-  import.meta.env.VITE_TEAM_FORMATION_URL ?? 'http://localhost:4002/team-formation';
-
-async function parseJson(response) {
-  const text = await response.text();
-  if (!text) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { raw: text };
-  }
-}
-
-async function handleResponse(response, fallbackMessage) {
-  const payload = await parseJson(response);
-
-  if (!response.ok) {
-    const message = payload.error || payload.message || fallbackMessage;
-    throw new Error(message);
-  }
-
-  return payload;
-}
+  import.meta.env.VITE_TEAM_FORMATION_URL ?? 'http://localhost:8000/team-formation';
 
 export async function generateTeamsForSection(sectionId) {
-  const response = await fetch(TEAM_FORMATION_URL, {
+  const payload = await fetchJson(TEAM_FORMATION_URL, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -35,6 +13,6 @@ export async function generateTeamsForSection(sectionId) {
     body: JSON.stringify({ section_id: sectionId }),
   });
 
-  const payload = await handleResponse(response, 'Unable to generate teams for this section.');
+  invalidateFetchCache('GET:http://localhost:8000/team');
   return payload?.data?.teams ?? [];
 }

@@ -4,7 +4,6 @@ marshmallow
 python-dotenv
 sqlalchemy
 psycopg2-binary
-flask-cors==6.0.0
 flask-openapi3
 pydantic
 

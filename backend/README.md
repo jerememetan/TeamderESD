@@ -2,6 +2,12 @@
 
 This file lists the local HTTP endpoints for the atomic and composite microservices (localhost).
 
+API gateway
+- Kong gateway proxy: http://localhost:8000
+- Kong admin API: http://localhost:8001
+- Frontend/browser traffic should use Kong routes (for example `http://localhost:8000/team-formation`).
+- CORS is now centralized at Kong; per-service Flask CORS middleware is removed.
+
 Atomic services
 - student-service: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/#/
 - course-service: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/#/
@@ -48,3 +54,4 @@ RabbitMQ management UI: http://localhost:15672 (guest/guest)
 Notes
 - Ports are taken from `docker-compose.yaml` / `docker-compose.scenario1.yaml` mappings.
 - Use the listed path fragments as example request URLs (e.g. `http://localhost:3001/api/students`).
+- For browser and frontend use, prefer the same paths via gateway base `http://localhost:8000`.

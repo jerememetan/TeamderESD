@@ -11,7 +11,6 @@ for _candidate in _SWAGGER_PATH_CANDIDATES:
 
 from swagger_helper import register_swagger
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 import requests
 import os
 from schemas import FormationRequestSchema, FormationResponseSchema, FormationGetResponseSchema
@@ -34,10 +33,6 @@ from error_publisher import publish_error_event
 
 
 app = Flask(__name__)
-CORS(
-    app,
-    resources={r"/formation-config*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}},
-)
 
 SERVICE_NAME = "formation-config-service"
 

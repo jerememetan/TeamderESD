@@ -1,18 +1,19 @@
 // handles all enrollment related services
+import { fetchJson } from './httpClient';
+
+const ENROLLMENT_URL = import.meta.env.VITE_ENROLLMENT_URL ?? "http://localhost:8000/enrollment";
+
 export async function fetchAllEnrollments() {
-  const res = await fetch("http://localhost:3005/enrollment");
-  const json = await res.json();
+  const json = await fetchJson(ENROLLMENT_URL);
   return json.data || [];
 }
 
 export async function fetchEnrollmentsBySectionId(sectionId) {
-  const res = await fetch(`http://localhost:3005/enrollment?section_id=${encodeURIComponent(sectionId)}`);
-  const json = await res.json();
+  const json = await fetchJson(`${ENROLLMENT_URL}?section_id=${encodeURIComponent(sectionId)}`);
   return json.data || [];
 }
 
 export async function fetchEnrollmentCountBySectionId(sectionId) {
-  const res = await fetch(`http://localhost:3005/enrollment?section_id=${encodeURIComponent(sectionId)}`);
-  const json = await res.json();
+  const json = await fetchJson(`${ENROLLMENT_URL}?section_id=${encodeURIComponent(sectionId)}`);
   return json.data.length;
 }

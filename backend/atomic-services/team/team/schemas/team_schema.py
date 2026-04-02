@@ -24,3 +24,12 @@ class TeamResponseSchema(Schema):
 class TeamsBySectionResponseSchema(Schema):
     section_id = fields.UUID()
     teams = fields.List(fields.Nested(TeamResponseSchema))
+
+
+class TeamsBySectionsDataSchema(Schema):
+    sections = fields.List(fields.Nested(TeamsBySectionResponseSchema))
+
+
+class TeamsBySectionsResponseSchema(Schema):
+    code = fields.Int()
+    data = fields.Nested(TeamsBySectionsDataSchema)

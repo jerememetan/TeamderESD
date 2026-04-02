@@ -1,39 +1,41 @@
-const TEAM_URL = import.meta.env.VITE_TEAM_URL ?? 'http://localhost:4002/teams';
+import { fetchJson } from './httpClient';
 
-async function parseJson(response) {
-  const text = await response.text();
-  if (!text) {
+const TEAM_URL = import.meta.env.VITE_TEAM_URL ?? 'http://localhost:8000/team';
+
+export async function fetchTeamsBySection(sectionId) {
+  const payload = await fetchJson(`${TEAM_URL}?section_id=${encodeURIComponent(sectionId)}`, {
+    headers: { Accept: 'application/json' },
+  });
+
+  return payload?.data?.teams ?? [];
+}
+
+export async function fetchTeamsBySections(sectionIds = []) {
+  const uniqueSectionIds = Array.from(new Set(sectionIds.filter(Boolean)));
+  if (uniqueSectionIds.length === 0) {
     return {};
   }
 
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { raw: text };
-  }
-}
+  const params = new URLSearchParams();
+  params.set('section_ids', uniqueSectionIds.join(','));
 
-async function handleResponse(response, fallbackMessage) {
-  const payload = await parseJson(response);
-
-  if (!response.ok) {
-    const message = payload.error || payload.message || fallbackMessage;
-    throw new Error(message);
-  }
-
-  return payload;
-}
-
-export async function fetchTeamsBySection(sectionId) {
-  console.log("fetching teams")
-  const response = await fetch(`${TEAM_URL}?section_id=${encodeURIComponent(sectionId)}`, {
-    headers: {
-      Accept: 'application/json',
-    },
+  const payload = await fetchJson(`${TEAM_URL}?${params.toString()}`, {
+    headers: { Accept: 'application/json' },
   });
 
-  const payload = await handleResponse(response, 'Unable to load teams for this section.');
-  return payload?.data?.teams ?? [];
+  const sections = payload?.data?.sections;
+  if (!Array.isArray(sections)) {
+    return {};
+  }
+
+  return sections.reduce((acc, sectionEntry) => {
+    const sectionId = sectionEntry?.section_id;
+    if (!sectionId) {
+      return acc;
+    }
+    acc[sectionId] = Array.isArray(sectionEntry.teams) ? sectionEntry.teams : [];
+    return acc;
+  }, {});
 }
 
 

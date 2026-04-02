@@ -413,7 +413,6 @@ services:
       ENABLE_SWAGGER: "true"
       PORT: 4005
       SUPABASE_URL: ${SUPABASE_URL}
-      FRONTEND_ORIGIN: "http://localhost:5173"
       SWAP_REQUEST_URL: "http://swap-request-service:3011/swap-request"
       SWAP_CONSTRAINTS_URL: "http://swap-constraints-service:3012/swap-constraints"
       TEAM_URL: "http://team-service:3007/team"
@@ -443,6 +442,24 @@ services:
       - "4010:4010"
     environment:
       PORT: 4010
+
+  kong-gateway:
+    image: kong:3.8
+    container_name: teamder-kong-gateway
+    restart: unless-stopped
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    volumes:
+      - ./kong/kong.yml:/usr/local/kong/declarative/kong.yml:ro
+    ports:
+      - "8000:8000"
+      - "8001:8001"
 
   # RabbitMQ
 

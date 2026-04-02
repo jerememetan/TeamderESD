@@ -16,7 +16,6 @@ import re
 from typing import Any, Dict, List, Optional
 
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 
 _p = Path(__file__).resolve()
 # Walk up the directory tree to find the composite root. Prefer a parent
@@ -70,20 +69,10 @@ FORM_LINK_GENERIC_MESSAGE = os.getenv(
     "FORM_LINK_GENERIC_MESSAGE",
     "Please complete your Teamder student form using the link provided.",
 )
-FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
 
 # Simple validation patterns
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 SECTION_ID_RE = re.compile(r"^[A-Za-z0-9._:-]+$")
-
-# Allow the frontend origin for specific endpoints used by UI
-CORS(
-    app,
-    resources={
-        r"/formation-notifications.*": {"origins": [FRONTEND_ORIGIN]},
-    },
-)
-
 
 def _is_valid_email(value: Any) -> bool:
     # Return True when the value is a non-empty, valid-looking email.

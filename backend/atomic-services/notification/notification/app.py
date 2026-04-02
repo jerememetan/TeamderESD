@@ -23,7 +23,6 @@ from typing import Any, Dict, Optional, Tuple
 import pika
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 from pika.exceptions import AMQPConnectionError
 from marshmallow import Schema, fields
 
@@ -89,10 +88,6 @@ DEFAULT_FORM_LINK_TEMPLATE = os.getenv(
         "Thank you."
     ),
 )
-
-FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
-
-CORS(app, resources={r"/notification/*": {"origins": [FRONTEND_ORIGIN]}})
 
 _metrics_lock = threading.Lock()
 _metrics = {

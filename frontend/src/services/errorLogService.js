@@ -1,28 +1,6 @@
-const ERROR_LOG_URL = import.meta.env.VITE_ERROR_LOG_URL ?? 'http://localhost:3019/errors';
+import { fetchJson, invalidateFetchCache } from './httpClient';
 
-async function parseJson(response) {
-  const text = await response.text();
-  if (!text) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { raw: text };
-  }
-}
-
-async function handleResponse(response, fallbackMessage) {
-  const payload = await parseJson(response);
-
-  if (!response.ok) {
-    const message = payload?.error?.message || payload.message || fallbackMessage;
-    throw new Error(message);
-  }
-
-  return payload;
-}
+const ERROR_LOG_URL = import.meta.env.VITE_ERROR_LOG_URL ?? 'http://localhost:8000/errors';
 
 export async function fetchErrorLogs({ status, sourceService, page = 1, pageSize = 25 } = {}) {
   const searchParams = new URLSearchParams();
@@ -38,24 +16,19 @@ export async function fetchErrorLogs({ status, sourceService, page = 1, pageSize
     searchParams.set('source_service', sourceService);
   }
 
-  const response = await fetch(`${ERROR_LOG_URL}?${searchParams.toString()}`, {
-    headers: {
-      Accept: 'application/json',
-    },
+  const payload = await fetchJson(`${ERROR_LOG_URL}?${searchParams.toString()}`, {
+    headers: { Accept: 'application/json' },
   });
 
-  const payload = await handleResponse(response, 'Unable to load error logs.');
   return payload?.data ?? [];
 }
 
 export async function deleteErrorLog(errorId) {
-  const response = await fetch(`${ERROR_LOG_URL}/${errorId}`, {
+  const payload = await fetchJson(`${ERROR_LOG_URL}/${errorId}`, {
     method: 'DELETE',
-    headers: {
-      Accept: 'application/json',
-    },
+    headers: { Accept: 'application/json' },
   });
 
-  const payload = await handleResponse(response, 'Unable to delete error log.');
+  invalidateFetchCache('GET:http://localhost:8000/errors');
   return payload?.data ?? null;
 }

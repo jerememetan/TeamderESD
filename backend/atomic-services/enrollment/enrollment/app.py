@@ -12,7 +12,6 @@ for _candidate in _SWAGGER_PATH_CANDIDATES:
 from swagger_helper import register_swagger
 
 from flask import Flask
-from flask_cors import CORS
 from .models.enrollment_model import db
 from dotenv import load_dotenv
 import os
@@ -20,7 +19,6 @@ import os
 def create_app():
     load_dotenv()
     app = Flask(__name__)
-    CORS(app)  # Enable CORS for all routes
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SUPABASE_URL")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)

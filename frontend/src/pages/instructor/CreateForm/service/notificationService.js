@@ -1,6 +1,6 @@
 const NOTIFICATION_API_BASE =
   import.meta.env.VITE_FORMATION_NOTIFICATION_API_BASE ??
-  "http://localhost:4004/formation-notifications";
+  "http://localhost:8000/formation-notifications";
 
 async function parseJson(response) {
   const text = await response.text();
