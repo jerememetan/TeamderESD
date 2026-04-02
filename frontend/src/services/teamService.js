@@ -10,4 +10,32 @@ export async function fetchTeamsBySection(sectionId) {
   return payload?.data?.teams ?? [];
 }
 
+export async function fetchTeamsBySections(sectionIds = []) {
+  const uniqueSectionIds = Array.from(new Set(sectionIds.filter(Boolean)));
+  if (uniqueSectionIds.length === 0) {
+    return {};
+  }
+
+  const params = new URLSearchParams();
+  params.set('section_ids', uniqueSectionIds.join(','));
+
+  const payload = await fetchJson(`${TEAM_URL}?${params.toString()}`, {
+    headers: { Accept: 'application/json' },
+  });
+
+  const sections = payload?.data?.sections;
+  if (!Array.isArray(sections)) {
+    return {};
+  }
+
+  return sections.reduce((acc, sectionEntry) => {
+    const sectionId = sectionEntry?.section_id;
+    if (!sectionId) {
+      return acc;
+    }
+    acc[sectionId] = Array.isArray(sectionEntry.teams) ? sectionEntry.teams : [];
+    return acc;
+  }, {});
+}
+
 

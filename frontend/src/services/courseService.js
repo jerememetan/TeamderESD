@@ -1,6 +1,6 @@
 import { fetchJson } from './httpClient';
 
-const COURSE_URL = import.meta.env.VITE_COURSE_URL ?? "http://localhost:8000/api/courses";
+const COURSE_URL = import.meta.env.VITE_COURSE_URL ?? "http://localhost:8000/courses";
 
 export async function fetchAllCourses(){
 const courseJson = await fetchJson(COURSE_URL);

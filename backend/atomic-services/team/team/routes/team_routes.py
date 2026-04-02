@@ -2,6 +2,8 @@ from ..schemas.team_schema import TeamCreateSchema, TeamResponseSchema
 from flask import Blueprint, request, jsonify
 from uuid import uuid4
 from ..models.team_model import db, Team, TeamStudent
+from collections import defaultdict
+from uuid import UUID
 
 team_bp = Blueprint("team", __name__)
 
@@ -62,16 +64,78 @@ get_team_by_id._openapi_response_schema = TeamResponseSchema
 @team_bp.route("", methods=["GET"])
 def get_teams_by_section():
     section_id = request.args.get("section_id")
-    if not section_id:
-        return jsonify({"code": 400, "message": "Missing section_id"}), 400
-    teams = Team.query.filter_by(section_id=section_id).all()
+    section_ids_args = request.args.getlist("section_ids")
+
+    # Support `section_ids=a,b,c` and `section_ids=a&section_ids=b` formats.
+    expanded_section_ids = []
+    for raw_value in section_ids_args:
+        if not raw_value:
+            continue
+        if "," in raw_value:
+            expanded_section_ids.extend([part.strip() for part in raw_value.split(",") if part.strip()])
+        else:
+            expanded_section_ids.append(raw_value.strip())
+
+    requested_section_ids = []
+    if section_id:
+        requested_section_ids.append(section_id)
+    requested_section_ids.extend(expanded_section_ids)
+
+    if not requested_section_ids:
+        return jsonify({"code": 400, "message": "Missing section_id or section_ids"}), 400
+
+    deduped_section_ids = []
+    seen = set()
+    for sid in requested_section_ids:
+        if sid not in seen:
+            seen.add(sid)
+            deduped_section_ids.append(sid)
+
+    parsed_section_ids = []
+    for sid in deduped_section_ids:
+        try:
+            parsed_section_ids.append(UUID(str(sid)))
+        except (ValueError, TypeError):
+            return jsonify({"code": 400, "message": f"Invalid section_id: {sid}"}), 400
+
+    teams = Team.query.filter(Team.section_id.in_(parsed_section_ids)).all()
+
+    team_ids = [team.team_id for team in teams]
+    students_by_team_id = defaultdict(list)
+    if team_ids:
+        team_students = TeamStudent.query.filter(TeamStudent.team_id.in_(team_ids)).all()
+        for team_student in team_students:
+            students_by_team_id[team_student.team_id].append(team_student)
+
     for team in teams:
-        team.students = TeamStudent.query.filter_by(team_id=team.team_id).all()
+        team.students = students_by_team_id.get(team.team_id, [])
+
+    teams_by_section = defaultdict(list)
+    for team in teams:
+        teams_by_section[str(team.section_id)].append(response_schema.dump(team))
+
+    # Preserve existing contract for single-section queries.
+    if section_id and not section_ids_args:
+        return jsonify({
+            "code": 200,
+            "data": {
+                "section_id": section_id,
+                "teams": teams_by_section.get(str(section_id), [])
+            }
+        }), 200
+
+    sections_payload = [
+        {
+            "section_id": sid,
+            "teams": teams_by_section.get(str(sid), []),
+        }
+        for sid in deduped_section_ids
+    ]
+
     return jsonify({
         "code": 200,
         "data": {
-            "section_id": section_id,
-            "teams": [response_schema.dump(team) for team in teams]
+            "sections": sections_payload,
         }
     }), 200
 

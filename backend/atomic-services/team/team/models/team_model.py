@@ -6,7 +6,10 @@ db = SQLAlchemy()
 
 class Team(db.Model):
     __tablename__ = "team"
-    __table_args__ = {"schema": "team"}
+    __table_args__ = (
+        db.Index("ix_team_section_id", "section_id"),
+        {"schema": "team"},
+    )
 
     team_id = db.Column(db.Uuid, primary_key=True, default=uuid.uuid4)
     section_id = db.Column(db.Uuid, nullable=False)

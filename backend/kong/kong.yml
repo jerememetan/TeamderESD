@@ -28,20 +28,20 @@ plugins:
 
 services:
   - name: student-service
-    url: http://student-service:3001
+    url: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student
     routes:
       - name: student-service-route
         paths:
-          - /api/students
-        strip_path: false
+          - /students
+        strip_path: true
 
   - name: course-service
-    url: http://course-service:3017
+    url: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course
     routes:
       - name: course-service-route
         paths:
-          - /api/courses
-        strip_path: false
+          - /courses
+        strip_path: true
 
   - name: section-service
     url: http://section-service:3018
