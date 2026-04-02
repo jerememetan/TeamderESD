@@ -5,7 +5,8 @@ const STUDENT_PROFILE_URL =
 
 export async function fetchStudentProfile(sectionId) {
   const payload = await fetchJson(
-    `${STUDENT_PROFILE_URL}?section_id=${encodeURIComponent(sectionId)}`,
+    console.log("fetching:", sectionId)
+      `${STUDENT_PROFILE_URL}?section_id=${encodeURIComponent(sectionId)}`,
     {
       headers: { Accept: 'application/json' },
     },

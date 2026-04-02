@@ -685,6 +685,31 @@ def get_team_formation():
     return jsonify({"code": 422, "message": "team formation could not be generated"}), 422
 
 
+@app.route("/teams", methods=["GET"])
+def proxy_get_teams():
+    """Proxy to the atomic team service to expose persisted teams through the composite service.
+
+    Accepts `section_id` query param and forwards it to the configured TEAM_URL.
+    Returns the upstream payload and status code, or a 502 on failure.
+    """
+    section_id = request.args.get("section_id")
+    if not section_id:
+        return jsonify({"code": 400, "message": "section_id is required"}), 400
+
+    try:
+        upstream = http_get(TEAM_URL, {"section_id": section_id})
+    except requests.RequestException:
+        logger.exception(
+            "failed to call team service (GET)",
+            extra={"section_id": section_id, "url": TEAM_URL},
+        )
+        return jsonify({"code": 502, "message": "failed to fetch teams"}), 502
+
+    payload = safe_json(upstream)
+    status = upstream.status_code if isinstance(upstream, requests.Response) else 502
+    return jsonify(payload), status
+
+
 # attach OpenAPI response schemas
 get_team_formation._openapi_response_schema = TeamFormationSuccessSchema
 get_team_formation._openapi_request_schema = TeamFormationRequestSchema

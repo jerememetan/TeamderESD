@@ -25,6 +25,9 @@ import { getBackendSectionId } from "../../../data/backendIds";
 import { mockCourses, mockTeams } from "../../../data/mockData";
 import { fetchStudentProfile } from "../../../services/studentProfileService";
 import styles from "./Analytics.module.css";
+import { fetchCourseByCode } from "../../../services/courseService";
+import { getSectionById } from "../../../services/sectionService";
+import { fetchTeamsBySection } from "../../../services/teamService";
 
 function Analytics() {
   const { courseId, groupId } = useParams();
@@ -32,34 +35,83 @@ function Analytics() {
   const [isLoadingRoster, setIsLoadingRoster] = useState(true);
   const [rosterError, setRosterError] = useState("");
 
-  const selectedCourse = mockCourses.find((course) => course.id === courseId);
-  const selectedGroup = selectedCourse?.groups.find(
-    (group) => group.id === groupId,
-  );
-  const groupTeams = mockTeams.filter(
-    (team) => team.courseId === courseId && team.groupId === groupId,
-  );
+  const [selectedCourse,setSelectedCourse] = useState(null);
+  const [selectedGroup,setSelectedGroup] = useState(null);
+  const [groupTeams,setGroupTeams ]= useState([]);
+  console.log(groupTeams);
   const selectedCourseGroups = selectedCourse?.groups ?? [];
   const backendSectionId = getBackendSectionId(groupId || "");
+  
+  useEffect(()=> {
+    async function loadTeams() {
+      try{
+        if (!groupId) {
+          setGroupTeams([]);
+          return;
+        }
+        const pulledteams = await fetchTeamsBySection(groupId);
+        setGroupTeams(pulledteams || []);
+      } catch(error){
+        console.log("load teams failed", error);
+        setGroupTeams([]);
+      }
+      
+    }
+    loadTeams();
+    console.log("GROUP TEAMS",groupTeams);
+  }, [groupId])
 
+  useEffect(() =>{
+    async function loadCourse(){
+      if (!groupId){
+        setIsLoadingRoster(false);
+        setRosterError("Missing group ID");
+        return;
+      }
+      setIsLoadingRoster(true);
+      setRosterError("");
+      try {
+        const course = await fetchCourseByCode(courseId);
+        setSelectedCourse(course);
+      } catch(error){
+        console.log("course fetching failed",error);
+
+      }
+    }
+    loadCourse();
+  } ,[courseId, groupId, setSelectedCourse])
+    useEffect(() =>{
+    async function loadGroup(){
+      if (!groupId){
+        setIsLoadingRoster(false);
+        setRosterError("Missing group ID");
+        return;
+      }
+      setIsLoadingRoster(true);
+      setRosterError("");
+      try {
+        const group = await getSectionById(groupId);
+        setSelectedGroup(group);
+      } catch(error){
+        console.log("course fetching failed",error);
+
+      }
+    }
+    loadGroup();
+  }, [groupId, setSelectedGroup])
   useEffect(() => {
     let isMounted = true;
 
     async function loadRoster() {
-      if (!backendSectionId) {
-        setIsLoadingRoster(false);
-        setRosterError("Missing backend section mapping for this group.");
-        return;
-      }
-
+      console.log("1");
       setIsLoadingRoster(true);
       setRosterError("");
-
       try {
-        const students = await fetchStudentProfile(backendSectionId);
+        const students = await fetchStudentProfile(groupId);
         if (!isMounted) {
           return;
         }
+        console.log("STUDENTS",students);
         setBackendStudents(students);
       } catch (error) {
         if (!isMounted) {
@@ -79,7 +131,7 @@ function Analytics() {
     return () => {
       isMounted = false;
     };
-  }, [backendSectionId]);
+  }, [groupId]);
 
   const siblingGroupSummaryData = selectedCourseGroups.map((group) => ({
     name: group.code,
@@ -121,23 +173,7 @@ function Analytics() {
     { metric: "Leadership", value: 90 },
   ];
 
-  const responseRateData = [
-    { week: "Week 1", responses: 45 },
-    { week: "Week 2", responses: 75 },
-    { week: "Week 3", responses: 95 },
-  ];
 
-  const yearDistributionData = useMemo(() => {
-    const counts = backendStudents.reduce((accumulator, student) => {
-      const key = student?.profile?.year
-        ? `Year ${student.profile.year}`
-        : "Unknown";
-      accumulator[key] = (accumulator[key] ?? 0) + 1;
-      return accumulator;
-    }, {});
-
-    return Object.entries(counts).map(([name, total]) => ({ name, total }));
-  }, [backendStudents]);
 
   if (!selectedCourse || !selectedGroup) {
     return <div className={styles.notFound}>Course group not found</div>;
@@ -163,7 +199,7 @@ function Analytics() {
       <section className={styles.hero}>
         <div>
           <h2 className={styles.title}>
-            {selectedGroup.code} Analytics Page
+            {selectedGroup.code} Analytics Page - {selectedCourse.code} G{selectedGroup.section_number}
           </h2>
           <p className={styles.subtitle}>
             <b>Course Name</b> : {selectedCourse.name} 
@@ -331,71 +367,10 @@ function Analytics() {
           </div>
         </ModuleBlock>
 
-        <ModuleBlock
-          componentId="MOD-A8"
-          eyebrow="Roster Mix"
-          title="Year Distribution"
-          className={`${styles.chartModule} ${styles.fullSpan}`}
-        >
-          <div className={styles.chartWrap}>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart
-                data={
-                  yearDistributionData.length
-                    ? yearDistributionData
-                    : responseRateData
-                }
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
-                <XAxis
-                  dataKey={yearDistributionData.length ? "name" : "week"}
-                  stroke="#51606F"
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey={yearDistributionData.length ? "total" : "responses"}
-                  stroke="#2ECC71"
-                  strokeWidth={2.5}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </ModuleBlock>
+
       </section>
 
-      <ModuleBlock
-        componentId="MOD-A9"
-        eyebrow="Signal Review"
-        title="Operational Insights"
-      >
-        <div className={styles.insightList}>
-          <div className={styles.insightRow}>
-            <SystemTag tone="success">Stable balance</SystemTag>
-            <p className={styles.insightText}>
-              This console evaluates one teaching group at a time instead of
-              mixing all groups together.
-            </p>
-          </div>
-          <div className={styles.insightRow}>
-            <SystemTag tone="neutral">Live roster</SystemTag>
-            <p className={styles.insightText}>
-              This page now uses student-profile to pull the current roster for{" "}
-              {selectedGroup.code} when the backend is available.
-            </p>
-          </div>
-          <div className={styles.insightRow}>
-            <SystemTag hazard>Next integration</SystemTag>
-            <p className={styles.insightText}>
-              Team membership is still mock-backed. The next backend slice
-              should connect team-formation and team persistence so roster and
-              team assignments come from the same source.
-            </p>
-          </div>
-        </div>
-      </ModuleBlock>
+
     </div>
   );
 }
