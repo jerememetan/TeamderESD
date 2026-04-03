@@ -84,7 +84,7 @@ def compute_team_metrics(team, student_lookup, skill_definitions):
     year_dist = _distribution(years)
 
     # ── School distribution ──
-    schools = [p["school"] for p in profiles if p.get("school") is not None]
+    schools = [p.get("school") or p.get("school_id") for p in profiles if p.get("school") is not None or p.get("school_id") is not None]
     school_dist = _distribution(schools)
 
     # ── Gender distribution ──

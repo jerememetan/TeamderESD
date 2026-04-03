@@ -24,14 +24,14 @@ Orchestrates the instructor team dashboard flow:
 """
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 import os
 import json
 from flask_cors import CORS
 
 app = Flask(__name__)
-# Enable CORS for dashboard endpoints to allow frontend origin access
-CORS(app, resources={r"/dashboard*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}})
+CORS(app)
 
 # â”€â”€ Upstream service URLs (overridden via docker-compose env) â”€â”€â”€â”€â”€â”€â”€â”€
 
