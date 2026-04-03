@@ -341,6 +341,17 @@ services:
     ports:
       - "3014:3014"
 
+  peer-evaluation-service:
+    build:
+      context: ./atomic-services/peer-evaluation
+    container_name: teamder-peer-evaluation-service
+    environment:
+      PORT: 3020
+      SUPABASE_URL: ${SUPABASE_URL}
+      FRONTEND_ORIGIN: "http://localhost:5173"
+    ports:
+      - "3020:3020"
+
   dashboard-orchestrator-service:
     build:
       context: ./composite-services/dashboard-orchestrator
@@ -356,6 +367,9 @@ services:
       SKILL_URL: "http://skill-service:3002/skill"
       TOPIC_URL: "http://topic-service:3003/topic"
       ANALYTICS_URL: "http://analytics-service:3014/analytics"
+      PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"          
+      NOTIFICATION_URL: "http://notification-service:3016/notification"        
+      REPUTATION_URL: "http://reputation-service:3006/reputation" 
       REQUEST_TIMEOUT: 8
       PORT: 4003
     depends_on:
@@ -366,6 +380,7 @@ services:
       - skill-service
       - topic-service
       - analytics-service
+      - peer-evaluation-service 
 
   formation-notification-service:
     build:
