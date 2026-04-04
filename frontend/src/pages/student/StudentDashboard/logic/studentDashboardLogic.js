@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { fetchStudentAssignments } from "../../../../services/studentAssignmentService";
 import { fetchStudentForms } from "../../../../services/studentFormService";
 import { fetchTeamsBySections } from "../../../../services/teamService";
@@ -5,7 +6,7 @@ import {
   getActivePeerEvaluationRoundsBySections,
   getPendingPeerEvaluations,
 } from "../../../../services/peerEvaluationService";
-
+import { fetchAllEnrollments } from "../../../../services/enrollmentService";
 function getFriendlyErrorMessage(error, fallbackMessage) {
   return error?.message || fallbackMessage;
 }
@@ -109,11 +110,29 @@ export async function loadDashboardSummary(studentProfile) {
     );
   }
 
+  // preload enrollment mapping to limit sections to those the student is actually enrolled in
+  const allEnrollments = await fetchAllEnrollments();
+  const enrollmentMap = allEnrollments.reduce((acc, rec) => {
+    const sid = rec?.student_id ?? rec?.studentId ?? rec?.studentIdRaw;
+    const sectionId = rec?.section_id ?? rec?.sectionId ?? rec?.section;
+    if (!sid || !sectionId) return acc;
+    const key = Number(sid);
+    if (!acc.has(key)) acc.set(key, new Set());
+    acc.get(key).add(String(sectionId));
+    return acc;
+  }, new Map());
+
   const forms = await fetchStudentForms({ studentId: backendStudentId });
   const unsubmittedForms = forms.filter((form) => !form.submitted);
   const uniqueSectionIds = Array.from(
     new Set(unsubmittedForms.map((form) => form.sectionId).filter(Boolean)),
   );
+
+  // if we have enrollment info for this backend student, restrict to those sections
+  const enrolledSectionSet = enrollmentMap.get(backendStudentId) || null;
+  const filteredSectionIds = enrolledSectionSet
+    ? uniqueSectionIds.filter((id) => enrolledSectionSet.has(String(id)))
+    : uniqueSectionIds;
 
   if (!uniqueSectionIds.length) {
     return {
@@ -126,11 +145,11 @@ export async function loadDashboardSummary(studentProfile) {
   }
 
   const [teamsBySection, roundsBySection] = await Promise.all([
-    fetchTeamsBySections(uniqueSectionIds),
-    getActivePeerEvaluationRoundsBySections(uniqueSectionIds),
+    fetchTeamsBySections(filteredSectionIds),
+    getActivePeerEvaluationRoundsBySections(filteredSectionIds),
   ]);
 
-  const teamCount = uniqueSectionIds.reduce((count, sectionId) => {
+  const teamCount = filteredSectionIds.reduce((count, sectionId) => {
     const sectionTeams = Array.isArray(teamsBySection[sectionId])
       ? teamsBySection[sectionId]
       : [];
@@ -143,7 +162,7 @@ export async function loadDashboardSummary(studentProfile) {
     return hasMembership ? count + 1 : count;
   }, 0);
 
-  const activeRounds = uniqueSectionIds.flatMap((sectionId) =>
+  const activeRounds = filteredSectionIds.flatMap((sectionId) =>
     Array.isArray(roundsBySection[sectionId]) ? roundsBySection[sectionId] : [],
   );
 
@@ -153,6 +172,70 @@ export async function loadDashboardSummary(studentProfile) {
     peerEvalCount: activeRounds.length,
     availableForms: unsubmittedForms,
     nextPeerRound: activeRounds[0] || null,
+  };
+}
+
+export function useDashboardSummary(studentProfile) {
+  const [teamCount, setTeamCount] = useState(0);
+  const [peerEvalCount, setPeerEvalCount] = useState(0);
+  const [nextPeerRound, setNextPeerRound] = useState(null);
+  const [availableForms, setAvailableForms] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!studentProfile) {
+      setTeamCount(0);
+      setPeerEvalCount(0);
+      setNextPeerRound(null);
+      setAvailableForms([]);
+      setIsLoading(true);
+      setError("");
+      return;
+    }
+
+    let ignore = false;
+
+    async function doLoad() {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const summary = await loadDashboardSummary(studentProfile);
+        if (ignore) return;
+
+        setTeamCount(summary.teamCount);
+        setPeerEvalCount(summary.peerEvalCount);
+        setNextPeerRound(summary.nextPeerRound);
+        setAvailableForms(summary.availableForms || []);
+      } catch (err) {
+        if (ignore) return;
+        setTeamCount(0);
+        setPeerEvalCount(0);
+        setNextPeerRound(null);
+        setAvailableForms([]);
+        setError(
+          err?.message || "Unable to load dashboard metrics from the backend.",
+        );
+      } finally {
+        if (!ignore) setIsLoading(false);
+      }
+    }
+
+    doLoad();
+
+    return () => {
+      ignore = true;
+    };
+  }, [studentProfile]);
+
+  return {
+    teamCount,
+    peerEvalCount,
+    nextPeerRound,
+    availableForms,
+    isLoading,
+    error,
   };
 }
 

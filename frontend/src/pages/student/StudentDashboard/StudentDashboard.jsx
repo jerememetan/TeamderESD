@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+// no React hooks imported directly; component uses services/hooks
 import { Link, useNavigate, useParams } from "react-router";
 import { AlertTriangle, FileText, Users } from "lucide-react";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
@@ -6,7 +6,7 @@ import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
 import StudentSwitcher from "../../../components/student/StudentSwitcher";
 import { useStudentSession } from "../../../services/studentSession";
-import { loadDashboardSummary } from "./logic/studentDashboardLogic";
+import { useDashboardSummary } from "./logic/studentDashboardLogic";
 import styles from "./StudentDashboard.module.css";
 
 function StudentDashBoard() {
@@ -21,76 +21,21 @@ function StudentDashBoard() {
     studentLoadError,
   } = useStudentSession(routeStudentId, { deferStudentsLoad: true });
 
-  const [teamCount, setTeamCount] = useState(0);
-  const [peerEvalCount, setPeerEvalCount] = useState(0);
-  const [nextPeerRound, setNextPeerRound] = useState(null);
-  const [availableForms, setAvailableForms] = useState(2);
-  const [summaryError, setSummaryError] = useState("");
-  const [isLoadingSummary, setIsLoadingSummary] = useState(true);
-  const [currentStudent, setCurrentStudent] = useState(activeStudent);
-
-  useEffect(() => {
-    console.log(1);
-    if (!activeStudent) {
-      setTeamCount(0);
-      setPeerEvalCount(0);
-      setNextPeerRound(null);
-      setAvailableForms([]);
-      setIsLoadingSummary(isLoadingStudents);
-      console.log("No active students");
-      return;
-    }
-
-    let ignore = false;
-
-    async function loadSummary() {
-      setIsLoadingSummary(true);
-      setSummaryError("");
-      console.log(3);
-
-      try {
-        console.log("ACTIVE STUDENT", activeStudent);
-        const summary = await loadDashboardSummary(activeStudent);
-        if (ignore) {
-          return;
-        }
-        setTeamCount(summary.teamCount);
-        setPeerEvalCount(summary.peerEvalCount);
-        setNextPeerRound(summary.nextPeerRound);
-        setAvailableForms(summary.availableForms);
-      } catch (error) {
-        if (ignore) {
-          return;
-        }
-
-        setTeamCount(0);
-        setPeerEvalCount(0);
-        setNextPeerRound(null);
-        setAvailableForms([]);
-        setSummaryError(
-          error?.message ||
-            "Unable to load dashboard metrics from the backend.",
-        );
-      } finally {
-        if (!ignore) {
-          setIsLoadingSummary(false);
-        }
-      }
-    }
-
-    loadSummary();
-
-    return () => {
-      ignore = true;
-    };
-  }, [activeStudent, isLoadingStudents]);
+  const {
+    teamCount,
+    peerEvalCount,
+    nextPeerRound,
+    availableForms,
+    isLoading: isLoadingSummary,
+    error: summaryError,
+  } = useDashboardSummary(activeStudent);
 
   const resolvedRouteStudentId =
     routeStudentId || activeStudentRouteId || "backend-unavailable";
   const studentBasePath = `/student/${resolvedRouteStudentId}`;
   const resolvedStudentName =
     activeStudent?.name || `Student ${resolvedRouteStudentId}`;
-  const availableFormList = availableForms;
+  const availableFormList = availableForms || [];
   const formActionTo = `${studentBasePath}/form`;
   const formActionText =
     isLoadingSummary || isLoadingStudents
