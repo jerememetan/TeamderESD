@@ -57,6 +57,14 @@ function MyTeam() {
     );
   }, [teamAssignments]);
 
+  const selectedTeam = useMemo(
+    () =>
+      teamAssignments.find((team) => team.id === selectedTeamId) ||
+      teamAssignments[0] ||
+      null,
+    [selectedTeamId, teamAssignments],
+  );
+
   if (isLoadingStudents) {
     return (
       <div className={styles.page}>
@@ -88,13 +96,6 @@ function MyTeam() {
   }
 
   const studentBasePath = `/student/${activeStudentRouteId}`;
-  const selectedTeam = useMemo(
-    () =>
-      teamAssignments.find((team) => team.id === selectedTeamId) ||
-      teamAssignments[0] ||
-      null,
-    [selectedTeamId, teamAssignments],
-  );
 
   const currentMember = selectedTeam?.members.find(
     (member) =>
