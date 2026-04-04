@@ -55,11 +55,15 @@ function CompletionStatus() {
         </div>
         <div className={styles.metric}>
           <p className={styles.metricLabel}>Submitted</p>
-          <p className={styles.metricValue}>{loading ? "..." : status.submitted.length}</p>
+          <p className={styles.metricValue}>
+            {loading ? "..." : status.submitted.length}
+          </p>
         </div>
         <div className={styles.metric}>
           <p className={styles.metricLabel}>Completion %</p>
-          <p className={styles.metricValue}>{loading ? "..." : `${status.percentage}%`}</p>
+          <p className={styles.metricValue}>
+            {loading ? "..." : `${status.percentage}%`}
+          </p>
         </div>
       </div>
 
@@ -69,7 +73,9 @@ function CompletionStatus() {
             {status.submitted.map((student) => (
               <li key={student.studentId} className={styles.studentRow}>
                 <p className={styles.studentName}>{student.name}</p>
-                <p className={styles.studentMeta}>{student.email || `ID ${student.studentId}`}</p>
+                <p className={styles.studentMeta}>
+                  {student.email || `ID ${student.studentId}`}
+                </p>
               </li>
             ))}
             {!status.submitted.length && !loading ? (
@@ -83,7 +89,9 @@ function CompletionStatus() {
             {status.notSubmitted.map((student) => (
               <li key={student.studentId} className={styles.studentRow}>
                 <p className={styles.studentName}>{student.name}</p>
-                <p className={styles.studentMeta}>{student.email || `ID ${student.studentId}`}</p>
+                <p className={styles.studentMeta}>
+                  {student.email || `ID ${student.studentId}`}
+                </p>
               </li>
             ))}
             {!status.notSubmitted.length && !loading ? (

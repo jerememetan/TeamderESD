@@ -47,7 +47,9 @@ export function useCompletionStatus(courseId, groupId) {
 
         setCourse(nextCourse);
         setGroup(nextGroup);
-        setStatus(buildCompletionStatus(submittedForms, unsubmittedForms, students));
+        setStatus(
+          buildCompletionStatus(submittedForms, unsubmittedForms, students),
+        );
       } catch (loadError) {
         if (!isMounted) {
           return;

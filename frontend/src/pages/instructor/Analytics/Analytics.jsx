@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import {
@@ -21,135 +21,33 @@ import {
 import GroupChip from "../../../components/schematic/GroupChip";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
-import { getBackendSectionId } from "../../../data/backendIds";
-import { fetchEnrollmentsBySectionId } from "../../../services/enrollmentService";
 import {
-  fetchAllStudents,
-  buildSectionRoster,
-} from "../../../services/studentService";
+  buildSiblingGroupSummaryData,
+  buildTeamScoresData,
+} from "../../../adapters/analyticsAdapter";
+import { useAnalyticsPage } from "./logic/useAnalyticsPage";
 import styles from "./Analytics.module.css";
-import { fetchCourseByCode } from "../../../services/courseService";
-import { getSectionById } from "../../../services/sectionService";
-import { fetchTeamsBySection } from "../../../services/teamService";
 
 function Analytics() {
   const { courseId, groupId } = useParams();
-  const [backendStudents, setBackendStudents] = useState([]);
-  const [isLoadingRoster, setIsLoadingRoster] = useState(true);
-  const [rosterError, setRosterError] = useState("");
+  const {
+    selectedCourse,
+    selectedGroup,
+    groupTeams,
+    backendStudents,
+    isLoadingRoster,
+    rosterError,
+  } = useAnalyticsPage(courseId, groupId);
 
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [groupTeams, setGroupTeams] = useState([]);
-  const selectedCourseGroups = selectedCourse?.groups ?? [];
-  const backendSectionId = getBackendSectionId(groupId || "");
-  const rosterSectionId = backendSectionId || groupId;
+  const siblingGroupSummaryData = useMemo(
+    () => buildSiblingGroupSummaryData(selectedCourse?.groups ?? []),
+    [selectedCourse],
+  );
 
-  useEffect(() => {
-    async function loadTeams() {
-      try {
-        if (!rosterSectionId) {
-          setGroupTeams([]);
-          return;
-        }
-        const pulledteams = await fetchTeamsBySection(rosterSectionId);
-        setGroupTeams(pulledteams || []);
-      } catch (error) {
-        console.log("load teams failed", error);
-        setGroupTeams([]);
-      }
-    }
-    loadTeams();
-  }, [rosterSectionId]);
-
-  useEffect(() => {
-    async function loadCourse() {
-      if (!groupId) {
-        setIsLoadingRoster(false);
-        setRosterError("Missing group ID");
-        return;
-      }
-      setIsLoadingRoster(true);
-      setRosterError("");
-      try {
-        const course = await fetchCourseByCode(courseId);
-        setSelectedCourse(course);
-      } catch (error) {
-        console.log("course fetching failed", error);
-      }
-    }
-    loadCourse();
-  }, [courseId, groupId, setSelectedCourse]);
-  useEffect(() => {
-    async function loadGroup() {
-      if (!groupId) {
-        setIsLoadingRoster(false);
-        setRosterError("Missing group ID");
-        return;
-      }
-      setIsLoadingRoster(true);
-      setRosterError("");
-      try {
-        const group = await getSectionById(groupId);
-        setSelectedGroup(group);
-      } catch (error) {
-        console.log("course fetching failed", error);
-      }
-    }
-    loadGroup();
-  }, [groupId, setSelectedGroup]);
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadRoster() {
-      if (!rosterSectionId) {
-        setBackendStudents([]);
-        setIsLoadingRoster(false);
-        setRosterError("Missing group ID");
-        return;
-      }
-
-      setIsLoadingRoster(true);
-      setRosterError("");
-      try {
-        const [enrollments, students] = await Promise.all([
-          fetchEnrollmentsBySectionId(rosterSectionId),
-          fetchAllStudents(),
-        ]);
-        if (!isMounted) {
-          return;
-        }
-        setBackendStudents(buildSectionRoster(enrollments, students));
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-        setRosterError(error.message);
-        setBackendStudents([]);
-      } finally {
-        if (isMounted) {
-          setIsLoadingRoster(false);
-        }
-      }
-    }
-
-    loadRoster();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [rosterSectionId]);
-
-  const siblingGroupSummaryData = selectedCourseGroups.map((group) => ({
-    name: group.code,
-    students: group.studentsCount,
-    teams: group.teamsCount,
-  }));
-
-  const teamScoresData = groupTeams.map((team) => ({
-    name: team.name,
-    score: team.formationScore,
-  }));
+  const teamScoresData = useMemo(
+    () => buildTeamScoresData(groupTeams),
+    [groupTeams],
+  );
 
   const diversityData = [
     {
@@ -186,7 +84,7 @@ function Analytics() {
 
   const totalStudents = backendStudents.length || selectedGroup.studentsCount;
   const averageTeamScore =
-    groupTeams.reduce((sum, team) => sum + team.formationScore, 0) /
+    groupTeams.reduce((sum, team) => sum + team.score, 0) /
     (groupTeams.length || 1);
   const averageStudentsPerTeam = totalStudents / (groupTeams.length || 1);
   const rosterSourceTone = rosterError
@@ -205,7 +103,7 @@ function Analytics() {
         <div>
           <h2 className={styles.title}>
             {selectedGroup.code} Analytics Page - {selectedCourse.code} G
-            {selectedGroup.section_number}
+            {selectedGroup.sectionNumber}
           </h2>
           <p className={styles.subtitle}>
             <b>Course Name</b> : {selectedCourse.name}
@@ -214,7 +112,7 @@ function Analytics() {
         <div className={styles.heroTags}>
           <GroupChip
             code={selectedGroup.code}
-            meta={`${totalStudents} students � ${groupTeams.length} teams`}
+            meta={`${totalStudents} students | ${groupTeams.length} teams`}
             tone="green"
           />
           <SystemTag tone={rosterSourceTone}>

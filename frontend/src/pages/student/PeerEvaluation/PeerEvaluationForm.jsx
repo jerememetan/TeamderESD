@@ -44,24 +44,32 @@ function PeerEvaluationForm() {
   }
 
   if (studentLoadError || !activeStudent) {
-    return <div className={styles.notFound}>{studentLoadError || "Backend student data is unavailable."}</div>;
+    return (
+      <div className={styles.notFound}>
+        {studentLoadError || "Backend student data is unavailable."}
+      </div>
+    );
   }
 
   if (!round) {
     return (
-      <div className={styles.notFound}>Peer evaluation round not available.</div>
+      <div className={styles.notFound}>
+        Peer evaluation round not available.
+      </div>
     );
   }
 
   if (!myTeam) {
     return (
       <div className={styles.notFound}>
-        You are not assigned to a team in this section. Make sure you are
-        logged in as a student enrolled in this section.
-        <br /><br />
+        You are not assigned to a team in this section. Make sure you are logged
+        in as a student enrolled in this section.
+        <br />
+        <br />
         Current student ID: {currentBackendId || "unknown"}
         <br />
-        Available students: {availableStudents.map(s => `${s.name} (${s.id})`).join(", ")}
+        Available students:{" "}
+        {availableStudents.map((s) => `${s.name} (${s.id})`).join(", ")}
       </div>
     );
   }
@@ -120,11 +128,11 @@ function PeerEvaluationForm() {
           <StudentSwitcher
             activeStudentId={activeStudent.id}
             availableStudents={availableStudents}
-            onChange={(nextStudentId) => navigate(`/student/${nextStudentId}/peer-evaluation/${roundId}`)}
+            onChange={(nextStudentId) =>
+              navigate(`/student/${nextStudentId}/peer-evaluation/${roundId}`)
+            }
           />
-          <SystemTag
-            tone={round.status === "active" ? "success" : "neutral"}
-          >
+          <SystemTag tone={round.status === "active" ? "success" : "neutral"}>
             {round.status === "active"
               ? "Round active"
               : `Round ${round.status}`}

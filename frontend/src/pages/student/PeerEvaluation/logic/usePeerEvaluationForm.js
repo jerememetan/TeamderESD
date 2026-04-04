@@ -102,7 +102,9 @@ export function usePeerEvaluationForm({
 
     return (
       teams.find((team) =>
-        (team.students || []).some((student) => student.student_id === currentBackendId),
+        (team.students || []).some(
+          (student) => student.student_id === currentBackendId,
+        ),
       ) || null
     );
   }, [teams, currentBackendId]);
