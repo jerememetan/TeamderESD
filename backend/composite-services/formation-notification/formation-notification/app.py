@@ -34,7 +34,7 @@ if str(_COMPOSITE_ROOT) not in sys.path:
 
 from error_publisher import publish_error_event
 
-from amqp_helper import publish_notification_message
+from amqp_helper import publish_notification_batch_message
 from invoke_http import call_http, extract_data, put_section_stage
 from schemas import (
     FormationNotificationRequestSchema,
@@ -53,7 +53,10 @@ SERVICE_NAME = "formation-notification-service"
 # Configuration and service endpoints used by this composite
 REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "1000"))
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://localhost:3005/enrollment")
-STUDENT_SERVICE_URL = os.getenv("STUDENT_SERVICE_URL", "http://localhost:3001/api/students")
+STUDENT_SERVICE_URL = os.getenv(
+    "STUDENT_SERVICE_URL",
+    "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student",
+)
 STUDENT_FORM_URL = os.getenv("STUDENT_FORM_URL", "http://localhost:3015/student-form")
 SECTION_URL = os.getenv("SECTION_URL", "http://localhost:3018/section")
 FORM_LINK_URL_TEMPLATE = os.getenv(
@@ -289,8 +292,9 @@ def create_formation_notifications():
     #    a. Call Student service to fetch details (email).
     #    b. Validate email; skip if missing/invalid.
     #    c. Call Student Form service to create a form for that student.
-    #    d. Build a notification payload and publish it to AMQP via
-    #       `amqp_helper`.
+    #    d. Build a per-student notification payload.
+    # 4. Publish one batch AMQP message containing all valid payloads via
+    #    `amqp_helper`.
     #    e. Record successes and failures for the response body.
     payload = request.get_json(silent=True) or {}
     section_id = payload.get("section_id")
@@ -369,8 +373,10 @@ def create_formation_notifications():
 
     created: List[Dict[str, Any]] = []
     failed: List[Dict[str, Any]] = []
+    pending_batch_notifications: List[Dict[str, Any]] = []
+    pending_created_rows: List[Dict[str, Any]] = []
 
-    # Process each student sequentially: fetch student -> create form -> publish
+    # Process each student sequentially: fetch student -> create form -> queue
     for student_id in student_ids:
         # --- Student service: fetch student details (including email) ---
         student_resp = call_http(
@@ -445,31 +451,8 @@ def create_formation_notifications():
             "idempotency_key": f"{section_id}:{student_id}:{form_id}",
         }
 
-        # --- Publish notification message via AMQP helper ---
-        # `publish_notification_message` returns (ok, error). On failure we log
-        # and record a publish failure.
-        publish_ok, publish_error = publish_notification_message(message_payload)
-        if not publish_ok:
-            logger.error(
-                "notification publish failed",
-                extra={
-                    "section_id": section_id,
-                    "student_id": student_id,
-                    "error": publish_error,
-                },
-            )
-            publish_downstream_error(
-                "rabbitmq",
-                "NOTIFICATION_PUBLISH_FAILED",
-                publish_error or "notification publish failed",
-                request_context={"section_id": section_id, "student_id": student_id, "operation": "publish-notification"},
-                response_payload=message_payload,
-            )
-            failed.append({"student_id": student_id, "reason": "notification publish failed"})
-            continue
-
-        # Notification message published successfully
-        created.append(
+        pending_batch_notifications.append(message_payload)
+        pending_created_rows.append(
             {
                 "student_id": student_id,
                 "email": email,
@@ -477,6 +460,41 @@ def create_formation_notifications():
                 "form_link": form_link,
             }
         )
+
+    if pending_batch_notifications:
+        # Publish one AMQP message containing all students in this request.
+        publish_ok, publish_error = publish_notification_batch_message(
+            section_id=section_id,
+            notifications=pending_batch_notifications,
+        )
+        if not publish_ok:
+            logger.error(
+                "notification batch publish failed",
+                extra={
+                    "section_id": section_id,
+                    "count": len(pending_batch_notifications),
+                    "error": publish_error,
+                },
+            )
+            publish_downstream_error(
+                "rabbitmq",
+                "NOTIFICATION_PUBLISH_FAILED",
+                publish_error or "notification batch publish failed",
+                request_context={
+                    "section_id": section_id,
+                    "count": len(pending_batch_notifications),
+                    "operation": "publish-notification-batch",
+                },
+                response_payload={
+                    "event_type": "FormLinksGeneratedBatch",
+                    "section_id": section_id,
+                    "notifications": pending_batch_notifications,
+                },
+            )
+            for row in pending_created_rows:
+                failed.append({"student_id": row["student_id"], "reason": "notification publish failed"})
+        else:
+            created.extend(pending_created_rows)
 
     response_body = _build_response(section_id, created=created, failed=failed)
 

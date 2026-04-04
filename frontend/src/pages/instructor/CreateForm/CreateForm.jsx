@@ -53,6 +53,7 @@ function CreateForm() {
   const [formState, setFormState] = useState(defaultState);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isFetchingConfig, setIsFetchingConfig] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [isPublishingLinks, setIsPublishingLinks] = useState(false);
@@ -132,10 +133,12 @@ function CreateForm() {
         return;
       }
       setIsLoading(true);
+      setIsFetchingConfig(true);
       setErrorMessage("");
       setSaveMessage("");
       if (!groupId) {
         setIsLoading(false);
+        setIsFetchingConfig(false);
         setErrorMessage("Missing backend section id for this course group.");
         return;
       }
@@ -168,6 +171,7 @@ function CreateForm() {
       } finally {
         if (isMounted) {
           setIsLoading(false);
+          setIsFetchingConfig(false);
         }
       }
     }
@@ -397,6 +401,10 @@ function CreateForm() {
     } finally {
       setIsPublishingLinks(false);
     }
+  };
+
+  const handleSaveDraft = async () => {
+    await handleSave();
   };
 
   const sectionItems = [
@@ -677,6 +685,10 @@ function CreateForm() {
         <div className={styles.feedbackSuccess}>{saveMessage}</div>
       ) : null}
 
+      {isFetchingConfig ? (
+        <p className={styles.helperText}>Loading saved formation criteria...</p>
+      ) : null}
+
       <div className={styles.workspace}>
         <ModuleBlock
           componentId="MOD-FNAV"
@@ -723,13 +735,20 @@ function CreateForm() {
 
           <div className={styles.actionRow}>
             <Button
+              variant="default"
+              onClick={handleSaveDraft}
+              disabled={isReadOnly || isSaving || isLoading || isPublishingLinks}
+            >
+              {isSaving ? "Saving draft..." : "Save Draft"}
+            </Button>
+            <Button
               variant="success"
               onClick={handleSaveAndContinue}
               disabled={isReadOnly || isSaving || isLoading || isPublishingLinks}
             >
               {isPublishingLinks
-                ? "Submitting..."
-                : "Save criteria and continue"}
+                ? "Saving and publishing..."
+                : "Save and Publish"}
             </Button>
           </div>
         </div>

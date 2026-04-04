@@ -510,6 +510,8 @@ This microservice manages student form data (buddy, MBTI, etc.) for a section. I
   - `POST /notification/send-form-link` — bulk: accepts `recipients` array (student_id, email, form_url, section_id)
   - `POST /notification/publish-email` — direct email payload (`to`, `subject`, `body`, `is_html`, ...)
 
+`POST /notification/send-form-link` now publishes a single RabbitMQ batch message (`event_type: FormLinksGeneratedBatch`) that contains all valid recipients in one payload. The HTTP request/response schema remains unchanged.
+
 ### RabbitMQ topology
 
 - Exchange: `notification.topic` (topic, durable) — env: `NOTIFICATION_EXCHANGE`
@@ -550,6 +552,14 @@ SMTP / Email:
 - `EMAIL_SEND_DELAY_SECONDS`
 
 ### Message shapes
+
+- Batch envelope (new primary path for bulk notifications):
+  - `event_type: FormLinksGeneratedBatch`
+  - `notifications: [ ... ]` where each item is a direct-email payload or legacy `FormLinkGenerated` payload.
+- Consumer behavior for batch envelope:
+  - Processes each item in `notifications` independently.
+  - Sends emails for valid items.
+  - Emits error events for invalid items without dropping the entire batch.
 
 - Preferred direct-email message: `to`, `subject`, `body`, `is_html`, `reply_to`, `headers`, `metadata`.
 - Backward-compatible event: `event_type: FormLinkGenerated` with `email`, `form_url`, `student_id`, `section_id`.

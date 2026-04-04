@@ -502,6 +502,6 @@ Content-Type: application/json
 ## Behavior Notes
 
 - Request is synchronous for orchestration only; it does not return downstream delivery status from notification processing.
-- The service fetches enrolled students, creates per-student forms, builds form links, and publishes notification messages to RabbitMQ.
+- The service fetches enrolled students, creates per-student forms, builds form links, and publishes one RabbitMQ batch message (`FormLinksGeneratedBatch`) containing all valid student notifications for the section.
 - Notification payload includes a generic user-facing message and a form link.
 - The service returns per-student success/failure details for orchestration outcomes only.
