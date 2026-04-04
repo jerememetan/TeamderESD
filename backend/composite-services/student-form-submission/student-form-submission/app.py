@@ -11,6 +11,7 @@ for _candidate in _SWAGGER_PATH_CANDIDATES:
 
 from swagger_helper import register_swagger
 
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
 from typing import Any, Dict, Optional
@@ -94,6 +95,26 @@ def _call_json(method: str, url: str, *, params: Optional[Dict[str, Any]] = None
     return requests.request(method=method, url=url, params=params, json=payload, timeout=REQUEST_TIMEOUT)
 
 
+def _submit_parallel_posts(post_requests):
+    if not post_requests:
+        return {}
+
+    results = {}
+    with ThreadPoolExecutor(max_workers=len(post_requests)) as executor:
+        future_by_key = {
+            key: executor.submit(_call_json, "POST", req["url"], payload=req["payload"])
+            for key, req in post_requests.items()
+        }
+
+        for key, future in future_by_key.items():
+            try:
+                results[key] = {"response": future.result(), "exception": None}
+            except requests.RequestException as exc:
+                results[key] = {"response": None, "exception": exc}
+
+    return results
+
+
 def _normalize_json_value(value: Any) -> Any:
     if isinstance(value, UUID):
         return str(value)
@@ -122,30 +143,6 @@ def submit_form():
     writes: Dict[str, Any] = {}
 
     has_form_data = buddy_id is not None or bool(mbti)
-    if has_form_data:
-        form_data_payload = _normalize_json_value({
-            "section_id": section_id,
-            "student_id": student_id,
-            "buddy_id": buddy_id,
-            "mbti": mbti,
-        })
-        try:
-            form_data_resp = _call_json("POST", FORM_DATA_URL, payload=form_data_payload)
-        except requests.RequestException:
-            return _downstream_error(
-                "student-form-data",
-                None,
-                "Failed to save student form data",
-                request_context={"section_id": section_id, "student_id": student_id, "operation": "submit-form-data"},
-            )
-        if form_data_resp.status_code not in (200, 201):
-            return _downstream_error(
-                "student-form-data",
-                form_data_resp,
-                "Failed to save student form data",
-                request_context={"section_id": section_id, "student_id": student_id, "operation": "submit-form-data"},
-            )
-        writes["form_data"] = _safe_json(form_data_resp)
 
     if len(skill_scores) > 0:
         invalid_scores = []
@@ -166,23 +163,6 @@ def submit_form():
             "student_id": student_id,
             "competences": skill_scores,
         })
-        try:
-            competence_resp = _call_json("POST", COMPETENCE_URL, payload=competence_payload)
-        except requests.RequestException:
-            return _downstream_error(
-                "student-competence",
-                None,
-                "Failed to save student competences",
-                request_context={"section_id": section_id, "student_id": student_id, "operation": "submit-competence"},
-            )
-        if competence_resp.status_code not in (200, 201):
-            return _downstream_error(
-                "student-competence",
-                competence_resp,
-                "Failed to save student competences",
-                request_context={"section_id": section_id, "student_id": student_id, "operation": "submit-competence"},
-            )
-        writes["competence"] = _safe_json(competence_resp)
 
     if len(topic_rankings) > 0:
         try:
@@ -198,23 +178,68 @@ def submit_form():
             "student_id": student_id,
             "preferences": topic_rankings,
         })
-        try:
-            topic_pref_resp = _call_json("POST", TOPIC_PREFERENCE_URL, payload=preference_payload)
-        except requests.RequestException:
+
+    post_requests = {}
+    if has_form_data:
+        form_data_payload = _normalize_json_value({
+            "section_id": section_id,
+            "student_id": student_id,
+            "buddy_id": buddy_id,
+            "mbti": mbti,
+        })
+        post_requests["form_data"] = {
+            "url": FORM_DATA_URL,
+            "payload": form_data_payload,
+            "service_name": "student-form-data",
+            "message": "Failed to save student form data",
+            "operation": "submit-form-data",
+        }
+
+    if len(skill_scores) > 0:
+        post_requests["competence"] = {
+            "url": COMPETENCE_URL,
+            "payload": competence_payload,
+            "service_name": "student-competence",
+            "message": "Failed to save student competences",
+            "operation": "submit-competence",
+        }
+
+    if len(topic_rankings) > 0:
+        post_requests["topic_preference"] = {
+            "url": TOPIC_PREFERENCE_URL,
+            "payload": preference_payload,
+            "service_name": "student-topic-preference",
+            "message": "Failed to save student topic preferences",
+            "operation": "submit-topic-preference",
+        }
+
+    post_results = _submit_parallel_posts(post_requests)
+    for key in ("form_data", "competence", "topic_preference"):
+        request_info = post_requests.get(key)
+        if request_info is None:
+            continue
+
+        result = post_results[key]
+        response = result["response"]
+        exception = result["exception"]
+
+        if exception is not None:
             return _downstream_error(
-                "student-topic-preference",
+                request_info["service_name"],
                 None,
-                "Failed to save student topic preferences",
-                request_context={"section_id": section_id, "student_id": student_id, "operation": "submit-topic-preference"},
+                request_info["message"],
+                request_context={"section_id": section_id, "student_id": student_id, "operation": request_info["operation"]},
             )
-        if topic_pref_resp.status_code not in (200, 201):
+
+        if response.status_code not in (200, 201):
             return _downstream_error(
-                "student-topic-preference",
-                topic_pref_resp,
-                "Failed to save student topic preferences",
-                request_context={"section_id": section_id, "student_id": student_id, "operation": "submit-topic-preference"},
+                request_info["service_name"],
+                response,
+                request_info["message"],
+                request_context={"section_id": section_id, "student_id": student_id, "operation": request_info["operation"]},
             )
-        writes["topic_preference"] = _safe_json(topic_pref_resp)
+
+        writes[key] = _safe_json(response)
 
     student_form_payload = _normalize_json_value(
         {
