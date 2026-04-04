@@ -2,6 +2,9 @@ import { Outlet, useLocation } from 'react-router'
 import MechanicalSwitch from '../../components/schematic/MechanicalSwitch'
 import styles from './AppShell.module.css'
 import { themeVars } from '../../design/theme'
+import { getPreferredStudentRouteId } from '../../services/studentSession'
+
+const preferredStudentRouteId = getPreferredStudentRouteId()
 
 const navItems = [
   {
@@ -11,7 +14,7 @@ const navItems = [
     match: (pathname) => pathname.startsWith('/instructor'),
   },
   {
-    to: '/student',
+    to: `/student/${preferredStudentRouteId}`,
     label: 'Student',
     code: 'MODE-02',
     match: (pathname) => pathname.startsWith('/student'),

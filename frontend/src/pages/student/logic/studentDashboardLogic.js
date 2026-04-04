@@ -1,11 +1,12 @@
 import { fetchStudentAssignments } from "../../../services/studentAssignmentService";
 import { getPendingPeerEvaluations } from "../../../services/peerEvaluationService";
-import { getBackendSectionId, getBackendStudentId } from "../../../data/backendIds";
-import { mockCourses } from "../../../data/mockData";
+
+function getFriendlyErrorMessage(error, fallbackMessage) {
+  return error?.message || fallbackMessage;
+}
 
 export async function loadAssignmentsForStudent(
   studentProfile,
-  activeStudentTeams,
   setTeamAssignments,
   setAssignmentSource,
   setPendingPeerRounds,
@@ -16,45 +17,77 @@ export async function loadAssignmentsForStudent(
   setAssignmentError("");
 
   try {
-    const backendAssignments = await fetchStudentAssignments({
-      currentStudentId: studentProfile.id,
-      courses: mockCourses,
-    });
+    const backendAssignments = await fetchStudentAssignments({ studentProfile });
 
-    if (backendAssignments.length) {
-      setTeamAssignments(backendAssignments);
-      setAssignmentSource("backend");
-      await loadPendingPeerEvals(studentProfile, backendAssignments, setPendingPeerRounds);
-    } else {
-      setTeamAssignments(activeStudentTeams);
-      setAssignmentSource("mock");
-      await loadPendingPeerEvals(studentProfile, activeStudentTeams, setPendingPeerRounds);
+    setTeamAssignments(backendAssignments);
+    setAssignmentSource("backend");
+
+    if (!backendAssignments.length) {
+      setAssignmentError("The backend did not return any team assignments for this student.");
+      setPendingPeerRounds([]);
+      return;
     }
+
+    await loadPendingPeerEvals(studentProfile, backendAssignments, setPendingPeerRounds);
   } catch (error) {
-    setTeamAssignments(activeStudentTeams);
-    setAssignmentSource("mock");
-    setAssignmentError(error.message);
-    await loadPendingPeerEvals(studentProfile, activeStudentTeams, setPendingPeerRounds);
+    setTeamAssignments([]);
+    setAssignmentSource("error");
+    setAssignmentError(getFriendlyErrorMessage(error, "Unable to connect to the backend team service."));
+    setPendingPeerRounds([]);
   } finally {
     setIsLoadingAssignments(false);
   }
 }
 
+export async function loadFormsForStudent(studentProfile, teamAssignments, setAvailableForms, setFormError) {
+  setFormError("");
+
+  try {
+    const backendStudentId = Number(studentProfile?.backendStudentId);
+    if (!Number.isFinite(backendStudentId)) {
+      throw new Error("Unable to resolve a backend student id for the selected student.");
+    }
+
+    const availableForms = teamAssignments
+      .filter((assignment) => Boolean(assignment?.sectionId))
+      .map((assignment) => ({
+        id: String(assignment.sectionId),
+        sectionId: assignment.sectionId,
+        studentId: backendStudentId,
+        submitted: false,
+        raw: assignment,
+        courseId: assignment.courseId || "",
+        courseCode: assignment.courseCode || "",
+        courseName: assignment.courseName || "",
+        sectionNumber: assignment.sectionNumber || null,
+        title: `${assignment.courseCode || assignment.courseId || "Course"} Section ${assignment.sectionNumber || assignment.groupCode || assignment.sectionId}`,
+        description: "Open form entry",
+      }));
+
+    setAvailableForms(availableForms);
+  } catch (error) {
+    setAvailableForms([]);
+    setFormError(getFriendlyErrorMessage(error, "Unable to load available forms for this student."));
+  }
+}
+
 async function loadPendingPeerEvals(studentProfile, teams, setPendingPeerRounds) {
   try {
-    // Get the backend student ID
-    const backendStudentId = getBackendStudentId(studentProfile.id);
+    const backendStudentId = Number(studentProfile?.backendStudentId);
+    if (!Number.isFinite(backendStudentId)) {
+      setPendingPeerRounds([]);
+      return;
+    }
 
-    // Collect unique section IDs from team assignments
     const sectionIds = new Set();
     for (const team of teams) {
-      const sectionId = getBackendSectionId(team.groupId);
+      const sectionId = team.sectionId || team.groupId;
       if (sectionId) {
         sectionIds.add(sectionId);
       }
     }
 
-    if (!backendStudentId || sectionIds.size === 0) {
+    if (sectionIds.size === 0) {
       setPendingPeerRounds([]);
       return;
     }

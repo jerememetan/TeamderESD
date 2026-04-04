@@ -288,7 +288,7 @@ services:
       OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
-      STUDENT_FORM_SUBMISSION_URL: "http://student-form-service:3015/student-form/submission"
+      STUDENT_FORM_SUBMISSION_URL: "http://student-form-submission-service:4006/student-form-submission/submit"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
       TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
       COMPETENCE_URL: "http://student-competence-service:3008/competence"
@@ -299,6 +299,32 @@ services:
       - student-topic-preference-service
       - reputation-service
       - student-competence-service
+
+  student-form-submission-service:
+    build:
+      context: ./composite-services/student-form-submission
+    container_name: teamder-student-form-submission-service
+    ports:
+      - "4006:4006"
+    environment:
+      ENABLE_SWAGGER: "true"
+      PORT: 4006
+      REQUEST_TIMEOUT: 8
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
+      FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
+      COMPETENCE_URL: "http://student-competence-service:3008/competence"
+      TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
+    depends_on:
+      - student-form-data-service
+      - student-competence-service
+      - student-topic-preference-service
 
   team-formation-service:
     build:

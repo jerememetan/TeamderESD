@@ -1,6 +1,6 @@
-import styles from "./MockStudentSwitcher.module.css";
+import styles from "./StudentSwitcher.module.css";
 
-function MockStudentSwitcher({ activeStudentId, availableStudents, onChange }) {
+function StudentSwitcher({ activeStudentId, availableStudents, onChange }) {
   return (
     <label className={styles.switcher}>
       <span className={styles.label}>Viewing as</span>
@@ -15,4 +15,4 @@ function MockStudentSwitcher({ activeStudentId, availableStudents, onChange }) {
   );
 }
 
-export default MockStudentSwitcher;
+export default StudentSwitcher;

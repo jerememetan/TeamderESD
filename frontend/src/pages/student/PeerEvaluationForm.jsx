@@ -4,8 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
-import MockStudentSwitcher from "../../components/student/MockStudentSwitcher";
-import { useMockStudentSession } from "../../services/mockStudentSession";
+import StudentSwitcher from "../../components/student/StudentSwitcher";
+import { useStudentSession } from "../../services/studentSession";
 import {
   getPeerEvaluationRound,
   getPeerEvaluationSubmission,
@@ -17,14 +17,16 @@ import styles from "./PeerEvaluationForm.module.css";
 import { Button } from "../../components/ui/button";
 
 function PeerEvaluationForm() {
-  const { roundId } = useParams();
+  const { roundId, studentId: routeStudentId } = useParams();
   const navigate = useNavigate();
   const {
     activeStudent,
-    activeStudentId,
-    setActiveStudentId,
+    activeStudentRouteId,
     availableStudents,
-  } = useMockStudentSession();
+    studentLoadError,
+    isLoadingStudents,
+  } = useStudentSession(routeStudentId);
+  const studentBasePath = `/student/${activeStudentRouteId}`;
 
   const [round, setRound] = useState(null);
   const [teams, setTeams] = useState([]);
@@ -36,12 +38,7 @@ function PeerEvaluationForm() {
   const [submitError, setSubmitError] = useState("");
 
   // Determine the current student's backend ID from available students
-  const currentBackendId = useMemo(() => {
-    const numId = parseInt(activeStudent?.id, 10);
-    if (!isNaN(numId) && numId > 0) return numId;
-    if (activeStudent?.student_id) return activeStudent.student_id;
-    return null;
-  }, [activeStudent]);
+  const currentBackendId = useMemo(() => activeStudent?.backendStudentId ?? null, [activeStudent]);
 
   // Load round, teams, and profiles
   useEffect(() => {
@@ -128,8 +125,12 @@ function PeerEvaluationForm() {
     [memberList, currentBackendId]
   );
 
-  if (isLoading) {
+  if (isLoading || isLoadingStudents) {
     return <div className={styles.notFound}>Loading peer evaluation...</div>;
+  }
+
+  if (studentLoadError || !activeStudent) {
+    return <div className={styles.notFound}>{studentLoadError || "Backend student data is unavailable."}</div>;
   }
 
   if (!round) {
@@ -154,7 +155,7 @@ function PeerEvaluationForm() {
   if (existingSubmission) {
     return (
       <div className={styles.page}>
-        <Link to="/student" className={styles.backLink}>
+        <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
         <ModuleBlock
@@ -169,7 +170,7 @@ function PeerEvaluationForm() {
             effects remain private and are not shown here.
           </p>
           <div className={styles.actionRow}>
-            <Button type="button" onClick={() => navigate("/student")}>
+            <Button type="button" onClick={() => navigate(studentBasePath)}>
               Return to dashboard
             </Button>
           </div>
@@ -213,7 +214,7 @@ function PeerEvaluationForm() {
         entries,
       });
 
-      navigate("/student");
+      navigate(studentBasePath);
     } catch (err) {
       setSubmitError(
         err.message || "Failed to submit evaluation. Please try again."
@@ -225,7 +226,7 @@ function PeerEvaluationForm() {
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
-      <Link to="/student" className={styles.backLink}>
+      <Link to={studentBasePath} className={styles.backLink}>
         <ArrowLeft className={styles.backIcon} /> Return to student console
       </Link>
 
@@ -239,10 +240,10 @@ function PeerEvaluationForm() {
           </p>
         </div>
         <div className={styles.heroTags}>
-          <MockStudentSwitcher
-            activeStudentId={activeStudentId}
+          <StudentSwitcher
+            activeStudentId={activeStudent.id}
             availableStudents={availableStudents}
-            onChange={setActiveStudentId}
+            onChange={(nextStudentId) => navigate(`/student/${nextStudentId}/peer-evaluation/${roundId}`)}
           />
           <SystemTag
             tone={round.status === "active" ? "success" : "neutral"}
@@ -328,7 +329,7 @@ function PeerEvaluationForm() {
           </Button>
           <Button
             type="button"
-            onClick={() => navigate("/student")}
+            onClick={() => navigate(studentBasePath)}
             variant="outline"
           >
             Cancel

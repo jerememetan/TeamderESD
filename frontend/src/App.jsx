@@ -32,7 +32,7 @@ const router = createBrowserRouter([
         element: <InstructorDashboard />,
       },
       {
-        path: 'student',
+        path: 'student/:studentId',
         element: <StudentDashBoard />,
       },
       {
@@ -64,15 +64,19 @@ const router = createBrowserRouter([
         element: <ErrorLogs />,
       },
       {
-        path: 'student/form/:formId',
+        path: 'student/:studentId/form',
         element: <FillForm />,
       },
       {
-        path: 'student/peer-evaluation/:roundId',
+        path: 'student/:studentId/form/:formId',
+        element: <FillForm />,
+      },
+      {
+        path: 'student/:studentId/peer-evaluation/:roundId',
         element: <PeerEvaluationForm />,
       },
       {
-        path: 'student/team',
+        path: 'student/:studentId/team',
         element: <MyTeam />,
       },
     ],

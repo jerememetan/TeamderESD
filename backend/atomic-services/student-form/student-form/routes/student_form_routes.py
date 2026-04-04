@@ -80,6 +80,14 @@ def get_student_form():
     return jsonify({"data": response_schema.dump(objs, many=True)}), 200
 
 
+@student_form_bp.route("/<int:form_id>", methods=["GET"])
+def get_student_form_by_id(form_id):
+    obj = StudentForm.query.filter_by(id=form_id).first()
+    if not obj:
+        return jsonify({"error": {"code": "NOT_FOUND", "message": "Student form not found"}}), 404
+    return jsonify({"data": response_schema.dump(obj)}), 200
+
+
 @student_form_bp.route("/submitted", methods=["GET"])
 def get_submitted_forms():
     filters, error_response = _extract_student_form_filters()
@@ -179,6 +187,7 @@ create_or_update_student_form._openapi_response_schema = StudentFormCreateEnvelo
 get_student_form._openapi_response_schema = StudentFormListEnvelope()
 get_student_form._openapi_query_parameters = _OPENAPI_STUDENT_FORM_QUERY_PARAMETERS
 get_student_form._openapi_description = "Get student forms filtered by section_id, student_id, or both. At least one filter must be provided."
+get_student_form_by_id._openapi_response_schema = StudentFormResponseSchema()
 get_submitted_forms._openapi_response_schema = StudentFormListEnvelope()
 get_submitted_forms._openapi_query_parameters = _OPENAPI_STUDENT_FORM_QUERY_PARAMETERS
 get_submitted_forms._openapi_description = "Get submitted student forms filtered by section_id, student_id, or both. At least one filter must be provided."

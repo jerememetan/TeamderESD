@@ -1,86 +1,112 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
-import { AlertTriangle, FileText, Users, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import { AlertTriangle, Clock, FileText, Users } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
-import MockStudentSwitcher from "../../components/student/MockStudentSwitcher";
-import { mockCourses, mockForms } from "../../data/mockData";
-import { loadAssignmentsForStudent } from "./logic/studentDashboardLogic";
-import { useMockStudentSession } from "../../services/mockStudentSession";
-import { getPendingPeerEvaluations } from "../../services/peerEvaluationService";
+import StudentSwitcher from "../../components/student/StudentSwitcher";
+import { useStudentSession } from "../../services/studentSession";
+import { loadAssignmentsForStudent, loadFormsForStudent } from "./logic/studentDashboardLogic";
 import styles from "./StudentDashboard.module.css";
 
 function StudentDashBoard() {
+  const navigate = useNavigate();
+  const { studentId: routeStudentId } = useParams();
   const {
     activeStudent,
-    activeStudentTeams,
+    activeStudentRouteId,
     activeStudentId,
-    setActiveStudentId,
     availableStudents,
-  } = useMockStudentSession();
-  const studentProfile = activeStudent;
-  const [teamAssignments, setTeamAssignments] = useState(activeStudentTeams);
-  const [assignmentSource, setAssignmentSource] = useState("mock");
+    isLoadingStudents,
+    studentLoadError,
+  } = useStudentSession(routeStudentId);
+
+  const [teamAssignments, setTeamAssignments] = useState([]);
+  const [assignmentSource, setAssignmentSource] = useState("loading");
   const [assignmentError, setAssignmentError] = useState("");
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
   const [pendingPeerRounds, setPendingPeerRounds] = useState([]);
+  const [availableForms, setAvailableForms] = useState([]);
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
+    if (isLoadingStudents || !activeStudent) {
+      return;
+    }
+
     loadAssignmentsForStudent(
-      studentProfile,
-      activeStudentTeams,
+      activeStudent,
       setTeamAssignments,
       setAssignmentSource,
       setPendingPeerRounds,
       setAssignmentError,
       setIsLoadingAssignments,
     );
-  }, [activeStudentTeams, studentProfile]);
+  }, [activeStudent, isLoadingStudents]);
 
-  const groupIds = new Set(teamAssignments.map((team) => team.groupId));
-  const availableFormList = Object.values(mockForms).filter((form) =>
-    groupIds.has(form.groupId),
-  );
-  const nextForm = availableFormList[0] || null;
+  useEffect(() => {
+    if (isLoadingStudents || !activeStudent) {
+      return;
+    }
+
+    loadFormsForStudent(activeStudent, teamAssignments, setAvailableForms, setFormError);
+  }, [activeStudent, isLoadingStudents, teamAssignments]);
+
+  if (isLoadingStudents) {
+    return (
+      <div className={styles.page}>
+        <section className={styles.hero}>
+          <div>
+            <h2 className={styles.title}>Student Dashboard</h2>
+            <p className={styles.subtitle}>Loading backend student session...</p>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (studentLoadError || !activeStudent) {
+    return (
+      <div className={styles.page}>
+        <Link to="/" className={styles.actionCard} style={{ width: "fit-content" }}>
+          Return to home
+        </Link>
+        <p className={styles.feedbackAlert}>
+          <AlertTriangle className={styles.actionIcon} />
+          {studentLoadError || `Backend did not return a student for ${routeStudentId || "this route"}.`}
+        </p>
+      </div>
+    );
+  }
+
+  const studentBasePath = `/student/${activeStudentRouteId}`;
+  const availableFormList = availableForms;
+  const nextPeerRound = pendingPeerRounds[0] || null;
   const formActionTo =
     availableFormList.length > 1
-      ? "/student/form"
-      : nextForm
-        ? `/student/form/${nextForm.id}`
-        : "/student";
+      ? `${studentBasePath}/form`
+      : availableFormList[0]
+        ? `${studentBasePath}/form/${availableFormList[0].id}`
+        : studentBasePath;
   const formActionState =
     availableFormList.length > 1
       ? { availableFormIds: availableFormList.map((form) => form.id) }
       : undefined;
   const formActionText =
     availableFormList.length > 1
-      ? "Choose which group form you want to complete before submitting your answers."
-      : "Open one of your group forms and submit your answers.";
-  const pendingConfirmations = useMemo(
-    () =>
-      teamAssignments.filter((team) =>
-        team.members.some(
-          (member) =>
-            (member.id === studentProfile.id ||
-              member.studentId === studentProfile.studentId ||
-              member.email === studentProfile.email) &&
-            member.confirmationStatus === "pending",
-        ),
-      ).length,
-    [
-      studentProfile.email,
-      studentProfile.id,
-      studentProfile.studentId,
-      teamAssignments,
-    ],
-  );
-  const assignmentTone = assignmentError
-    ? "alert"
-    : assignmentSource === "backend"
-      ? "success"
-      : "neutral";
-  const nextPeerRound = pendingPeerRounds[0] || null;
+      ? "Choose which section form you want to complete."
+      : availableFormList.length === 1
+        ? "Open your assigned section form and submit your answers."
+        : "No section forms are currently available for this student.";
+  const assignmentTone = assignmentError || formError ? "alert" : assignmentSource === "backend" ? "success" : "neutral";
+  const statusText = isLoadingAssignments
+    ? "Loading assignments"
+    : assignmentError || formError
+      ? "Backend data unavailable"
+      : assignmentSource === "backend"
+      ? "Backend teams loaded"
+      : "Backend data unavailable";
+  const feedbackMessage = [assignmentError, formError].filter(Boolean).join(" ");
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -91,26 +117,27 @@ function StudentDashBoard() {
         <div>
           <h2 className={styles.title}>Student Dashboard</h2>
           <p className={styles.subtitle}>
-            Welcome back, {studentProfile.name}. You are currently assigned to{" "}
-            {teamAssignments.length} course group
+            Welcome back, {activeStudent.name}. You are currently assigned to {teamAssignments.length} course group
             {teamAssignments.length > 1 ? "s" : ""}.
           </p>
         </div>
         <div className={styles.heroMeta}>
-          <MockStudentSwitcher
+          <StudentSwitcher
             activeStudentId={activeStudentId}
             availableStudents={availableStudents}
-            onChange={setActiveStudentId}
+            onChange={(nextStudentId) => navigate(`/student/${nextStudentId}`)}
           />
-          <SystemTag tone={assignmentTone}>
-            {isLoadingAssignments
-              ? "Loading assignments"
-              : assignmentSource === "backend"
-                ? "Backend teams loaded"
-                : "Mock assignments active"}
-          </SystemTag>
+          <SystemTag tone={assignmentTone}>{statusText}</SystemTag>
         </div>
       </section>
+
+      {feedbackMessage ? (
+        <p className={styles.feedbackAlert}>
+          <AlertTriangle className={styles.actionIcon} />
+          {feedbackMessage}
+        </p>
+      ) : null}
+
       <section className={styles.statsGrid}>
         {[
           {
@@ -143,11 +170,11 @@ function StudentDashBoard() {
       <section className={styles.actionGrid}>
         {[
           {
-            to: "/student/team",
+            to: `${studentBasePath}/team`,
             icon: <Users className={styles.actionIcon} />,
             code: "Quick Link",
             title: "View My Teams",
-            text: "See every team you have been assigned to and confirm your place.",
+            text: "See every team returned by the backend for this student.",
           },
           {
             to: formActionTo,
@@ -160,8 +187,8 @@ function StudentDashBoard() {
           },
           {
             to: nextPeerRound
-              ? `/student/peer-evaluation/${nextPeerRound.id}`
-              : "/student",
+              ? `${studentBasePath}/peer-evaluation/${nextPeerRound.id}`
+              : studentBasePath,
             icon: <FileText className={styles.actionIcon} />,
             code: "Peer Review",
             title: "Complete Peer Evaluation",
@@ -199,7 +226,7 @@ function StudentDashBoard() {
           <div>
             <p className={styles.historyTitle}>Latest submission</p>
             <p className={styles.historyText}>
-              Team Formation Survey completed on March 5, 2026.
+              Form availability is derived from your current team section assignments.
             </p>
           </div>
         </div>
