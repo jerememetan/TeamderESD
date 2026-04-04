@@ -22,7 +22,7 @@ class SwapConstraint(db.Model):
     )
 
     constraint_id = db.Column(db.Uuid, primary_key=True, default=uuid.uuid4)
-    course_id = db.Column(db.Uuid, nullable=False, index=True)
+    course_id = db.Column(db.Integer, nullable=False, index=True)
     module_id = db.Column(db.Uuid, nullable=False, index=True)
     class_id = db.Column(db.Uuid, nullable=False, index=True)
 

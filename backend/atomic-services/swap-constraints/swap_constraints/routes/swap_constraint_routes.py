@@ -19,8 +19,12 @@ def get_swap_constraints():
     class_id = request.args.get("class_id")
 
     query = SwapConstraint.query
-    if course_id:
-        query = query.filter_by(course_id=course_id)
+    if course_id is not None:
+        try:
+            course_id_value = int(course_id)
+        except (TypeError, ValueError):
+            return jsonify({"code": 400, "error": "course_id must be a valid integer"}), 400
+        query = query.filter_by(course_id=course_id_value)
     if module_id:
         query = query.filter_by(module_id=module_id)
     if class_id:

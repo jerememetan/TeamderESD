@@ -254,6 +254,46 @@ Move instructor-facing swap request shaping out of the atomic swap-request servi
 - Existing `GET /swap-orchestrator/cycles/:cycle_id/requests` remains unchanged.
 - Atomic `swap-request` endpoints remain storage-focused and unchanged.
 
+<<<<<<< HEAD
+## 2026-04-05 :: Step 7 :: Cycle list filter options
+
+### Goal
+Support four cycle retrieval modes on one endpoint so frontend and teammate tooling can reuse a single route.
+
+### Endpoint
+- `GET /swap-orchestrator/cycles`
+
+### Query options
+- No query params: returns all cycles.
+- `section_id=<uuid>`: returns cycles for one section.
+- `course_id=<int>`: returns cycles for one course.
+- `section_id=<uuid>&course_id=<int>`: returns cycles matching both filters.
+
+### Notes
+- Invalid `section_id` values return `400` with UUID validation messaging.
+- Invalid `course_id` values return `400` when not parseable as integer.
+- Course filtering now uses direct integer matching (`course_id` is treated as integer end-to-end in swap-orchestrator, swap-constraints, and team-swap payload validation).
+- Empty matches return `200` with an empty `data.cycles` list.
+
+## 2026-04-05 :: Step 8 :: Swap-orchestrator Swagger enhancement
+
+### Goal
+Expose missing query parameters and typed request bodies in Swagger UI for swap-orchestrator routes.
+
+### Scope
+- Enhanced `swagger_helper.py` for swap-orchestrator with operation-level OpenAPI hints.
+- Added explicit query parameter docs for:
+	- `GET /swap-orchestrator/cycles` (`section_id`, `course_id`)
+	- `GET /swap-orchestrator/cycles/{cycle_id}/requests/processed` (`status`)
+	- `GET /swap-orchestrator/student-team` (`section_id`, `student_id`)
+- Added typed request body schemas for key write endpoints:
+	- `POST /swap-orchestrator/cycles`
+	- `POST /swap-orchestrator/cycles/{cycle_id}/requests`
+	- `PATCH /swap-orchestrator/cycles/{cycle_id}/requests/{swap_request_id}/decision`
+
+### Result
+- Swagger UI now displays the missing query options and clearer request payload contracts for frontend and teammate testing.
+=======
 ## 2026-04-05 :: Step 7 :: Backend dependency hardening baseline (Phase 5 support track)
 
 ### Goal
@@ -371,3 +411,4 @@ Verify contracts used by recently refactored student pages (`StudentDashboard`, 
 ### Artifact
 
 - `backend/docs/phase6-verification-2026-04-05.md` (updated with student-route delta)
+>>>>>>> b2283afd671322de9f4320a461e21685fd1f3d8e
