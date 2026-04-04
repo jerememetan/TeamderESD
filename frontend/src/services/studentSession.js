@@ -55,7 +55,8 @@ export function getPreferredStudentRouteId() {
   return getStoredStudentId() || BACKEND_UNAVAILABLE_ROUTE;
 }
 
-export function useStudentSession(routeStudentId) {
+export function useStudentSession(routeStudentId, options = {}) {
+  const { deferStudentsLoad = false } = options;
   const normalizedRouteStudentId = normalizeStudentRouteId(routeStudentId);
   const [activeStudentId, setActiveStudentId] = useState(() => normalizedRouteStudentId || getStoredStudentId());
   const [availableStudents, setAvailableStudents] = useState([]);
@@ -64,6 +65,7 @@ export function useStudentSession(routeStudentId) {
 
   useEffect(() => {
     let ignore = false;
+    let deferredLoadHandle = null;
 
     async function loadStudents() {
       setIsLoadingStudents(true);
@@ -91,12 +93,21 @@ export function useStudentSession(routeStudentId) {
       }
     }
 
-    loadStudents();
+    if (deferStudentsLoad) {
+      deferredLoadHandle = window.setTimeout(() => {
+        loadStudents();
+      }, 0);
+    } else {
+      loadStudents();
+    }
 
     return () => {
       ignore = true;
+      if (deferredLoadHandle !== null) {
+        window.clearTimeout(deferredLoadHandle);
+      }
     };
-  }, []);
+  }, [deferStudentsLoad]);
 
   useEffect(() => {
     if (!normalizedRouteStudentId) {

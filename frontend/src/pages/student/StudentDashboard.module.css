@@ -11,6 +11,13 @@
   align-items: flex-start;
 }
 
+.heroMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--td-space-xs);
+}
+
 .kicker,
 .actionCode,
 .metaLine,
@@ -39,7 +46,6 @@
 
 .subtitle,
 .actionText,
-.historyText,
 .sourceNote {
   margin: 0;
   color: var(--td-color-text-muted);
@@ -104,7 +110,7 @@
 }
 
 .actionIcon,
-.historyIcon {
+.actionIcon {
   width: 24px;
   height: 24px;
   color: var(--td-color-primary);
@@ -121,13 +127,12 @@
 }
 
 .actionTitle,
-.historyTitle {
+.actionTitle {
   margin: 6px 0;
   font-size: 1.06rem;
 }
 
 .teamMeta,
-.historyState,
 .assignmentList {
   display: flex;
   flex-direction: column;
@@ -150,11 +155,6 @@
   letter-spacing: 0.08em;
 }
 
-.historyState {
-  flex-direction: row;
-  align-items: center;
-}
-
 @media (max-width: 900px) {
   .statsGrid,
   .actionGrid {
@@ -165,6 +165,10 @@
 @media (max-width: 700px) {
   .hero {
     flex-direction: column;
+  }
+
+  .heroMeta {
+    align-items: flex-start;
   }
 
   .actionCard::after {

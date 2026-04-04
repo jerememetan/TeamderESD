@@ -1,5 +1,7 @@
 import { fetchStudentAssignments } from "../../../services/studentAssignmentService";
-import { getPendingPeerEvaluations } from "../../../services/peerEvaluationService";
+import { fetchStudentForms } from "../../../services/studentFormService";
+import { fetchTeamsBySections } from "../../../services/teamService";
+import { getActivePeerEvaluationRoundsBySections, getPendingPeerEvaluations } from "../../../services/peerEvaluationService";
 
 function getFriendlyErrorMessage(error, fallbackMessage) {
   return error?.message || fallbackMessage;
@@ -69,6 +71,52 @@ export async function loadFormsForStudent(studentProfile, teamAssignments, setAv
     setAvailableForms([]);
     setFormError(getFriendlyErrorMessage(error, "Unable to load available forms for this student."));
   }
+}
+
+export async function loadDashboardSummary(studentProfile) {
+  const backendStudentId = Number(studentProfile?.backendStudentId);
+  if (!Number.isFinite(backendStudentId)) {
+    throw new Error("Unable to resolve a backend student id for the selected student.");
+  }
+
+  const forms = await fetchStudentForms({ studentId: backendStudentId });
+  const uniqueSectionIds = Array.from(new Set(forms.map((form) => form.sectionId).filter(Boolean)));
+
+  if (!uniqueSectionIds.length) {
+    return {
+      teamCount: 0,
+      formCount: forms.length,
+      peerEvalCount: 0,
+      availableForms: forms,
+      nextPeerRound: null,
+    };
+  }
+
+  const [teamsBySection, roundsBySection] = await Promise.all([
+    fetchTeamsBySections(uniqueSectionIds),
+    getActivePeerEvaluationRoundsBySections(uniqueSectionIds),
+  ]);
+
+  const teamCount = uniqueSectionIds.reduce((count, sectionId) => {
+    const sectionTeams = Array.isArray(teamsBySection[sectionId]) ? teamsBySection[sectionId] : [];
+    const hasMembership = sectionTeams.some((team) =>
+      (team?.students ?? []).some((student) => Number(student?.student_id) === backendStudentId),
+    );
+
+    return hasMembership ? count + 1 : count;
+  }, 0);
+
+  const activeRounds = uniqueSectionIds.flatMap((sectionId) =>
+    Array.isArray(roundsBySection[sectionId]) ? roundsBySection[sectionId] : [],
+  );
+
+  return {
+    teamCount,
+    formCount: forms.length,
+    peerEvalCount: activeRounds.length,
+    availableForms: forms,
+    nextPeerRound: activeRounds[0] || null,
+  };
 }
 
 async function loadPendingPeerEvals(studentProfile, teams, setPendingPeerRounds) {

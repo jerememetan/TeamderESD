@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { AlertTriangle, Clock, FileText, Users } from "lucide-react";
+import { AlertTriangle, FileText, Users } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
 import StudentSwitcher from "../../components/student/StudentSwitcher";
 import { useStudentSession } from "../../services/studentSession";
-import { loadAssignmentsForStudent, loadFormsForStudent } from "./logic/studentDashboardLogic";
+import { loadDashboardSummary } from "./logic/studentDashboardLogic";
 import styles from "./StudentDashboard.module.css";
 
 function StudentDashBoard() {
@@ -19,94 +19,85 @@ function StudentDashBoard() {
     availableStudents,
     isLoadingStudents,
     studentLoadError,
-  } = useStudentSession(routeStudentId);
+  } = useStudentSession(routeStudentId, { deferStudentsLoad: true });
 
-  const [teamAssignments, setTeamAssignments] = useState([]);
-  const [assignmentSource, setAssignmentSource] = useState("loading");
-  const [assignmentError, setAssignmentError] = useState("");
-  const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
-  const [pendingPeerRounds, setPendingPeerRounds] = useState([]);
+  const [teamCount, setTeamCount] = useState(0);
+  const [peerEvalCount, setPeerEvalCount] = useState(0);
+  const [nextPeerRound, setNextPeerRound] = useState(null);
   const [availableForms, setAvailableForms] = useState([]);
-  const [formError, setFormError] = useState("");
+  const [summaryError, setSummaryError] = useState("");
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true);
 
   useEffect(() => {
-    if (isLoadingStudents || !activeStudent) {
+    if (!activeStudent) {
+      setTeamCount(0);
+      setPeerEvalCount(0);
+      setNextPeerRound(null);
+      setAvailableForms([]);
+      setIsLoadingSummary(isLoadingStudents);
       return;
     }
 
-    loadAssignmentsForStudent(
-      activeStudent,
-      setTeamAssignments,
-      setAssignmentSource,
-      setPendingPeerRounds,
-      setAssignmentError,
-      setIsLoadingAssignments,
-    );
+    let ignore = false;
+
+    async function loadSummary() {
+      setIsLoadingSummary(true);
+      setSummaryError("");
+
+      try {
+        const summary = await loadDashboardSummary(activeStudent);
+        if (ignore) {
+          return;
+        }
+
+        setTeamCount(summary.teamCount);
+        setPeerEvalCount(summary.peerEvalCount);
+        setNextPeerRound(summary.nextPeerRound);
+        setAvailableForms(summary.availableForms);
+      } catch (error) {
+        if (ignore) {
+          return;
+        }
+
+        setTeamCount(0);
+        setPeerEvalCount(0);
+        setNextPeerRound(null);
+        setAvailableForms([]);
+        setSummaryError(error?.message || "Unable to load dashboard metrics from the backend.");
+      } finally {
+        if (!ignore) {
+          setIsLoadingSummary(false);
+        }
+      }
+    }
+
+    loadSummary();
+
+    return () => {
+      ignore = true;
+    };
   }, [activeStudent, isLoadingStudents]);
 
-  useEffect(() => {
-    if (isLoadingStudents || !activeStudent) {
-      return;
-    }
-
-    loadFormsForStudent(activeStudent, teamAssignments, setAvailableForms, setFormError);
-  }, [activeStudent, isLoadingStudents, teamAssignments]);
-
-  if (isLoadingStudents) {
-    return (
-      <div className={styles.page}>
-        <section className={styles.hero}>
-          <div>
-            <h2 className={styles.title}>Student Dashboard</h2>
-            <p className={styles.subtitle}>Loading backend student session...</p>
-          </div>
-        </section>
-      </div>
-    );
-  }
-
-  if (studentLoadError || !activeStudent) {
-    return (
-      <div className={styles.page}>
-        <Link to="/" className={styles.actionCard} style={{ width: "fit-content" }}>
-          Return to home
-        </Link>
-        <p className={styles.feedbackAlert}>
-          <AlertTriangle className={styles.actionIcon} />
-          {studentLoadError || `Backend did not return a student for ${routeStudentId || "this route"}.`}
-        </p>
-      </div>
-    );
-  }
-
-  const studentBasePath = `/student/${activeStudentRouteId}`;
+  const resolvedRouteStudentId = routeStudentId || activeStudentRouteId || "backend-unavailable";
+  const studentBasePath = `/student/${resolvedRouteStudentId}`;
+  const resolvedStudentName = activeStudent?.name || `Student ${resolvedRouteStudentId}`;
   const availableFormList = availableForms;
-  const nextPeerRound = pendingPeerRounds[0] || null;
-  const formActionTo =
-    availableFormList.length > 1
-      ? `${studentBasePath}/form`
-      : availableFormList[0]
-        ? `${studentBasePath}/form/${availableFormList[0].id}`
-        : studentBasePath;
-  const formActionState =
-    availableFormList.length > 1
-      ? { availableFormIds: availableFormList.map((form) => form.id) }
-      : undefined;
+  const formActionTo = `${studentBasePath}/form`;
   const formActionText =
-    availableFormList.length > 1
+    isLoadingSummary || isLoadingStudents
+      ? "Loading your available section forms."
+      : availableFormList.length > 1
       ? "Choose which section form you want to complete."
       : availableFormList.length === 1
         ? "Open your assigned section form and submit your answers."
         : "No section forms are currently available for this student.";
-  const assignmentTone = assignmentError || formError ? "alert" : assignmentSource === "backend" ? "success" : "neutral";
-  const statusText = isLoadingAssignments
-    ? "Loading assignments"
-    : assignmentError || formError
+  const assignmentTone = studentLoadError || summaryError ? "alert" : isLoadingSummary || isLoadingStudents ? "neutral" : "success";
+  const statusText = isLoadingSummary || isLoadingStudents
+    ? "Loading dashboard"
+    : studentLoadError || summaryError
       ? "Backend data unavailable"
-      : assignmentSource === "backend"
-      ? "Backend teams loaded"
-      : "Backend data unavailable";
-  const feedbackMessage = [assignmentError, formError].filter(Boolean).join(" ");
+      : "Dashboard metrics loaded";
+  const feedbackMessage = [studentLoadError, summaryError].filter(Boolean).join(" ");
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -117,16 +108,20 @@ function StudentDashBoard() {
         <div>
           <h2 className={styles.title}>Student Dashboard</h2>
           <p className={styles.subtitle}>
-            Welcome back, {activeStudent.name}. You are currently assigned to {teamAssignments.length} course group
-            {teamAssignments.length > 1 ? "s" : ""}.
+            Welcome back, {resolvedStudentName}. You are currently assigned to {teamCount} course group
+            {teamCount > 1 ? "s" : ""}.
           </p>
         </div>
         <div className={styles.heroMeta}>
-          <StudentSwitcher
-            activeStudentId={activeStudentId}
-            availableStudents={availableStudents}
-            onChange={(nextStudentId) => navigate(`/student/${nextStudentId}`)}
-          />
+          {availableStudents.length ? (
+            <StudentSwitcher
+              activeStudentId={activeStudentId}
+              availableStudents={availableStudents}
+              onChange={(nextStudentId) => navigate(`/student/${nextStudentId}`)}
+            />
+          ) : (
+            <p className={styles.sourceNote}>Loading students...</p>
+          )}
           <SystemTag tone={assignmentTone}>{statusText}</SystemTag>
         </div>
       </section>
@@ -142,17 +137,17 @@ function StudentDashBoard() {
         {[
           {
             title: "My Teams",
-            metric: String(teamAssignments.length).padStart(2, "0"),
+            metric: isLoadingSummary || isLoadingStudents ? "--" : String(teamCount).padStart(2, "0"),
             accent: "blue",
           },
           {
             title: "Available Forms",
-            metric: String(availableFormList.length).padStart(2, "0"),
+            metric: isLoadingSummary || isLoadingStudents ? "--" : String(availableFormList.length).padStart(2, "0"),
             accent: "green",
           },
           {
             title: "Peer Evaluations",
-            metric: String(pendingPeerRounds.length).padStart(2, "0"),
+            metric: isLoadingSummary || isLoadingStudents ? "--" : String(peerEvalCount).padStart(2, "0"),
             accent: "orange",
           },
         ].map((item, index) => (
@@ -178,7 +173,6 @@ function StudentDashBoard() {
           },
           {
             to: formActionTo,
-            state: formActionState,
             icon: <FileText className={styles.actionIcon} />,
             code: "Quick Link",
             title:
@@ -200,7 +194,6 @@ function StudentDashBoard() {
           <Link
             key={action.code + index}
             to={action.to}
-            state={action.state}
             className={`${styles.actionCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem} ${!nextPeerRound && action.code === "Peer Review" ? styles.actionCardDisabled : ""}`}
             style={{ "--td-stagger-delay": `${(index + 4) * 50}ms` }}
           >
@@ -213,24 +206,6 @@ function StudentDashBoard() {
           </Link>
         ))}
       </section>
-
-      <ModuleBlock
-        componentId="MOD-15"
-        eyebrow="Recent Activity"
-        title="Form History"
-        className={`${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
-        style={{ "--td-stagger-delay": "350ms" }}
-      >
-        <div className={styles.historyState}>
-          <Clock className={styles.historyIcon} />
-          <div>
-            <p className={styles.historyTitle}>Latest submission</p>
-            <p className={styles.historyText}>
-              Form availability is derived from your current team section assignments.
-            </p>
-          </div>
-        </div>
-      </ModuleBlock>
     </div>
   );
 }
