@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from "react-router";
 import {
   AlertTriangle,
   ArrowLeft,
+  CircleAlert,
   Plus,
   Settings2,
   SlidersHorizontal,
@@ -305,6 +306,7 @@ function CreateForm() {
   const activeParameterCount = WEIGHT_FIELDS.filter(
     (field) => Math.abs(Number(formState.weights[field.key] || 0)) > 0.0001,
   ).length;
+  const formsRequired = isFormsRequired(formState);
   const priorityWeightFields = WEIGHT_FIELDS.filter(
     (field) => field.key !== "topic_weight" && field.key !== "skill_weight",
   );
@@ -320,6 +322,12 @@ function CreateForm() {
     const description = getWeightDescription(weightKey, value);
     const negativeWarning = getNegativeWeightWarning(weightKey, value);
     const shouldWarnRandomness = weightKey === "randomness" && value > 0.5;
+    const requiresStudentFormData = [
+      "buddy_weight",
+      "mbti_weight",
+      "topic_weight",
+      "skill_weight",
+    ].includes(weightKey);
 
     return (
       <div
@@ -329,9 +337,23 @@ function CreateForm() {
         <div className={styles.criterionHeader}>
           <div>
             <p className={styles.criterionCode}>{field.label}</p>
-            <p className={styles.helperText}>{field.helper}</p>
+            <p className={`${styles.helperText} ${styles.helperTextWithInfo}`}>
+              <span>{field.helper}</span>
+              {requiresStudentFormData ? (
+                <span
+                  className={styles.weightInfo}
+                  role="img"
+                  aria-label="Student form input required"
+                  data-tooltip="These inputs are not auto-populated from student records. If weighted, students must submit forms before team formation can use them."
+                >
+                  <CircleAlert className={styles.weightInfoIcon} />
+                </span>
+              ) : null}
+            </p>
           </div>
-          <SystemTag tone="neutral">{value.toFixed(2)}</SystemTag>
+          <div className={styles.criterionMeta}>
+            <SystemTag tone="neutral">{value.toFixed(2)}</SystemTag>
+          </div>
         </div>
 
         <input
@@ -501,6 +523,22 @@ function CreateForm() {
       content: (
         <div className={styles.criteriaList}>
           {renderWeightControl("topic_weight", styles.fullRow)}
+          {formState.topics.length === 0 && Math.abs(Number(formState.weights?.topic_weight || 0)) > 0.0001 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                Topic weighting is configured but no project topics are defined. Add one or more topics so the topic weighting can meaningfully influence team formation.
+              </span>
+            </div>
+          ) : null}
+          {formState.topics.length > 0 && Math.abs(Number(formState.weights?.topic_weight || 0)) <= 0.0001 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                Project topics are present, but the topic weight is set to zero. With a zero weight, topics will not affect team formation — raise the topic weighting to have these topics influence results.
+              </span>
+            </div>
+          ) : null}
           {formState.topics.length > 10 ? (
             <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
               <AlertTriangle className={styles.warningIcon} />
@@ -566,6 +604,22 @@ function CreateForm() {
       content: (
         <div className={styles.criteriaList}>
           {renderWeightControl("skill_weight", styles.fullRow)}
+          {formState.skills.length === 0 && Math.abs(Number(formState.weights?.skill_weight || 0)) > 0.0001 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                Skill weighting is configured but no skills are defined. Add one or more skills so the skill weighting can meaningfully influence team formation.
+              </span>
+            </div>
+          ) : null}
+          {formState.skills.length > 0 && Math.abs(Number(formState.weights?.skill_weight || 0)) <= 0.0001 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                Skills are defined, but the skill weight is currently zero. With zero weighting, skills will not be considered during team formation—increase the skill weighting to make these skills count.
+              </span>
+            </div>
+          ) : null}
           {formState.skills.length > 10 ? (
             <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
               <AlertTriangle className={styles.warningIcon} />
@@ -654,17 +708,13 @@ function CreateForm() {
             {selectedCourse.code} G{selectedGroup.section_number} -{" "}
             {selectedCourse.name}
           </h2>
-          <p className={chrome.subtitle}>
-            Configure the solver inputs for this group using the sidebar
-            workspace.
-          </p>
         </div>
       </section>
 
       <div className={styles.statusPanel}>
         <div>
-          <p className={styles.statusLabel}>Form Creation</p>
-          <p className={styles.statusText}> Creating form for 
+          <p className={styles.statusLabel}>Formation Configuration</p>
+          <p className={styles.statusText}> Configuring for 
             <strong> {selectedCourse.code}G{selectedGroup.section_number}</strong>
           </p>
         </div>
@@ -747,8 +797,12 @@ function CreateForm() {
               disabled={isReadOnly || isSaving || isLoading || isPublishingLinks}
             >
               {isPublishingLinks
-                ? "Saving and publishing..."
-                : "Save and Publish"}
+                ? formsRequired
+                  ? "Saving and publishing..."
+                  : "Saving and forming teams..."
+                : formsRequired
+                  ? "Save and Publish"
+                  : "Save and Form Teams"}
             </Button>
           </div>
         </div>

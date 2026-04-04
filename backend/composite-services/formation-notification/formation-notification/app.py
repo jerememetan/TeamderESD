@@ -10,6 +10,7 @@ for _candidate in _SWAGGER_PATH_CANDIDATES:
         break
 
 from swagger_helper import register_swagger
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 import os
 import re
@@ -51,7 +52,8 @@ logger = logging.getLogger(__name__)
 SERVICE_NAME = "formation-notification-service"
 
 # Configuration and service endpoints used by this composite
-REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "4000"))
+REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "1000"))
+MAX_PARALLEL_WORKERS = int(os.getenv("MAX_PARALLEL_WORKERS", "20"))
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://localhost:3005/enrollment")
 STUDENT_SERVICE_URL = os.getenv(
     "STUDENT_SERVICE_URL",
@@ -376,15 +378,52 @@ def create_formation_notifications():
     pending_batch_notifications: List[Dict[str, Any]] = []
     pending_created_rows: List[Dict[str, Any]] = []
 
-    # Process each student sequentially: fetch student -> create form -> queue
+    # Execute student and student-form calls concurrently to reduce end-to-end latency.
+    # We submit one student lookup and one form-creation task per student id.
+    worker_count = min(max(1, len(student_ids) * 2), MAX_PARALLEL_WORKERS)
+    student_results: Dict[int, Dict[str, Any]] = {}
+    form_results: Dict[int, Optional[str]] = {}
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        future_to_meta = {}
+
+        for student_id in student_ids:
+            student_future = executor.submit(
+                call_http,
+                method="GET",
+                url=f"{STUDENT_SERVICE_URL.rstrip('/')}/{student_id}",
+                timeout=REQUEST_TIMEOUT,
+            )
+            future_to_meta[student_future] = {"kind": "student", "student_id": student_id}
+
+            form_future = executor.submit(_create_form, section_id, student_id)
+            future_to_meta[form_future] = {"kind": "form", "student_id": student_id}
+
+        for future in as_completed(future_to_meta):
+            meta = future_to_meta[future]
+            student_id = meta["student_id"]
+
+            if meta["kind"] == "student":
+                try:
+                    student_results[student_id] = future.result()
+                except Exception as ex:  # defensive guard for unexpected runtime errors
+                    logger.exception("student lookup task crashed section_id=%s student_id=%s", section_id, student_id)
+                    student_results[student_id] = {
+                        "ok": False,
+                        "status_code": None,
+                        "error": str(ex),
+                    }
+            else:
+                try:
+                    form_results[student_id] = future.result()
+                except Exception as ex:  # defensive guard for unexpected runtime errors
+                    logger.exception("student-form task crashed section_id=%s student_id=%s", section_id, student_id)
+                    form_results[student_id] = None
+
+    # Build notification payloads after both result sets are available.
     for student_id in student_ids:
-        # --- Student service: fetch student details (including email) ---
-        student_resp = call_http(
-            method="GET",
-            url=f"{STUDENT_SERVICE_URL.rstrip('/')}/{student_id}",
-            timeout=REQUEST_TIMEOUT,
-        )
-        if not student_resp["ok"]:
+        student_resp = student_results.get(student_id, {"ok": False, "error": "student lookup missing"})
+        if not student_resp.get("ok"):
             # dependency failure: cannot fetch student details
             publish_downstream_error(
                 "student",
@@ -397,7 +436,7 @@ def create_formation_notifications():
             failed.append({"student_id": student_id, "reason": "student details unavailable"})
             continue
 
-        email = _extract_student_email(student_resp["payload"])
+        email = _extract_student_email(student_resp.get("payload"))
         if not _is_valid_email(email):
             # missing or invalid email; record as a failed notification
             publish_downstream_error(
@@ -410,8 +449,7 @@ def create_formation_notifications():
             failed.append({"student_id": student_id, "reason": "missing email"})
             continue
 
-        # --- Student-form service: create a form for this student ---
-        form_id = _create_form(section_id, student_id)
+        form_id = form_results.get(student_id)
         if not form_id:
             # dependency failure creating the form
             publish_downstream_error(
