@@ -37,11 +37,6 @@ function Analytics() {
     rosterError,
   } = useAnalyticsPage(courseId, groupId);
 
-  // API integration point (course-group comparison dataset):
-  // Endpoint candidate: GET /section?course_id={courseId}
-  // Expected object per section: { id, section_number, students_count }
-  // Optional enrichment: GET /team?section_ids={id1,id2,...} -> teams count per section
-  // Replace this placeholder row with a mapped array of sibling groups once endpoint shape is finalized.
   const siblingGroupSummaryData = [
     buildSiblingGroupSummaryData(
       selectedCourse?.code + " " +selectedGroup?.code,
@@ -50,10 +45,9 @@ function Analytics() {
     ),
   ];
 
-  console.log("COURSE",selectedCourse);
-  // API integration point (team diversity metrics):
+  // TODO(api-backend): Provide per-team diversity metrics for this section.
   // Endpoint candidate: GET /analytics?section_id={groupId} or GET /team/{team_id}/metrics
-  // Expected object per team: { team_id, team_name, skill_level_score, background_score, work_style_score }
+  // Expected object per team: { team_id, team_name, skill_level_score, background_score, work_style_score } - This can be changed to whatever you want
   // Keep this static fallback until analytics-service contract is finalized.
   const diversityData = [
     {
@@ -76,7 +70,7 @@ function Analytics() {
     },
   ];
 
-  // API integration point (overall section quality radar):
+  // TODO(api-backend): Provide section-level quality metrics for radar chart.
   // Endpoint candidate: GET /analytics/section/{groupId}/quality
   // Expected object: {
   //   skill_balance: number,
@@ -84,7 +78,7 @@ function Analytics() {
   //   diversity: number,
   //   communication: number,
   //   leadership: number
-  // }
+  // } - Same thing, these are just suggested fields, but can be adjusted
   // Transform backend keys into [{ metric, value }] for RadarChart.
   const radarData = [
     { metric: "Skill Balance", value: 85 },

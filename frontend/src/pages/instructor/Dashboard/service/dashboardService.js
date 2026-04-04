@@ -8,8 +8,8 @@ const DASHBOARD_URL =
 const SWAP_REQUEST_URL =
   import.meta.env.VITE_SWAP_REQUEST_URL ?? "http://localhost:8000/swap-request";
 
-// API integration map (primary orchestrator path):
-// GET /dashboard
+// TODO(api-backend): Implement and keep stable primary dashboard orchestrator contract.
+// Endpoint: GET /dashboard
 // Expected envelope: { code, data }
 // Expected data object:
 // {
@@ -19,11 +19,25 @@ const SWAP_REQUEST_URL =
 //   pendingSwapRequests: number
 // }
 
-// API integration map (atomic fallback path):
-// GET /courses -> { code, data: { Courses: Course[] } }
-// GET /section -> { code, data: Section[] }
-// GET /enrollment -> { code, data: Enrollment[] }
-// GET /swap-request -> { code, data } where data may be nested as data.data
+// TODO(api-backend): Keep atomic fallback contracts backward compatible while dashboard orchestrator is unstable.
+// Endpoint: GET /swap-request -> { code, data } where data may be nested as data.data
+// It can return either this:
+// {
+// "code": 200,
+// "data": [
+//   {
+//   "id": "sr_001",
+//   "status": "pending",
+//   "studentName": "Jereme Tan",
+//   "courseName": "Software Engineering",
+//   "currentTeamName": "Team Alpha",
+//   "reason": "Scheduling clash",
+//   "createdAt": "2026-04-05T09:12:33Z"
+//   }
+//   ]
+// }
+
+
 // Fallback summary object returned by this service must always match:
 // {
 //   totalCourses: number,
@@ -50,6 +64,7 @@ function countPendingSwapRequests(requests = []) {
 
 async function fetchDashboardFromAtomicServices() {
   const fetchSwapRequests = async () => {
+    // TODO(api-backend): Keep this endpoint status field stable for pending-request counting.
     // Endpoint: GET /swap-request
     // Supported payload shapes observed:
     // 1) { code, data: SwapRequest[] }
@@ -66,14 +81,9 @@ async function fetchDashboardFromAtomicServices() {
 
   const [coursesResult, sectionsResult, enrollmentsResult, swapsResult] =
     await Promise.allSettled([
-      // Endpoint: GET /courses
-      // Expected array item fields for this aggregate: only length is required.
+
       fetchAllCourses(),
-      // Endpoint: GET /section
-      // Expected array item fields for this aggregate: only length is required.
       fetchAllSections(),
-      // Endpoint: GET /enrollment
-      // Expected array item fields used here: { student_id } for unique student count.
       fetchAllEnrollments(),
       fetchSwapRequests(),
     ]);
@@ -104,6 +114,7 @@ async function fetchDashboardFromAtomicServices() {
 
 export async function fetchDashboardCoursesWithEnrollments() {
   try {
+    // TODO(api-backend): Preferred orchestrator endpoint for dashboard summary.
     // Primary endpoint: GET /dashboard
     // Preferred source because backend orchestrator owns dashboard contract.
     const payload = await fetchJson(DASHBOARD_URL, {
