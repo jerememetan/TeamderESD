@@ -1,6 +1,7 @@
 import { RouterProvider, createBrowserRouter } from 'react-router'
 import AppShell from './app/layouts/AppShell'
 import Analytics from './pages/instructor/Analytics/Analytics'
+import CompletionStatus from './pages/instructor/CompletionStatus/CompletionStatus'
 import CreateForm from './pages/instructor/CreateForm/CreateForm'
 import Courses from './pages/instructor/Courses/Courses'
 import InstructorDashboard from './pages/instructor/Dashboard/InstructorDashboard'
@@ -32,7 +33,7 @@ const router = createBrowserRouter([
         element: <InstructorDashboard />,
       },
       {
-        path: 'student',
+        path: 'student/:studentId',
         element: <StudentDashBoard />,
       },
       {
@@ -42,6 +43,10 @@ const router = createBrowserRouter([
       {
         path: 'instructor/courses/:courseId/groups/:groupId/analytics',
         element: <Analytics />,
+      },
+      {
+        path: 'instructor/courses/:courseId/groups/:groupId/completion-status',
+        element: <CompletionStatus />,
       },
       {
         path: 'instructor/courses/:courseId/groups/:groupId/create-form',
@@ -64,15 +69,19 @@ const router = createBrowserRouter([
         element: <ErrorLogs />,
       },
       {
-        path: 'student/form/:formId',
+        path: 'student/:studentId/form',
         element: <FillForm />,
       },
       {
-        path: 'student/peer-evaluation/:roundId',
+        path: 'student/:studentId/form/:formId',
+        element: <FillForm />,
+      },
+      {
+        path: 'student/:studentId/peer-evaluation/:roundId',
         element: <PeerEvaluationForm />,
       },
       {
-        path: 'student/team',
+        path: 'student/:studentId/team',
         element: <MyTeam />,
       },
     ],

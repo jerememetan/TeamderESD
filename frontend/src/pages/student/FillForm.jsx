@@ -1,107 +1,510 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
-import MockStudentSwitcher from "../../components/student/MockStudentSwitcher";
 import { Button } from "../../components/ui/button";
-import { getBackendSectionId } from "../../data/backendIds";
-import { mockCourses, mockForms, mockStudents } from "../../data/mockData";
-import { useMockStudentSession } from "../../services/mockStudentSession";
+import {
+  fetchFormationConfig,
+  resolveFormationFieldVisibility,
+} from "../../services/formationConfigService";
+import { fetchEnrollmentsBySectionId } from "../../services/enrollmentService";
+import { fetchAllCourses } from "../../services/courseService";
+import { fetchAllSections } from "../../services/sectionService";
+import { fetchStudentForms } from "../../services/studentFormService";
+import { submitStudentForm } from "../../services/studentFormSubmissionService";
+import { fetchAllStudents, buildStudentMapByBackendId } from "../../services/studentService";
+import { useStudentSession } from "../../services/studentSession";
 import styles from "./FillForm.module.css";
 
-const STUDENT_FORM_API_BASE =
-  import.meta.env.VITE_STUDENT_FORM_API_BASE || "http://localhost:8000/student-form";
+const SKILL_SCORE_LABELS = {
+  0: "None",
+  1: "Beginner",
+  2: "Basic",
+  3: "Intermediate",
+  4: "Advanced",
+  5: "Expert",
+};
+
+const MBTI_OPTIONS = [
+  "INTJ",
+  "INTP",
+  "ENTJ",
+  "ENTP",
+  "INFJ",
+  "INFP",
+  "ENFJ",
+  "ENFP",
+  "ISTJ",
+  "ISFJ",
+  "ESTJ",
+  "ESFJ",
+  "ISTP",
+  "ISFP",
+  "ESTP",
+  "ESFP",
+];
+
+const DEFAULT_FIELD_VISIBILITY = {
+  mbtiEnabled: false,
+  buddyEnabled: false,
+  buddyWeight: 0,
+  skillEnabled: false,
+  topicEnabled: false,
+};
 
 function FillForm() {
-  const { formId } = useParams();
+  const { formId, studentId: routeStudentId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { activeStudent, activeStudentTeams, activeStudentId, setActiveStudentId, availableStudents } = useMockStudentSession();
-  const studentProfile = activeStudent;
-  const teamAssignments = activeStudentTeams;
-  const groupIds = new Set(teamAssignments.map((team) => team.groupId));
-  const scopedFormIds = location.state?.availableFormIds;
-  const availableFormList = (Array.isArray(scopedFormIds) && scopedFormIds.length
-    ? scopedFormIds.map((id) => Object.values(mockForms).find((form) => form.id === id)).filter(Boolean)
-    : Object.values(mockForms).filter((form) => groupIds.has(form.groupId))
-  );
-  const buddyCandidateList = mockStudents.filter((student) => student.id !== studentProfile.id);
-  const chooserMode = !formId && availableFormList.length > 1;
-  const resolvedForm = formId
-    ? availableFormList.find((form) => form.id === formId) || Object.values(mockForms).find((form) => form.id === formId) || mockForms[formId || ""]
-    : availableFormList[0];
-  const [responses, setResponses] = useState({});
+  const {
+    activeStudent,
+    activeStudentRouteId,
+    isLoadingStudents,
+    studentLoadError,
+  } = useStudentSession(routeStudentId);
+
+  const [availableForms, setAvailableForms] = useState([]);
+  const [formsError, setFormsError] = useState("");
+  const [isLoadingForms, setIsLoadingForms] = useState(true);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(false);
+  const [isLoadingBuddyOptions, setIsLoadingBuddyOptions] = useState(false);
+  const [formLoadError, setFormLoadError] = useState("");
+  const [formationConfig, setFormationConfig] = useState(null);
+  const [fieldVisibility, setFieldVisibility] = useState(DEFAULT_FIELD_VISIBILITY);
+  const [buddyOptions, setBuddyOptions] = useState([]);
   const [buddyRequestStudentId, setBuddyRequestStudentId] = useState("");
-  const [templateFields, setTemplateFields] = useState([]);
-  const [loadingTemplate, setLoadingTemplate] = useState(false);
-  const selectedCourse = mockCourses.find((course) => course.id === resolvedForm?.courseId);
-  const selectedGroup = selectedCourse?.groups.find((group) => group.id === resolvedForm?.groupId);
-  const activeTeam = teamAssignments.find((team) => team.groupId === resolvedForm?.groupId) || teamAssignments[0];
-  const backendSectionId = getBackendSectionId(resolvedForm?.groupId || "");
-  const sectionId = useMemo(() => backendSectionId || resolvedForm?.groupId || formId, [backendSectionId, resolvedForm?.groupId, formId]);
+  const [mbti, setMbti] = useState("");
+  const [skillScores, setSkillScores] = useState({});
+  const [topicRankings, setTopicRankings] = useState({});
+  const [formSubmissionError, setFormSubmissionError] = useState("");
 
   useEffect(() => {
-    if (!resolvedForm || chooserMode) {
-      setTemplateFields([]);
+    if (isLoadingStudents || !activeStudent) {
+      setAvailableForms([]);
+      setIsLoadingForms(isLoadingStudents);
       return;
     }
 
-    const loadTemplate = async () => {
-      if (!sectionId) return;
-      setLoadingTemplate(true);
-      try {
-        const response = await fetch(
-          `${STUDENT_FORM_API_BASE}/template?section_id=${encodeURIComponent(sectionId)}`,
-        );
-        if (!response.ok) return;
-        const payload = await response.json();
-        const fields = payload?.data?.fields;
-        if (Array.isArray(fields)) {
-          setTemplateFields(fields);
-        }
-      } catch (_error) {
-      } finally {
-        setLoadingTemplate(false);
-      }
-    };
+    let ignore = false;
 
-    loadTemplate();
-  }, [chooserMode, resolvedForm, sectionId]);
+    async function loadForms() {
+      setIsLoadingForms(true);
+      setFormsError("");
+
+      try {
+        const backendStudentId = Number(activeStudent.backendStudentId);
+        if (!Number.isFinite(backendStudentId)) {
+          throw new Error("Unable to resolve a backend student id for the selected student.");
+        }
+
+        const [forms, sections, courses] = await Promise.all([
+          fetchStudentForms({ studentId: backendStudentId }),
+          fetchAllSections(),
+          fetchAllCourses(),
+        ]);
+        if (ignore) {
+          return;
+        }
+
+        const sectionById = new Map(
+          (Array.isArray(sections) ? sections : []).map((section) => [
+            String(section?.id ?? ""),
+            section,
+          ]),
+        );
+
+        const courseById = new Map(
+          (Array.isArray(courses) ? courses : []).map((course) => [
+            String(course?.id ?? course?.course_id ?? ""),
+            {
+              code: String(course?.code ?? course?.course_code ?? "").trim(),
+              name: String(course?.name ?? course?.course_name ?? "").trim(),
+            },
+          ]),
+        );
+
+        setAvailableForms(
+          forms.map((form, index) => ({
+            id: String(form.id),
+            sectionId: String(form.sectionId || "").trim(),
+            submitted: Boolean(form.submitted),
+            title: (() => {
+              const sectionRecord = sectionById.get(String(form.sectionId));
+              const sectionNumber = Number(sectionRecord?.section_number);
+              const courseId = String(sectionRecord?.course_id ?? "");
+              const course = courseById.get(courseId);
+              const courseCode = String(course?.code || "").trim();
+
+              if (courseCode && Number.isFinite(sectionNumber)) {
+                return `${courseCode} G${sectionNumber}`;
+              }
+
+              if (courseCode) {
+                return courseCode;
+              }
+
+              return Number.isFinite(sectionNumber)
+                ? `Section ${sectionNumber}`
+                : `Form ${index + 1}`;
+            })(),
+            description: (() => {
+              const sectionRecord = sectionById.get(String(form.sectionId));
+              const courseId = String(sectionRecord?.course_id ?? "");
+              const course = courseById.get(courseId);
+              return String(course?.name || "").trim() || "Course form";
+            })(),
+          })),
+        );
+      } catch (error) {
+        if (ignore) {
+          return;
+        }
+        setAvailableForms([]);
+        setFormsError(error?.message || "Unable to load forms for this student.");
+      } finally {
+        if (!ignore) {
+          setIsLoadingForms(false);
+        }
+      }
+    }
+
+    loadForms();
+
+    return () => {
+      ignore = true;
+    };
+  }, [activeStudent, isLoadingStudents]);
+
+  const availableFormList = useMemo(
+    () => availableForms.filter((form) => !form.submitted),
+    [availableForms],
+  );
+  const resolvedForm = formId ? availableForms.find((form) => form.id === formId) : null;
+  const chooserMode = !formId;
+  const studentBasePath = `/student/${activeStudentRouteId}`;
+
+  const resolvedAssignmentLabel = resolvedForm?.title || "Course form";
+
+  const sectionSkills = Array.isArray(formationConfig?.skills) ? formationConfig.skills : [];
+  const sectionTopics = Array.isArray(formationConfig?.topics) ? formationConfig.topics : [];
+  const shouldCollectSkills = fieldVisibility.skillEnabled && sectionSkills.length > 0;
+  const shouldCollectTopics = fieldVisibility.topicEnabled && sectionTopics.length > 0;
+  const shouldCollectMbti = fieldVisibility.mbtiEnabled;
+  const shouldCollectBuddy = fieldVisibility.buddyEnabled;
+
+  useEffect(() => {
+    if (!formId || isLoadingForms || !resolvedForm?.submitted) {
+      return;
+    }
+
+    const redirectHandle = window.setTimeout(() => {
+      navigate(studentBasePath);
+    }, 2500);
+
+    return () => {
+      window.clearTimeout(redirectHandle);
+    };
+  }, [formId, isLoadingForms, navigate, resolvedForm?.submitted, studentBasePath]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSectionFormationConfig() {
+      if (!resolvedForm || !activeStudent || resolvedForm.submitted) {
+        setFormationConfig(null);
+        setFieldVisibility(DEFAULT_FIELD_VISIBILITY);
+        setBuddyOptions([]);
+        setSkillScores({});
+        setTopicRankings({});
+        setBuddyRequestStudentId("");
+        setMbti("");
+        setFormLoadError("");
+        return;
+      }
+
+      const sectionId = resolvedForm.sectionId;
+      const activeStudentId = Number(activeStudent.backendStudentId);
+
+      setIsLoadingConfig(true);
+      setFormLoadError("");
+      setFormSubmissionError("");
+      setBuddyRequestStudentId("");
+      setMbti("");
+      setBuddyOptions([]);
+
+      try {
+        const matchingForms = await fetchStudentForms({
+          studentId: activeStudentId,
+          sectionId,
+        });
+        const effectiveSectionId = matchingForms[0]?.sectionId || sectionId;
+
+        if (!effectiveSectionId) {
+          throw new Error("Unable to resolve a valid section for this student form.");
+        }
+
+        const configResponse = await fetchFormationConfig(effectiveSectionId);
+        if (!isMounted) {
+          return;
+        }
+
+        const nextVisibility = resolveFormationFieldVisibility(configResponse);
+        const skills = Array.isArray(configResponse?.skills) ? configResponse.skills : [];
+        const topics = Array.isArray(configResponse?.topics) ? configResponse.topics : [];
+
+        setFormationConfig(configResponse);
+        setFieldVisibility(nextVisibility);
+        setSkillScores(
+          skills.reduce((acc, skill) => {
+            if (skill?.skill_id) {
+              acc[String(skill.skill_id)] = "";
+            }
+            return acc;
+          }, {}),
+        );
+        setTopicRankings(
+          topics.reduce((acc, topic) => {
+            if (topic?.topic_id) {
+              acc[String(topic.topic_id)] = "";
+            }
+            return acc;
+          }, {}),
+        );
+
+        if (!nextVisibility.buddyEnabled) {
+          return;
+        }
+
+        setIsLoadingBuddyOptions(true);
+        const [enrollments, students] = await Promise.all([
+          fetchEnrollmentsBySectionId(effectiveSectionId),
+          fetchAllStudents(),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        const rosterIds = Array.from(
+          new Set(
+            (Array.isArray(enrollments) ? enrollments : [])
+              .map((enrollment) => Number(enrollment?.student_id))
+              .filter((studentId) => Number.isFinite(studentId) && studentId !== activeStudentId),
+          ),
+        );
+
+        const studentsByBackendId = buildStudentMapByBackendId(students);
+
+        setBuddyOptions(
+          rosterIds
+            .map((studentId) => ({
+              value: String(studentId),
+              label:
+                String(studentsByBackendId.get(studentId)?.name || "").trim() ||
+                `Student ${studentId}`,
+            }))
+            .sort((left, right) => left.label.localeCompare(right.label)),
+        );
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setFormationConfig(null);
+        setFieldVisibility(DEFAULT_FIELD_VISIBILITY);
+        setSkillScores({});
+        setTopicRankings({});
+        setBuddyOptions([]);
+        setFormLoadError(error?.message || "Unable to load section form configuration.");
+      } finally {
+        if (isMounted) {
+          setIsLoadingConfig(false);
+          setIsLoadingBuddyOptions(false);
+        }
+      }
+    }
+
+    loadSectionFormationConfig();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeStudent, resolvedForm]);
+
+  if (isLoadingStudents) {
+    return (
+      <div className={styles.page}>
+        <p className={styles.notFound}>Loading backend student session...</p>
+      </div>
+    );
+  }
+
+  if (studentLoadError || !activeStudent) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <p className={styles.notFound}>{studentLoadError || "Backend student data is unavailable."}</p>
+      </div>
+    );
+  }
+
+  if (formsError || formLoadError) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <p className={styles.notFound}>{formsError || formLoadError}</p>
+      </div>
+    );
+  }
+
+  if (!formId && isLoadingForms) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <ModuleBlock eyebrow="Loading" title="Loading forms">
+          <p>Fetching your available forms from student-form service...</p>
+        </ModuleBlock>
+      </div>
+    );
+  }
+
+  if (!formId && !availableFormList.length && !isLoadingForms) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <p className={styles.notFound}>No unsubmitted form entries are available for this student.</p>
+      </div>
+    );
+  }
+
+  if (formId && isLoadingForms) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <ModuleBlock componentId="MOD-FLOAD-DETAIL" eyebrow="Loading" title="Loading form">
+          <p>Resolving this form record for the selected student...</p>
+        </ModuleBlock>
+      </div>
+    );
+  }
+
+  const availableFormCount = availableFormList.length;
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setFormSubmissionError("");
+
+    try {
+      if (!resolvedForm || !activeStudent) {
+        throw new Error("Unable to resolve form context for submission.");
+      }
+
+      const resolvedSectionId = String(resolvedForm.sectionId || "").trim();
+      if (!resolvedSectionId) {
+        throw new Error("Unable to resolve section_id for this form submission.");
+      }
+
+      const normalizedSkills = shouldCollectSkills
+        ? sectionSkills
+            .map((skill) => ({
+              skill_id: String(skill?.skill_id || "").trim(),
+              skill_level: Number(skillScores[String(skill?.skill_id)]),
+            }))
+            .filter((row) => row.skill_id && Number.isFinite(row.skill_level))
+        : [];
+
+      const invalidSkills = normalizedSkills.filter(
+        (row) => !row.skill_id || !Number.isFinite(row.skill_level) || row.skill_level < 0 || row.skill_level > 5,
+      );
+      if (invalidSkills.length) {
+        throw new Error("Each skill score must be a value between 0 and 5.");
+      }
+
+      const normalizedTopics = shouldCollectTopics
+        ? sectionTopics.map((topic) => ({
+            topic_id: String(topic?.topic_id || "").trim(),
+            rank: Number(topicRankings[String(topic?.topic_id)]),
+          }))
+        : [];
+
+      const invalidTopics = normalizedTopics.filter(
+        (row) => !row.topic_id || !Number.isFinite(row.rank) || row.rank < 1,
+      );
+      if (invalidTopics.length) {
+        throw new Error("Please rank every project topic from most preferred to least preferred.");
+      }
+
+      const sortedTopicRanks = normalizedTopics.map((topic) => topic.rank).sort((a, b) => a - b);
+      const hasInvalidTopicOrder = sortedTopicRanks.some((rankValue, index) => rankValue !== index + 1);
+      if (hasInvalidTopicOrder) {
+        throw new Error("Topic ranks must be unique and contiguous starting from 1.");
+      }
+
+      const payload = {
+        section_id: resolvedSectionId,
+        student_id: activeStudent.backendStudentId,
+        ...(shouldCollectBuddy && buddyRequestStudentId ? { buddy_id: Number(buddyRequestStudentId) } : {}),
+        ...(shouldCollectMbti && mbti.trim() ? { mbti: mbti.trim() } : {}),
+        ...(normalizedSkills.length ? { skill_scores: normalizedSkills } : {}),
+        ...(normalizedTopics.length ? { topic_rankings: normalizedTopics } : {}),
+      };
+
+      await submitStudentForm(payload);
+
+      alert("Form submitted successfully!");
+      navigate(studentBasePath);
+    } catch (error) {
+      setFormSubmissionError(error?.message || "Unable to submit form.");
+    }
+  };
+
+  const updateSkillScore = (skillId, value) => {
+    setSkillScores((current) => ({ ...current, [skillId]: value }));
+  };
+
+  const updateTopicRank = (topicId, value) => {
+    setTopicRankings((current) => ({ ...current, [topicId]: value }));
+  };
 
   if (chooserMode) {
     return (
       <div className={styles.page}>
-        <Link to="/student" className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to student console</Link>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
         <section className={styles.hero}>
           <div>
-            <p className={styles.kicker}>[GROUP FORM]</p>
             <h2 className={styles.title}>Choose a form</h2>
-            <p className={styles.subtitle}>You have more than one active form. Pick the course group you want to complete first.</p>
+            <p className={styles.subtitle}>Available forms</p>
           </div>
           <div className={styles.heroMeta}>
-            <MockStudentSwitcher activeStudentId={activeStudentId} availableStudents={availableStudents} onChange={setActiveStudentId} />
-            <SystemTag tone="neutral">{availableFormList.length} forms available</SystemTag>
+            <SystemTag tone="neutral">{availableFormCount} forms available</SystemTag>
           </div>
         </section>
         <div className={styles.chooserGrid}>
           {availableFormList.map((form, index) => {
-            const course = mockCourses.find((item) => item.id === form.courseId);
-            const group = course?.groups.find((item) => item.id === form.groupId);
             return (
               <Link
                 key={form.id}
-                to={`/student/form/${form.id}`}
-                state={{ availableFormIds: availableFormList.map((item) => item.id) }}
+                to={`/student/${activeStudentRouteId}/form/${form.id}`}
                 className={styles.chooserCard}
               >
                 <ModuleBlock
-                  componentId={`MOD-FSEL-${index + 1}`}
-                  eyebrow={group?.code || form.groupId}
-                  title={course ? `${course.code} - ${course.name}` : form.title}
+                  eyebrow="Course"
+                  title={form.title}
                 >
-                  <p className={styles.chooserMeta}>{group?.label || 'Assigned group'}</p>
-                  <p className={styles.subtitle}>{form.description}</p>
+                  <p className={styles.chooserMeta}>{form.description}</p>
+                  <p className={styles.subtitle}>Open form entry</p>
                 </ModuleBlock>
               </Link>
             );
@@ -111,139 +514,200 @@ function FillForm() {
     );
   }
 
-  if (!resolvedForm) {
-    return <div className={styles.notFound}>Form not found</div>;
+  if (resolvedForm?.submitted) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <ModuleBlock componentId="MOD-FSUB" eyebrow="Submitted" title="Form already submitted">
+          <p className={styles.subtitle}>
+            This form has already been submitted. Redirecting you back to your dashboard...
+          </p>
+          <div className={styles.actionRow}>
+            <Button type="button" onClick={() => navigate(studentBasePath)}>
+              Return to dashboard
+            </Button>
+          </div>
+        </ModuleBlock>
+      </div>
+    );
   }
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    try {
-      const fallbackNumericStudentId = Number(String(studentProfile.studentId || "").replace(/\D/g, "")) || 1;
-      const payload = {
-        section_id: sectionId,
-        student_id: fallbackNumericStudentId,
-        responses: {
-          ...responses,
-          ...(buddyRequestStudentId ? { buddy_id: Number(buddyRequestStudentId) } : {}),
-        },
-      };
-
-      const response = await fetch(`${STUDENT_FORM_API_BASE}/submission`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(errorBody?.error?.message || "Failed to submit form");
-      }
-
-      alert("Form submitted successfully!");
-      navigate("/student");
-    } catch (error) {
-      alert(`Unable to submit form: ${error.message}`);
-    }
-  };
+  if (!resolvedForm) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <p className={styles.notFound}>Backend form records are not available for this route.</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
-      <Link to="/student" className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to student console</Link>
+      <Link to={studentBasePath} className={styles.backLink}>
+        <ArrowLeft className={styles.backIcon} /> Return to student console
+      </Link>
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[GROUP FORM]</p>
-          <h2 className={styles.title}>{selectedGroup?.code || activeTeam?.groupId} form</h2>
-          <p className={styles.subtitle}>Complete this form for your team in {selectedGroup?.code || activeTeam?.groupId}.</p>
+          <h2 className={styles.title}>{resolvedAssignmentLabel} form</h2>
+          <p className={styles.subtitle}>Logged In As: {activeStudent.name}.</p>
         </div>
         <div className={styles.heroMeta}>
-          <MockStudentSwitcher activeStudentId={activeStudentId} availableStudents={availableStudents} onChange={setActiveStudentId} />
           <SystemTag tone="success">Form open</SystemTag>
         </div>
       </section>
 
-      <form onSubmit={handleSubmit} className={styles.form}>
-        {!loadingTemplate && templateFields.length > 0
-          ? templateFields.map((field, index) => (
-              <ModuleBlock
-                key={field.key}
-                componentId={`MOD-R${index + 1}`}
-                eyebrow={`Criterion ${String(index + 1).padStart(2, "0")}`}
-                title={field.label}
-              >
-                {field.input_type === "select" ? (
-                  <select
-                    value={responses[field.key] ?? ""}
-                    onChange={(event) =>
-                      setResponses((currentResponses) => ({
-                        ...currentResponses,
-                        [field.key]: event.target.value,
-                      }))
-                    }
-                    className={styles.select}
-                    required={field.required}
-                  >
-                    <option value="">Select an option</option>
-                    {(field.options || []).map((optionValue) => (
-                      <option key={optionValue} value={optionValue}>
-                        {optionValue}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type={field.input_type === "number" ? "number" : "text"}
-                    value={responses[field.key] ?? ""}
-                    onChange={(event) =>
-                      setResponses((currentResponses) => ({
-                        ...currentResponses,
-                        [field.key]:
-                          field.input_type === "number"
-                            ? Number(event.target.value)
-                            : event.target.value,
-                      }))
-                    }
-                    className={styles.input}
-                    required={field.required}
-                  />
-                )}
-              </ModuleBlock>
-            ))
-          : resolvedForm.criteria.map((criterion, index) => (
-              <ModuleBlock key={criterion.id} componentId={`MOD-R${index + 1}`} eyebrow={`Criterion ${String(index + 1).padStart(2, '0')}`} title={criterion.question}>
-                <div className={styles.scaleGrid}>
-                  {[1, 2, 3, 4, 5].map((score) => (
-                    <label key={score} className={`${styles.scoreCard} ${responses[criterion.id] === score ? styles.scoreCardActive : ''}`}>
-                      <input
-                        type="radio"
-                        name={criterion.id}
-                        value={score}
-                        checked={responses[criterion.id] === score}
-                        onChange={() => setResponses((currentResponses) => ({ ...currentResponses, [criterion.id]: score }))}
-                        className={styles.hiddenInput}
-                        required
-                      />
-                      <span className={styles.scoreValue}>{score}</span>
-                      <span className={styles.scoreLabel}>Signal</span>
-                    </label>
-                  ))}
-                </div>
-              </ModuleBlock>
-            ))}
+      {formSubmissionError ? <p className={styles.notFound}>{formSubmissionError}</p> : null}
 
-        {resolvedForm.allowBuddy ? (
-          <ModuleBlock componentId="MOD-RB" eyebrow="Pairing Request" title="Buddy request">
-            <select value={buddyRequestStudentId} onChange={(event) => setBuddyRequestStudentId(event.target.value)} className={styles.select}>
-              <option value="">No buddy request</option>
-              {buddyCandidateList.map((student) => (
-                <option key={student.id} value={student.id}>{student.name}</option>
-              ))}
-            </select>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        {isLoadingConfig ? (
+          <ModuleBlock componentId="MOD-CONFIG" eyebrow="Loading" title="Loading formation config">
+            <p>Resolving section-specific form fields...</p>
+          </ModuleBlock>
+        ) : null}
+
+        {shouldCollectBuddy ? (
+          <ModuleBlock eyebrow="Profile" title={fieldVisibility.buddyWeight < 0 ? "Preferred Avoid" : "Preferred Buddy"}>
+            <p className={styles.subtitle}>Optional buddy preference for your current section enrollment list.</p>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel} htmlFor="buddy-select">
+                {fieldVisibility.buddyWeight < 0 ? "Select classmate to avoid" : "Select preferred classmate"}
+              </label>
+              <select
+                id="buddy-select"
+                value={buddyRequestStudentId}
+                onChange={(event) => setBuddyRequestStudentId(event.target.value)}
+                className={styles.select}
+                disabled={isLoadingBuddyOptions}
+              >
+                <option value="">None</option>
+                {buddyOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {isLoadingBuddyOptions ? <p className={styles.subtitle}>Loading classmates...</p> : null}
+            </div>
+          </ModuleBlock>
+        ) : null}
+
+        {shouldCollectMbti ? (
+          <ModuleBlock eyebrow="Profile" title="MBTI">
+            <p className={styles.subtitle}>Optional personality preference for this section.</p>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel} htmlFor="mbti-select">Personality type</label>
+              <select
+                id="mbti-select"
+                value={mbti}
+                onChange={(event) => setMbti(event.target.value)}
+                className={styles.select}
+              >
+                <option value="">None</option>
+                {MBTI_OPTIONS.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+              <a
+                href="https://www.16personalities.com/free-personality-test"
+                target="_blank"
+                rel="noreferrer"
+                className={styles.helpLink}
+              >
+                Find your type at 16Personalities
+              </a>
+            </div>
+          </ModuleBlock>
+        ) : null}
+
+        {fieldVisibility.skillEnabled ? (
+          <ModuleBlock eyebrow="Skills" title="Skill Scores">
+            <p className={styles.subtitle}>Rate your section skills from 0 (None) to 5 (Expert).</p>
+            {shouldCollectSkills ? (
+              <div className={styles.listGrid}>
+                {sectionSkills.map((skill) => {
+                  const skillId = String(skill?.skill_id || "");
+                  if (!skillId) {
+                    return null;
+                  }
+
+                  return (
+                    <div key={skillId} className={styles.editorGrid}>
+                      <p className={styles.fieldLabel}>{skill?.skill_label || "Skill"}</p>
+                      <select
+                        className={styles.select}
+                        value={skillScores[skillId] ?? ""}
+                        onChange={(event) => updateSkillScore(skillId, event.target.value)}
+                      >
+                        <option value="">No score</option>
+                        {Object.entries(SKILL_SCORE_LABELS).map(([score, label]) => (
+                          <option key={`${skillId}-score-${score}`} value={score}>
+                            {score} - {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={styles.subtitle}>No skill labels are configured for this section yet.</p>
+            )}
+          </ModuleBlock>
+        ) : null}
+
+        {fieldVisibility.topicEnabled ? (
+          <ModuleBlock eyebrow="Topics" title="Project Topic Rankings">
+            <p className={styles.subtitle}>Rank every section topic from most preferred (1) to least preferred.</p>
+            {shouldCollectTopics ? (
+              <div className={styles.listGrid}>
+                {sectionTopics.map((topic) => {
+                  const topicId = String(topic?.topic_id || "");
+                  if (!topicId) {
+                    return null;
+                  }
+
+                  return (
+                    <div key={topicId} className={styles.editorGrid}>
+                      <p className={styles.fieldLabel}>{topic?.topic_label || "Project topic"}</p>
+                      <select
+                        className={styles.select}
+                        value={topicRankings[topicId] ?? ""}
+                        onChange={(event) => updateTopicRank(topicId, event.target.value)}
+                      >
+                        <option value="">Select rank</option>
+                        {Array.from({ length: sectionTopics.length }, (_, index) => index + 1).map((rankValue) => (
+                          <option key={`${topicId}-rank-${rankValue}`} value={rankValue}>
+                            {rankValue}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={styles.subtitle}>No project topics are configured for this section yet.</p>
+            )}
+          </ModuleBlock>
+        ) : null}
+
+        {isLoadingForms ? (
+          <ModuleBlock eyebrow="Loading" title="Loading forms">
+            <p>Fetching forms for the selected student...</p>
           </ModuleBlock>
         ) : null}
 
         <div className={styles.actionRow}>
-          <Button type="submit">Submit form</Button>
-          <Button type="button" onClick={() => navigate('/student')} variant="outline">Cancel</Button>
+          <Button type="submit" disabled={isLoadingForms || isLoadingConfig || isLoadingBuddyOptions}>
+            Submit form
+          </Button>
+          <Button type="button" onClick={() => navigate(studentBasePath)} variant="outline">
+            Cancel
+          </Button>
         </div>
       </form>
     </div>

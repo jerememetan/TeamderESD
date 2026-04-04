@@ -13,7 +13,9 @@ from swagger_helper import register_swagger
 from flask import Flask, request, jsonify
 import requests
 import os
+from uuid import UUID
 from schemas import FormationRequestSchema, FormationResponseSchema, FormationGetResponseSchema
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 _p = Path(__file__).resolve()
 # Walk up to find the composite root directory. Prefer a parent that
@@ -150,80 +152,90 @@ def aggregate():
 
     # --- Project Topics ---
     topics = payload.get("topics", [])
-    try:
-        topic_delete_resp = requests.delete(TOPIC_URL, params={"section_id": section_id})
-    except requests.RequestException:
-        publish_error_event(
-            source_service=SERVICE_NAME,
-            downstream_service="topic",
-            error_code="TOPIC_CLEAR_UNREACHABLE",
-            error_message="Unable to clear topics",
-            http_status=502,
-            request_context={"section_id": section_id, "operation": "clear-topics"},
-        )
-        return jsonify({"error": "Unable to clear topics"}), 502
-
-    if topic_delete_resp.status_code < 200 or topic_delete_resp.status_code >= 300:
-        return downstream_error("topic", topic_delete_resp, "Failed to clear topics")
-
-    for topic in topics:
-        if "section_id" not in topic:
-            topic["section_id"] = section_id
+    # Perform topic and skill updates in parallel to speed up processing.
+    skills = payload.get("skills", [])
+    # Helper to post a single resource (topic or skill)
+    def _post_item(url, item, downstream_name):
         try:
-            post_resp = requests.post(TOPIC_URL, json=topic)
+            return requests.post(url, json=item)
+        except requests.RequestException:
+            publish_error_event(
+                source_service=SERVICE_NAME,
+                downstream_service=downstream_name,
+                error_code=f"{downstream_name.upper()}_WRITE_UNREACHABLE",
+                error_message=f"Unable to save {downstream_name}s",
+                http_status=502,
+                request_context={"section_id": section_id, "operation": f"create-{downstream_name}", "payload": item},
+            )
+            raise
+
+    # Use a thread pool to run deletes and posts concurrently
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        # start deletes in parallel
+        future_topic_delete = executor.submit(requests.delete, TOPIC_URL, params={"section_id": section_id})
+        future_skill_delete = executor.submit(requests.delete, SKILL_URL, params={"section_id": section_id})
+
+        try:
+            topic_delete_resp = future_topic_delete.result()
         except requests.RequestException:
             publish_error_event(
                 source_service=SERVICE_NAME,
                 downstream_service="topic",
-                error_code="TOPIC_WRITE_UNREACHABLE",
-                error_message="Unable to save topics",
+                error_code="TOPIC_CLEAR_UNREACHABLE",
+                error_message="Unable to clear topics",
                 http_status=502,
-                request_context={"section_id": section_id, "operation": "create-topic", "payload": topic},
+                request_context={"section_id": section_id, "operation": "clear-topics"},
             )
-            return jsonify({"error": "Unable to save topics"}), 502
+            return jsonify({"error": "Unable to clear topics"}), 502
 
-        if post_resp.status_code < 200 or post_resp.status_code >= 300:
-            return downstream_error("topic", post_resp, "Failed to save topics")
-        results["topics"].append(safe_json(post_resp))
-
-    # --- Skills ---
-    skills = payload.get("skills", [])
-    try:
-        skill_delete_resp = requests.delete(SKILL_URL, params={"section_id": section_id})
-    except requests.RequestException:
-        publish_error_event(
-            source_service=SERVICE_NAME,
-            downstream_service="skill",
-            error_code="SKILL_CLEAR_UNREACHABLE",
-            error_message="Unable to clear skills",
-            http_status=502,
-            request_context={"section_id": section_id, "operation": "clear-skills"},
-        )
-        return jsonify({"error": "Unable to clear skills"}), 502
-
-    if skill_delete_resp.status_code < 200 or skill_delete_resp.status_code >= 300:
-        return downstream_error("skill", skill_delete_resp, "Failed to clear skills")
-
-    for skill in skills:
-        if "section_id" not in skill:
-            skill["section_id"] = section_id
         try:
-            post_resp = requests.post(SKILL_URL, json=skill)
+            skill_delete_resp = future_skill_delete.result()
         except requests.RequestException:
             publish_error_event(
                 source_service=SERVICE_NAME,
                 downstream_service="skill",
-                error_code="SKILL_WRITE_UNREACHABLE",
-                error_message="Unable to save skills",
+                error_code="SKILL_CLEAR_UNREACHABLE",
+                error_message="Unable to clear skills",
                 http_status=502,
-                request_context={"section_id": section_id, "operation": "create-skill", "payload": skill},
+                request_context={"section_id": section_id, "operation": "clear-skills"},
             )
-            return jsonify({"error": "Unable to save skills"}), 502
+            return jsonify({"error": "Unable to clear skills"}), 502
 
-        if post_resp.status_code < 200 or post_resp.status_code >= 300:
-            return downstream_error("skill", post_resp, "Failed to save skills")
-        results["skills"].append(safe_json(post_resp))
+        if topic_delete_resp.status_code < 200 or topic_delete_resp.status_code >= 300:
+            return downstream_error("topic", topic_delete_resp, "Failed to clear topics")
+        if skill_delete_resp.status_code < 200 or skill_delete_resp.status_code >= 300:
+            return downstream_error("skill", skill_delete_resp, "Failed to clear skills")
 
+        # Submit all posts for topics and skills concurrently
+        post_futures = {}
+        for topic in topics:
+            if "section_id" not in topic:
+                topic["section_id"] = section_id
+            post_futures[executor.submit(_post_item, TOPIC_URL, topic, "topic")] = ("topic", topic)
+
+        for skill in skills:
+            if "section_id" not in skill:
+                skill["section_id"] = section_id
+            post_futures[executor.submit(_post_item, SKILL_URL, skill, "skill")] = ("skill", skill)
+
+        # Collect results as they complete
+        for fut in as_completed(post_futures):
+            downstream_name, payload_item = post_futures[fut]
+            try:
+                post_resp = fut.result()
+            except requests.RequestException:
+                # _post_item already published an error event; return a generic error response
+                return jsonify({"error": f"Unable to save {downstream_name}s"}), 502
+
+            if post_resp.status_code < 200 or post_resp.status_code >= 300:
+                return downstream_error(downstream_name, post_resp, f"Failed to save {downstream_name}s")
+
+            if downstream_name == "topic":
+                results["topics"].append(safe_json(post_resp))
+            else:
+                results["skills"].append(safe_json(post_resp))
+
+    # end ThreadPoolExecutor
 
     return jsonify(results), 200
 
@@ -238,69 +250,88 @@ def aggregate_get():
     section_id = request.args.get("section_id")
     if not section_id:
         return jsonify({"error": "Missing section_id in query params"}), 400
-
     try:
-        crit_resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
-    except requests.RequestException:
-        publish_error_event(
-            source_service=SERVICE_NAME,
-            downstream_service="criteria",
-            error_code="CRITERIA_FETCH_UNREACHABLE",
-            error_message="Unable to reach criteria service",
-            http_status=502,
-            request_context={"section_id": section_id, "operation": "read-formation-config"},
-        )
-        return jsonify({"error": "Unable to reach criteria service"}), 502
-    crit_data = None
-    course_id = None
-    if crit_resp.status_code == 200:
-        crit_json = safe_json(crit_resp)
-        if crit_json.get("data"):
-            crit_data = crit_json["data"][0] if isinstance(crit_json["data"], list) and crit_json["data"] else crit_json["data"]
-            course_id = crit_data.get("course_id")
-            crit_data.pop("course_id", None)
-            crit_data.pop("section_id", None)
-    elif crit_resp.status_code >= 500:
-        return downstream_error("criteria", crit_resp, "Failed to fetch criteria")
+        UUID(str(section_id))
+    except (ValueError, TypeError):
+        return jsonify({"error": "section_id must be a valid UUID"}), 400
 
-    try:
-        topic_resp = requests.get(TOPIC_URL, params={"section_id": section_id})
-    except requests.RequestException:
-        publish_error_event(
-            source_service=SERVICE_NAME,
-            downstream_service="topic",
-            error_code="TOPIC_FETCH_UNREACHABLE",
-            error_message="Unable to reach topic service",
-            http_status=502,
-            request_context={"section_id": section_id, "operation": "read-topics"},
-        )
-        return jsonify({"error": "Unable to reach topic service"}), 502
-    topics = []
-    if topic_resp.status_code == 200:
-        topic_json = safe_json(topic_resp)
-        for t in topic_json.get("data", []):
-            topics.append({"topic_label": t.get("topic_label")})
+    # Fetch criteria, topics, and skills in parallel to reduce latency
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        fut_crit = executor.submit(requests.get, CRITERIA_URL, params={"section_id": section_id})
+        fut_topic = executor.submit(requests.get, TOPIC_URL, params={"section_id": section_id})
+        fut_skill = executor.submit(requests.get, SKILL_URL, params={"section_id": section_id})
 
-    try:
-        skill_resp = requests.get(SKILL_URL, params={"section_id": section_id})
-    except requests.RequestException:
-        publish_error_event(
-            source_service=SERVICE_NAME,
-            downstream_service="skill",
-            error_code="SKILL_FETCH_UNREACHABLE",
-            error_message="Unable to reach skill service",
-            http_status=502,
-            request_context={"section_id": section_id, "operation": "read-skills"},
-        )
-        return jsonify({"error": "Unable to reach skill service"}), 502
-    skills = []
-    if skill_resp.status_code == 200:
-        skill_json = safe_json(skill_resp)
-        for s in skill_json.get("data", []):
-            skills.append({
-                "skill_label": s.get("skill_label"),
-                "skill_importance": s.get("skill_importance")
-            })
+        try:
+            crit_resp = fut_crit.result()
+        except requests.RequestException:
+            publish_error_event(
+                source_service=SERVICE_NAME,
+                downstream_service="criteria",
+                error_code="CRITERIA_FETCH_UNREACHABLE",
+                error_message="Unable to reach criteria service",
+                http_status=502,
+                request_context={"section_id": section_id, "operation": "read-formation-config"},
+            )
+            return jsonify({"error": "Unable to reach criteria service"}), 502
+
+        crit_data = None
+        course_id = None
+        if crit_resp.status_code == 200:
+            crit_json = safe_json(crit_resp)
+            if crit_json.get("data"):
+                crit_data = crit_json["data"][0] if isinstance(crit_json["data"], list) and crit_json["data"] else crit_json["data"]
+                course_id = crit_data.get("course_id")
+                crit_data.pop("course_id", None)
+                crit_data.pop("section_id", None)
+        elif crit_resp.status_code >= 500:
+            return downstream_error("criteria", crit_resp, "Failed to fetch criteria")
+
+        try:
+            topic_resp = fut_topic.result()
+        except requests.RequestException:
+            publish_error_event(
+                source_service=SERVICE_NAME,
+                downstream_service="topic",
+                error_code="TOPIC_FETCH_UNREACHABLE",
+                error_message="Unable to reach topic service",
+                http_status=502,
+                request_context={"section_id": section_id, "operation": "read-topics"},
+            )
+            return jsonify({"error": "Unable to reach topic service"}), 502
+
+        topics = []
+        if topic_resp.status_code == 200:
+            topic_json = safe_json(topic_resp)
+            for t in topic_json.get("data", []):
+                topics.append(
+                    {
+                        "topic_id": t.get("topic_id"),
+                        "topic_label": t.get("topic_label"),
+                    }
+                )
+
+        try:
+            skill_resp = fut_skill.result()
+        except requests.RequestException:
+            publish_error_event(
+                source_service=SERVICE_NAME,
+                downstream_service="skill",
+                error_code="SKILL_FETCH_UNREACHABLE",
+                error_message="Unable to reach skill service",
+                http_status=502,
+                request_context={"section_id": section_id, "operation": "read-skills"},
+            )
+            return jsonify({"error": "Unable to reach skill service"}), 502
+
+        skills = []
+        if skill_resp.status_code == 200:
+            skill_json = safe_json(skill_resp)
+            for s in skill_json.get("data", []):
+                skills.append({
+                    "skill_id": s.get("skill_id"),
+                    "skill_label": s.get("skill_label"),
+                    "skill_importance": s.get("skill_importance")
+                })
 
     result = {
         "course_id": course_id,

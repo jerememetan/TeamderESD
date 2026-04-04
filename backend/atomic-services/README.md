@@ -182,11 +182,43 @@ This README provides simple instructions for calling the endpoints of the three 
 ### Endpoints
 
 - **GET /enrollment**
-  - Query params: `section_id` (optional)
-  - Returns: List of enrollments, optionally filtered by section
+  - Query params:
+    - `section_id` (optional, UUID)
+    - `section_ids` (optional, comma-separated UUIDs or repeated query param)
+  - Returns:
+    - no query params: all enrollments
+    - `section_id`: enrollments for one section
+    - `section_ids`: grouped enrollments for many sections
   - Example:
     ```http
     GET http://localhost:3001/enrollment?section_id={uuid}
+    ```
+
+  - Bulk example:
+    ```http
+    GET http://localhost:3001/enrollment?section_ids=11111111-1111-1111-1111-111111111111,22222222-2222-2222-2222-222222222222
+    ```
+
+  - Bulk response example:
+    ```json
+    {
+      "code": 200,
+      "data": {
+        "sections": [
+          {
+            "section_id": "11111111-1111-1111-1111-111111111111",
+            "enrollments": [
+              { "section_id": "11111111-1111-1111-1111-111111111111", "student_id": 101 },
+              { "section_id": "11111111-1111-1111-1111-111111111111", "student_id": 102 }
+            ]
+          },
+          {
+            "section_id": "22222222-2222-2222-2222-222222222222",
+            "enrollments": []
+          }
+        ]
+      }
+    }
     ```
 
 - **GET /enrollment**
@@ -449,16 +481,24 @@ This microservice manages student form data (buddy, MBTI, etc.) for a section. I
     ### Endpoints
 
     - **GET /student-form**
-      - Query params: `section_id` (required), `student_id` (optional)
-      - Behavior: If `student_id` is provided returns the single matching row for that student+section; otherwise returns all student-forms for the `section_id`.
+      - Query params: `section_id` (optional), `student_id` (optional)
+      - Requirement: At least one of `section_id` or `student_id` must be provided.
+      - Behavior:
+        - `section_id` only: returns all student-forms in that section.
+        - `student_id` only: returns all student-forms for that student across sections.
+        - both `section_id` and `student_id`: returns the matching form as a one-item list; returns `404 NOT_FOUND` if no match exists.
       - Example:
         ```http
         GET http://localhost:3015/student-form?section_id={uuid}
+        GET http://localhost:3015/student-form?student_id=123
         GET http://localhost:3015/student-form?section_id={uuid}&student_id=123
         ```
 
     - **GET /student-form/submitted**
-      - Query params: `section_id` (required)
+      - Query params: `section_id` (optional), `student_id` (optional)
+      - Requirement: At least one of `section_id` or `student_id` must be provided.
+      - Returns: All student-forms matching the supplied filters where `submitted=true`.
+      - If both `section_id` and `student_id` are provided and no record matches, returns `404 NOT_FOUND`.
 
 ---
 
@@ -469,6 +509,8 @@ This microservice manages student form data (buddy, MBTI, etc.) for a section. I
 - **Publish endpoints:**
   - `POST /notification/send-form-link` — bulk: accepts `recipients` array (student_id, email, form_url, section_id)
   - `POST /notification/publish-email` — direct email payload (`to`, `subject`, `body`, `is_html`, ...)
+
+`POST /notification/send-form-link` now publishes a single RabbitMQ batch message (`event_type: FormLinksGeneratedBatch`) that contains all valid recipients in one payload. The HTTP request/response schema remains unchanged.
 
 ### RabbitMQ topology
 
@@ -510,6 +552,14 @@ SMTP / Email:
 - `EMAIL_SEND_DELAY_SECONDS`
 
 ### Message shapes
+
+- Batch envelope (new primary path for bulk notifications):
+  - `event_type: FormLinksGeneratedBatch`
+  - `notifications: [ ... ]` where each item is a direct-email payload or legacy `FormLinkGenerated` payload.
+- Consumer behavior for batch envelope:
+  - Processes each item in `notifications` independently.
+  - Sends emails for valid items.
+  - Emits error events for invalid items without dropping the entire batch.
 
 - Preferred direct-email message: `to`, `subject`, `body`, `is_html`, `reply_to`, `headers`, `metadata`.
 - Backward-compatible event: `event_type: FormLinkGenerated` with `email`, `form_url`, `student_id`, `section_id`.
@@ -588,18 +638,24 @@ The consumer accepts JSON objects with either of these patterns:
 pip install -r error/requirements.txt
 python -m error.app
 ```
-      - Returns: All student-forms for the section where `submitted=true`.
+      - Returns: All student-forms matching the supplied filters where `submitted=true`.
       - Example:
         ```http
         GET http://localhost:3015/student-form/submitted?section_id={uuid}
+        GET http://localhost:3015/student-form/submitted?student_id=123
+        GET http://localhost:3015/student-form/submitted?section_id={uuid}&student_id=123
         ```
 
     - **GET /student-form/unsubmitted**
-      - Query params: `section_id` (required)
-      - Returns: All student-forms for the section where `submitted=false`.
+      - Query params: `section_id` (optional), `student_id` (optional)
+      - Requirement: At least one of `section_id` or `student_id` must be provided.
+      - Returns: All student-forms matching the supplied filters where `submitted=false`.
+      - If both `section_id` and `student_id` are provided and no record matches, returns `404 NOT_FOUND`.
       - Example:
         ```http
         GET http://localhost:3015/student-form/unsubmitted?section_id={uuid}
+        GET http://localhost:3015/student-form/unsubmitted?student_id=123
+        GET http://localhost:3015/student-form/unsubmitted?section_id={uuid}&student_id=123
         ```
 
     - **POST /student-form**
@@ -665,7 +721,7 @@ python -m error.app
 
     ### Notes
 
-    - `section_id` must be a UUID string. `student_id` and entries in `students` must be integers.
+    - `section_id` must be a UUID string when provided. `student_id` and entries in `students` must be integers.
     - The service uses the `student_form` table (schema `student_form`) and returns `created_at` / `updated_at` timestamps in ISO format.
 
 

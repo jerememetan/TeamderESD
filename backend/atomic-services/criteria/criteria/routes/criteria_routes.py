@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from ..app import db
 from ..models.criteria_model import Criteria
 from marshmallow import fields
+from uuid import UUID
 
 criteria_bp = Blueprint("criteria", __name__)
 create_schema = CriteriaCreateSchema()
@@ -15,6 +16,10 @@ def get_criteria():
     section_id = request.args.get("section_id")
     query = Criteria.query
     if section_id:
+        try:
+            UUID(str(section_id))
+        except (ValueError, TypeError):
+            return jsonify({"code": 400, "error": "section_id must be a valid UUID."}), 400
         query = query.filter_by(section_id=section_id)
     if course_id:
         try:

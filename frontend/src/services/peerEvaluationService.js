@@ -135,6 +135,47 @@ export async function getPendingPeerEvaluations({ studentId, sectionIds }) {
 }
 
 /**
+ * Get active peer evaluation rounds grouped by section for dashboard metrics.
+ */
+export async function getActivePeerEvaluationRoundsBySections(sectionIds = []) {
+  const uniqueSectionIds = Array.from(new Set(sectionIds.filter(Boolean)));
+  if (!uniqueSectionIds.length) {
+    return {};
+  }
+
+  const results = await Promise.allSettled(
+    uniqueSectionIds.map(async (sectionId) => {
+      const payload = await fetchJson(
+        `${PEER_EVAL_URL}/rounds?section_id=${encodeURIComponent(sectionId)}&status=active`,
+        { headers: { Accept: 'application/json' } }
+      );
+
+      const rounds = Array.isArray(payload?.data) ? payload.data : [];
+      return {
+        sectionId,
+        rounds: rounds.map((round) => ({
+          id: round.round_id,
+          sectionId: round.section_id,
+          status: round.status,
+          title: round.title,
+          dueAt: round.due_at,
+          startedAt: round.created_at,
+        })),
+      };
+    })
+  );
+
+  return results.reduce((acc, result) => {
+    if (result.status !== 'fulfilled') {
+      return acc;
+    }
+
+    acc[result.value.sectionId] = result.value.rounds;
+    return acc;
+  }, {});
+}
+
+/**
  * Instructor initiates a peer evaluation round via the dashboard orchestrator.
  */
 export async function startPeerEvaluationRound({ sectionId, title, dueAt }) {

@@ -119,34 +119,51 @@ Content-Type: application/json
    - create student form via Student Form service,
    - build form link,
    - publish a notification message (with generic message + form link) to RabbitMQ.
-5. Return a consolidated per-student success/failure summary.
+5. Publish one RabbitMQ batch message containing all valid per-student notifications for the section.
+6. Return a consolidated per-student success/failure summary.
 
 ## RabbitMQ Message Payload
 
+The service now publishes a single message per API request, with all student notifications inside `notifications`.
+
 ```json
 {
-  "to": "student1@university.edu",
-  "subject": "Action Required: Complete Your Teamder Student Form",
-  "body": "Please complete your Teamder student form using the link provided.\n\nhttp://localhost:5173/student/101/form/f-001",
-  "metadata": {
-    "event_type": "FormLinkGenerated",
-    "student_id": 101,
-    "section_id": "IS213-2026-01",
-    "form_id": "f-001",
-    "template_key": "student_form_link_v1",
-    "idempotency_key": "IS213-2026-01:101:f-001"
-  },
-  "event_type": "FormLinkGenerated",
-  "student_id": 101,
-  "email": "student1@university.edu",
+  "event_type": "FormLinksGeneratedBatch",
   "section_id": "IS213-2026-01",
-  "form_id": "f-001",
-  "form_url": "http://localhost:5173/student/101/form/f-001",
-  "message": "Please complete your Teamder student form using the link provided.",
-  "template_key": "student_form_link_v1",
-  "idempotency_key": "IS213-2026-01:101:f-001"
+  "notifications": [
+    {
+      "to": "student1@university.edu",
+      "subject": "Action Required: Complete Your Teamder Student Form",
+      "body": "Please complete your Teamder student form using the link provided.\n\nhttp://localhost:5173/student/101/form/f-001",
+      "metadata": {
+        "event_type": "FormLinkGenerated",
+        "student_id": 101,
+        "section_id": "IS213-2026-01",
+        "form_id": "f-001",
+        "template_key": "student_form_link_v1",
+        "idempotency_key": "IS213-2026-01:101:f-001"
+      },
+      "event_type": "FormLinkGenerated",
+      "student_id": 101,
+      "email": "student1@university.edu",
+      "section_id": "IS213-2026-01",
+      "form_id": "f-001",
+      "form_url": "http://localhost:5173/student/101/form/f-001",
+      "message": "Please complete your Teamder student form using the link provided.",
+      "template_key": "student_form_link_v1",
+      "idempotency_key": "IS213-2026-01:101:f-001"
+    }
+  ]
 }
 ```
+
+Each element inside `notifications` retains the legacy per-recipient message format for backward-compatible consumer handling.
+
+## API Contract Compatibility
+
+- Frontend request payload remains unchanged: `POST /formation-notifications` with `section_id`.
+- Frontend response payload remains unchanged: `notifications_created`, `notifications_failed`, and `summary`.
+- The batching change is internal between formation-notification and notification via RabbitMQ.
 
 ## Environment Variables
 

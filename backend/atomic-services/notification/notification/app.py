@@ -18,7 +18,7 @@ import smtplib
 import threading
 import time
 from email.message import EmailMessage
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pika
 from dotenv import load_dotenv
@@ -199,6 +199,46 @@ def _extract_email_payload(message: Dict[str, Any]) -> Tuple[Optional[Dict[str, 
     return None, "message does not match expected email schema"
 
 
+def _extract_email_payloads(
+    message: Dict[str, Any]
+) -> Tuple[List[Tuple[Dict[str, Any], Dict[str, Any]]], List[Dict[str, Any]], Optional[str]]:
+    # Supports both single-message payloads and batch envelopes.
+    # Accepted batch keys: notifications, messages.
+    source_items: List[Any]
+    if "notifications" in message:
+        notifications = message.get("notifications")
+        if not isinstance(notifications, list):
+            return [], [], "field 'notifications' must be an array"
+        source_items = notifications
+    elif "messages" in message:
+        messages = message.get("messages")
+        if not isinstance(messages, list):
+            return [], [], "field 'messages' must be an array"
+        source_items = messages
+    else:
+        source_items = [message]
+
+    valid_payloads: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
+    invalid_items: List[Dict[str, Any]] = []
+
+    for idx, item in enumerate(source_items):
+        if not isinstance(item, dict):
+            invalid_items.append({"index": idx, "error": "item must be a JSON object"})
+            continue
+
+        email_payload, payload_error = _extract_email_payload(item)
+        if payload_error:
+            invalid_items.append({"index": idx, "error": payload_error, "payload": item})
+            continue
+
+        valid_payloads.append((item, email_payload))
+
+    if not valid_payloads and invalid_items:
+        return [], invalid_items, "message does not contain any valid email payload"
+
+    return valid_payloads, invalid_items, None
+
+
 def _classify_smtp_error(exc: Exception) -> Tuple[bool, str]:
     if isinstance(exc, smtplib.SMTPResponseException):
         code = int(getattr(exc, "smtp_code", 0) or 0)
@@ -362,8 +402,6 @@ def _publish_error_event(
 
 
 def _handle_email_message(ch, method, properties, body) -> None:
-    _inc_metric("processed", 1)
-
     parsed, parse_error = _safe_json_loads(body)
     if parse_error:
         logger.error("Rejecting invalid JSON message (tag=%s): %s", method.delivery_tag, parse_error)
@@ -378,10 +416,12 @@ def _handle_email_message(ch, method, properties, body) -> None:
         ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
         return
 
-    email_payload, payload_error = _extract_email_payload(parsed)
+    payloads, invalid_items, payload_error = _extract_email_payloads(parsed)
+    _inc_metric("processed", len(payloads) + len(invalid_items))
+
     if payload_error:
         logger.error("Rejecting invalid email payload (tag=%s): %s", method.delivery_tag, payload_error)
-        _inc_metric("invalid_messages", 1)
+        _inc_metric("invalid_messages", len(invalid_items) if invalid_items else 1)
         _publish_error_event(
             ch,
             parsed,
@@ -392,46 +432,70 @@ def _handle_email_message(ch, method, properties, body) -> None:
         ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
         return
 
-    recipient_masked = _mask_email(email_payload["to"])
-    logger.info(
-        "Attempting email send for recipient=%s event_type=%s",
-        recipient_masked,
-        parsed.get("event_type", "direct_email"),
-    )
+    if invalid_items:
+        _inc_metric("invalid_messages", len(invalid_items))
+        for invalid_item in invalid_items:
+            _publish_error_event(
+                ch,
+                invalid_item.get("payload") if isinstance(invalid_item, dict) else None,
+                "INVALID_BATCH_ITEM",
+                str(invalid_item.get("error", "invalid batch item")),
+                {
+                    "delivery_tag": method.delivery_tag,
+                    "routing_key": method.routing_key,
+                    "index": invalid_item.get("index"),
+                },
+            )
 
-    success, is_transient, detail, attempts = _send_email_with_retry(email_payload)
+    if len(payloads) > 1:
+        logger.info(
+            "Processing notification batch delivery_tag=%s batch_size=%s invalid_items=%s",
+            method.delivery_tag,
+            len(payloads),
+            len(invalid_items),
+        )
 
-    if success:
-        logger.info("Email sent successfully to recipient=%s attempts=%s", recipient_masked, attempts)
-        _inc_metric("sent", 1)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-    else:
-        _inc_metric("send_failures", 1)
-        error_code = "SMTP_TRANSIENT_FAILURE" if is_transient else "SMTP_PERMANENT_FAILURE"
-        logger.error(
-            "Email send failed recipient=%s attempts=%s transient=%s error=%s",
+    for source_message, email_payload in payloads:
+        recipient_masked = _mask_email(email_payload["to"])
+        logger.info(
+            "Attempting email send for recipient=%s event_type=%s",
             recipient_masked,
-            attempts,
-            is_transient,
-            detail,
+            source_message.get("event_type", parsed.get("event_type", "direct_email")),
         )
-        _publish_error_event(
-            ch,
-            parsed,
-            error_code,
-            detail,
-            {
-                "delivery_tag": method.delivery_tag,
-                "routing_key": method.routing_key,
-                "recipient": recipient_masked,
-                "attempts": attempts,
-            },
-        )
-        # Ack to avoid infinite poison-message loops.
-        ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    if EMAIL_SEND_DELAY_SECONDS > 0:
-        time.sleep(EMAIL_SEND_DELAY_SECONDS)
+        success, is_transient, detail, attempts = _send_email_with_retry(email_payload)
+
+        if success:
+            logger.info("Email sent successfully to recipient=%s attempts=%s", recipient_masked, attempts)
+            _inc_metric("sent", 1)
+        else:
+            _inc_metric("send_failures", 1)
+            error_code = "SMTP_TRANSIENT_FAILURE" if is_transient else "SMTP_PERMANENT_FAILURE"
+            logger.error(
+                "Email send failed recipient=%s attempts=%s transient=%s error=%s",
+                recipient_masked,
+                attempts,
+                is_transient,
+                detail,
+            )
+            _publish_error_event(
+                ch,
+                source_message,
+                error_code,
+                detail,
+                {
+                    "delivery_tag": method.delivery_tag,
+                    "routing_key": method.routing_key,
+                    "recipient": recipient_masked,
+                    "attempts": attempts,
+                },
+            )
+
+        if EMAIL_SEND_DELAY_SECONDS > 0:
+            time.sleep(EMAIL_SEND_DELAY_SECONDS)
+
+    # Ack once after handling the full message (single or batch).
+    ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
 def _consume_loop() -> None:
@@ -587,7 +651,7 @@ def health():
     )
 
 
-    health._openapi_response_schema = HealthSchema()
+health._openapi_response_schema = HealthSchema()
 
 
 
@@ -599,17 +663,26 @@ def send_form_links():
         return jsonify({"code": 400, "message": "recipients array is required"}), 400
 
     statuses = []
-    success_count = 0
-    failure_count = 0
+    publish_candidates = []
 
-    for row in recipients:
+    for idx, row in enumerate(recipients):
+        if not isinstance(row, dict):
+            statuses.append(
+                {
+                    "student_id": None,
+                    "email": None,
+                    "delivery_status": "failed",
+                    "message": f"recipient at index {idx} must be an object",
+                }
+            )
+            continue
+
         student_id = row.get("student_id")
         email = row.get("email")
         form_url = row.get("form_url")
         section_id = row.get("section_id")
 
         if not email or not form_url:
-            failure_count += 1
             statuses.append(
                 {
                     "student_id": student_id,
@@ -620,35 +693,34 @@ def send_form_links():
             )
             continue
 
-        message_payload = {
+        publish_candidates.append(
+            {
             "event_type": "FormLinkGenerated",
             "student_id": student_id,
             "email": email,
             "section_id": section_id,
             "form_url": form_url,
-        }
+            }
+        )
 
-        ok, error = publish_message(message_payload, routing_key=PUBLISH_ROUTING_KEY)
-        if ok:
-            success_count += 1
+    if publish_candidates:
+        batch_payload = {
+            "event_type": "FormLinksGeneratedBatch",
+            "notifications": publish_candidates,
+        }
+        ok, error = publish_message(batch_payload, routing_key=PUBLISH_ROUTING_KEY)
+        for row in publish_candidates:
             statuses.append(
                 {
-                    "student_id": student_id,
-                    "email": email,
-                    "delivery_status": "success",
-                    "message": "queued for delivery",
+                    "student_id": row.get("student_id"),
+                    "email": row.get("email"),
+                    "delivery_status": "success" if ok else "failed",
+                    "message": "queued for delivery" if ok else f"amqp publish failed: {error}",
                 }
             )
-        else:
-            failure_count += 1
-            statuses.append(
-                {
-                    "student_id": student_id,
-                    "email": email,
-                    "delivery_status": "failed",
-                    "message": f"amqp publish failed: {error}",
-                }
-            )
+
+    success_count = len([row for row in statuses if row.get("delivery_status") == "success"])
+    failure_count = len(statuses) - success_count
 
     return (
         jsonify(
@@ -665,8 +737,8 @@ def send_form_links():
     )
 
 
-    send_form_links._openapi_request_schema = SendFormLinksRequestSchema()
-    send_form_links._openapi_response_schema = SendFormLinksEnvelopeSchema()
+send_form_links._openapi_request_schema = SendFormLinksRequestSchema()
+send_form_links._openapi_response_schema = SendFormLinksEnvelopeSchema()
 
 
 

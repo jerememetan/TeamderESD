@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
 import {
   AlertTriangle,
   ArrowLeft,
+  CircleAlert,
   Plus,
-  Save,
   Settings2,
   SlidersHorizontal,
   Sparkles,
@@ -16,17 +16,18 @@ import SystemTag from "../../../components/schematic/SystemTag";
 import { Button } from "../../../components/ui/button";
 import chrome from "../../../styles/instructorChrome.module.css";
 import {
-  getBackendCourseId,
-  getBackendSectionId,
-  backendSectionIds,
-} from "../../../data/backendIds";
-import { mockCourses, mockForms } from "../../../data/mockData";
-import {
   fetchFormationConfig,
   saveFormationConfig,
 } from "../../../services/formationConfigService";
 import styles from "./CreateForm.module.css";
-import { WEIGHT_FIELDS, DEFAULT_WEIGHTS } from "./logic/weights";
+import {
+  WEIGHT_FIELDS,
+  clampWeightValue,
+  getNegativeWeightWarning,
+  getWeightDescription,
+  getWeightField,
+  getWeightSliderBounds,
+} from "./logic/weights";
 import { buildDefaultState } from "./logic/buildDefaultState";
 import { normalizeLoadedConfig } from "./logic/normalizeLoadedConfig";
 import { buildSavePayload } from "./logic/payloads";
@@ -34,53 +35,26 @@ import { sendFormLinks } from "./service/notificationService";
 import { fetchCourseByCode } from "../../../services/courseService";
 import { getSectionById } from "../../../services/sectionService";
 import { fetchEnrollmentCountBySectionId } from "../../../services/enrollmentService";
+import { generateTeamsForSection } from "../../../services/teamFormationService";
+import { isFormsRequired } from "../logic/formationFlow";
 function CreateForm() {
   // takes course Id and Group ID from the params (already configured)
   const { courseId, groupId } = useParams();
-  // Resolve selected course/group from params. Support frontend codes/ids
-  // fetchEnrollmentCountBySectionId
-  const resolved = (() => {
-    let course =
-      mockCourses.find((c) => c.code === courseId) ||
-      mockCourses.find((c) => c.id === courseId) ||
-      null;
-    let frontendGroupId = groupId;
-
-    if (!course) {
-      // If `groupId` looks like a backend UUID, reverse-lookup frontend key
-      const frontendKey = Object.keys(backendSectionIds).find(
-        (k) => backendSectionIds[k] === groupId,
-      );
-      if (frontendKey) {
-        frontendGroupId = frontendKey;
-        course =
-          mockCourses.find((c) => c.groups.some((g) => g.id === frontendKey)) ||
-          null;
-      }
-
-      // fallback: find a course containing the provided groupId directly
-      if (!course) {
-        course =
-          mockCourses.find((c) => c.groups.some((g) => g.id === groupId)) ||
-          null;
-      }
-    }
-
-    return { course, frontendGroupId };
-  })();
+  const location = useLocation();
+  const isReadOnly = new URLSearchParams(location.search).get("mode") === "view";
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
-  const existingForm = mockForms[resolved.frontendGroupId || ""];
+  const [bootstrapError, setBootstrapError] = useState("");
 
   const defaultState = useMemo(
-    () => buildDefaultState(selectedGroup, existingForm),
-    [selectedGroup, existingForm],
+    () => buildDefaultState(selectedGroup),
+    [selectedGroup],
   );
   const [formState, setFormState] = useState(defaultState);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [loadSource, setLoadSource] = useState("mock");
+  const [isFetchingConfig, setIsFetchingConfig] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [isPublishingLinks, setIsPublishingLinks] = useState(false);
@@ -94,40 +68,62 @@ function CreateForm() {
         const res = await fetchEnrollmentCountBySectionId(groupId);
         setStudentCount(res);
       } catch (error) {
-        console.log("EnrollmentCountPullFailed:" + error);
+        setErrorMessage(`Failed to load enrollment count. ${error?.message || String(error)}`);
       }
     }
-    
+
     fetchStudentCount();
-    console.log("STUDENT COUNT", studentCount);
   }, [groupId]);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchCourse() {
       try {
         const course = await fetchCourseByCode(courseId);
+        if (!isMounted) {
+          return;
+        }
         setSelectedCourse(course);
       } catch (error) {
-        console.log("course not found: " + courseId, error);
+        if (!isMounted) {
+          return;
+        }
+        setBootstrapError(`Course load failed. ${error?.message || String(error)}`);
       }
     }
-    
+
     fetchCourse();
-    console.log("SELECTED COURSE", selectedCourse);
+
+    return () => {
+      isMounted = false;
+    };
   }, [courseId]);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchSection() {
       try {
         const section = await getSectionById(groupId);
+        if (!isMounted) {
+          return;
+        }
         setSelectedGroup(section);
       } catch (error) {
-        console.log("section not found:" + error);
+        if (!isMounted) {
+          return;
+        }
+        setBootstrapError(`Section load failed. ${error?.message || String(error)}`);
       }
     }
+
     fetchSection();
-    console.log("SELECTED GROUP", selectedGroup);
-  }, [selectedCourse]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [groupId]);
 
 
   useEffect(() => {
@@ -138,13 +134,13 @@ function CreateForm() {
         return;
       }
       setIsLoading(true);
+      setIsFetchingConfig(true);
       setErrorMessage("");
       setSaveMessage("");
-      // tries to get Course Id but if it fails it will use a mock source
-      if (!courseId || !courseId) {
-        setLoadSource("mock");
+      if (!groupId) {
         setIsLoading(false);
-        setErrorMessage("Missing backend UUID mapping for this course group.");
+        setIsFetchingConfig(false);
+        setErrorMessage("Missing backend section id for this course group.");
         return;
       }
 
@@ -161,20 +157,22 @@ function CreateForm() {
           defaultState,
         );
         setFormState(normalized);
-        setLoadSource(response?.criteria ? "backend" : "mock");
       } catch (error) {
         if (!isMounted) {
           return;
         }
 
         setFormState(defaultState);
-        setLoadSource("mock");
-        setErrorMessage(
-          `Backend load failed. Showing fallback values instead. ${error.message}`,
-        );
+        const message = error?.message || String(error);
+        if (String(message).includes("404")) {
+          setSaveMessage("No existing formation criteria found yet. You can configure and save now.");
+        } else {
+          setErrorMessage(`Backend load failed. ${message}`);
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
+          setIsFetchingConfig(false);
         }
       }
     }
@@ -185,6 +183,10 @@ function CreateForm() {
       isMounted = false;
     };
   }, [defaultState, selectedCourse, selectedGroup]);
+  if (bootstrapError) {
+    return <div className={styles.notFound}>{bootstrapError}</div>;
+  }
+
   if (!selectedCourse || !selectedGroup) {
     return <div className={styles.notFound}>Loading course...</div>;
   }
@@ -194,11 +196,12 @@ function CreateForm() {
   };
 
   const setWeightValue = (weightKey, value) => {
+    const nextValue = clampWeightValue(weightKey, value);
     setFormState((current) => ({
       ...current,
       weights: {
         ...current.weights,
-        [weightKey]: Number(value),
+        [weightKey]: nextValue,
       },
     }));
   };
@@ -269,39 +272,18 @@ function CreateForm() {
     }));
   };
 
-  const handlePreferredGroupSizeChange = (value) => {
-    const preferredGroupSize = Math.max(2, Number(value) || 2);
-    const derivedNumGroups = Math.max(
-      1,
-      Math.ceil(studentCount / preferredGroupSize),
-    );
-
-    setFormState((current) => ({
-      ...current,
-      preferredGroupSize,
-      numGroups: derivedNumGroups,
-      minimumGroupSize: Math.min(current.minimumGroupSize, preferredGroupSize),
-    }));
-  };
-
-  const handleSave = async (mode) => {
+  const handleSave = async () => {
     setIsSaving(true);
     setSaveMessage("");
     setErrorMessage("");
-    const backendCourseId =
-      // prefer actual backend UUIDs returned from the course service
-      (selectedCourse && (selectedCourse.id || selectedCourse.course_id)) ||
-      // fallback to static mapping
-      getBackendCourseId(courseId) ||
-      null;
+    const backendCourseId = selectedCourse?.id || selectedCourse?.course_id || null;
+    const backendSectionId = selectedGroup?.id || selectedGroup?.section_id || null;
 
-    const backendSectionId =
-      // prefer actual backend UUID returned from the section service
-      (selectedGroup && (selectedGroup.id || selectedGroup.section_id)) ||
-      // fallback to static mapping using the frontend group key
-      getBackendSectionId(resolved.frontendGroupId || groupId) ||
-      groupId ||
-      null;
+    if (!backendCourseId || !backendSectionId) {
+      setErrorMessage("Cannot save because course/section backend identifiers are missing.");
+      setIsSaving(false);
+      return false;
+    }
 
     const payload = buildSavePayload(
       formState,
@@ -310,13 +292,7 @@ function CreateForm() {
     );
     try {
       await saveFormationConfig(payload);
-      console.log("SUBMITTED PAYLOAD", payload);
-      setLoadSource("backend");
-      setSaveMessage(
-        mode === "publish"
-          ? "Group form published to formation-config."
-          : "Group form draft saved to formation-config.",
-      );
+      setSaveMessage("Formation criteria saved.");
       return true;
 
     } catch (error) {
@@ -327,36 +303,130 @@ function CreateForm() {
     }
   };
 
-  const backendStatusTone =
-    loadSource === "backend" ? "success" : errorMessage ? "alert" : "neutral";
-  const activeWeights = WEIGHT_FIELDS.reduce(
-    (sum, field) => sum + Number(formState.weights[field.key] || 0),
-    0,
+  const activeParameterCount = WEIGHT_FIELDS.filter(
+    (field) => Math.abs(Number(formState.weights[field.key] || 0)) > 0.0001,
+  ).length;
+  const formsRequired = isFormsRequired(formState);
+  const priorityWeightFields = WEIGHT_FIELDS.filter(
+    (field) => field.key !== "topic_weight" && field.key !== "skill_weight",
   );
 
-  const handlePublish = async () => {
+  const renderWeightControl = (weightKey, className = "") => {
+    const field = getWeightField(weightKey);
+    if (!field) {
+      return null;
+    }
+
+    const value = Number(formState.weights[weightKey] || 0);
+    const slider = getWeightSliderBounds(weightKey);
+    const description = getWeightDescription(weightKey, value);
+    const negativeWarning = getNegativeWeightWarning(weightKey, value);
+    const shouldWarnRandomness = weightKey === "randomness" && value > 0.5;
+    const requiresStudentFormData = [
+      "buddy_weight",
+      "mbti_weight",
+      "topic_weight",
+      "skill_weight",
+    ].includes(weightKey);
+
+    return (
+      <div
+        key={weightKey}
+        className={`${styles.criterionCard} ${className}`.trim()}
+      >
+        <div className={styles.criterionHeader}>
+          <div>
+            <p className={styles.criterionCode}>{field.label}</p>
+            <p className={`${styles.helperText} ${styles.helperTextWithInfo}`}>
+              <span>{field.helper}</span>
+              {requiresStudentFormData ? (
+                <span
+                  className={styles.weightInfo}
+                  role="img"
+                  aria-label="Student form input required"
+                  data-tooltip="These inputs are not auto-populated from student records. If weighted, students must submit forms before team formation can use them."
+                >
+                  <CircleAlert className={styles.weightInfoIcon} />
+                </span>
+              ) : null}
+            </p>
+          </div>
+          <div className={styles.criterionMeta}>
+            <SystemTag tone="neutral">{value.toFixed(2)}</SystemTag>
+          </div>
+        </div>
+
+        <input
+          type="range"
+          min={slider.min}
+          max={slider.max}
+          step={slider.step}
+          value={value}
+          onChange={(event) => setWeightValue(weightKey, event.target.value)}
+          className={styles.sliderInput}
+          disabled={isReadOnly}
+        />
+        <div className={styles.sliderScale}>
+          <span>{slider.min}</span>
+          <span>{slider.max}</span>
+        </div>
+
+        <p className={styles.criterionDescription}>{description}</p>
+
+        {negativeWarning ? (
+          <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+            <AlertTriangle className={styles.warningIcon} />
+            <span>{negativeWarning}</span>
+          </div>
+        ) : null}
+
+        {shouldWarnRandomness ? (
+          <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+            <AlertTriangle className={styles.warningIcon} />
+            <span>
+              Randomness above 0.50 increases exploration in the solver and can
+              increase the time taken to form teams.
+            </span>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const handleSaveAndContinue = async () => {
     setIsPublishingLinks(true);
     setErrorMessage("");
     setSaveMessage("");
     try {
-      const saved = await handleSave("publish");
+      const saved = await handleSave();
       if (!saved) {
         throw new Error(
           "Unable to save formation-config before notification dispatch.",
         );
       }
-      // just need a JSON of section_id : your actual section id
-      const result = await sendFormLinks({ "section_id": groupId });
+
+      if (!isFormsRequired(formState)) {
+        await generateTeamsForSection(groupId);
+        setSaveMessage(
+          "Criteria saved. No student form fields are required, so team formation started immediately.",
+        );
+        return;
+      }
+
+      const result = await sendFormLinks({ section_id: groupId });
       const data = result || {};
-      console.log("PUBLISH OUTPUT",data);
       setSaveMessage(
-        `Published. Generated ${data.summary.total_students ?? 0} link(s); notification success: ${data.summary.success_count ?? 0}, failure: ${data.summary.failure_count ?? 0}.`,
+        `Criteria saved and forms dispatched. Generated ${data.summary?.total_students ?? 0} link(s); notification success: ${data.summary?.success_count ?? 0}, failure: ${data.summary?.failure_count ?? 0}.`,
       );
     } catch (error) {
       setErrorMessage(`Publish failed. ${error.message}`);
     } finally {
       setIsPublishingLinks(false);
     }
+  };
+
+  const handleSaveDraft = async () => {
+    await handleSave();
   };
 
   const sectionItems = [
@@ -373,120 +443,64 @@ function CreateForm() {
       metricLabel: "Teams to generate",
       content: (
         <div className={styles.fieldGrid}>
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>Students enrolled</span>
+            <div className={styles.staticValue}>{studentCount}</div>
+          </div>
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Preferred team size</span>
+            <span className={styles.fieldLabel}>Number of groups</span>
             <input
               type="number"
               min="2"
-              value={formState.preferredGroupSize}
-              onChange={(event) =>
-                handlePreferredGroupSizeChange(event.target.value)
-              }
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>Number of teams</span>
-            <input
-              type="number"
-              min="1"
               value={formState.numGroups}
-              onChange={(event) =>
+              onChange={(event) => {
+                const newNumGroups = Math.max(2, Number(event.target.value) || 2);
                 setStateValue(
                   "numGroups",
-                  Math.max(1, Number(event.target.value) || 1),
-                )
-              }
+                  newNumGroups,
+                );
+              }}
               className={styles.input}
+              disabled={isReadOnly}
             />
           </label>
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>Minimum team size</span>
-            <input
-              type="number"
-              min="2"
-              value={formState.minimumGroupSize}
-              onChange={(event) =>
-                setStateValue(
-                  "minimumGroupSize",
-                  Math.max(2, Number(event.target.value) || 2),
-                )
-              }
-              className={styles.input}
-            />
-          </label>
-          {/* <div className={styles.toggleGrid}>
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                checked={formState.mixGender}
-                onChange={(event) =>
-                  setStateValue("mixGender", event.target.checked)
+          {studentCount > 0 && formState.numGroups > 0 ? (
+            <div className={styles.teamSizeInfo}>
+              {(() => {
+                const baseSize = Math.floor(studentCount / formState.numGroups);
+                const remainder = studentCount % formState.numGroups;
+                if (remainder === 0) {
+                  return (
+                    <p className={styles.infoText}>
+                      <strong>{baseSize}</strong> members per group
+                    </p>
+                  );
                 }
-              />{" "}
-              <span>Balance gender</span>
-            </label>
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                checked={formState.mixYear}
-                onChange={(event) =>
-                  setStateValue("mixYear", event.target.checked)
-                }
-              />{" "}
-              <span>Balance year of study</span>
-            </label>
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                checked={formState.allowBuddy}
-                onChange={(event) =>
-                  setStateValue("allowBuddy", event.target.checked)
-                }
-              />{" "}
-              <span>Allow buddy requests</span>
-            </label>
-          </div> */}
+                return (
+                  <p className={styles.infoText}>
+                    <strong>{baseSize}–{baseSize + 1}</strong> members per group
+                  </p>
+                );
+              })()}
+            </div>
+          ) : null}
         </div>
       ),
     },
     {
       id: "priorities",
       label: "Formation priorities",
-      meta: `${activeWeights.toFixed(2)} total signal`,
+      meta: `${activeParameterCount} parameters active`,
       eyebrow: "Weighting",
       title: "Formation priorities",
       description:
         "Tune how much influence each signal should have during team generation.",
       icon: <SlidersHorizontal className={styles.sectionIcon} />,
-      metric: activeWeights.toFixed(2),
-      metricLabel: "Total weighting signal",
+      metric: activeParameterCount,
+      metricLabel: "Parameters active",
       content: (
         <div className={styles.criteriaList}>
-          {WEIGHT_FIELDS.map((field) => (
-            <div key={field.key} className={styles.criterionCard}>
-              <div className={styles.criterionHeader}>
-                <div>
-                  <p className={styles.criterionCode}>{field.label}</p>
-                  <p className={styles.helperText}>{field.helper}</p>
-                </div>
-                <SystemTag tone="neutral">
-                  {Number(formState.weights[field.key]).toFixed(2)}
-                </SystemTag>
-              </div>
-              <input
-                type="number"
-                min="0"
-                max="1"
-                step="0.05"
-                value={formState.weights[field.key]}
-                onChange={(event) =>
-                  setWeightValue(field.key, event.target.value)
-                }
-                className={styles.input}
-              />
-            </div>
-          ))}
+          {priorityWeightFields.map((field) => renderWeightControl(field.key))}
         </div>
       ),
     },
@@ -502,12 +516,39 @@ function CreateForm() {
       metric: formState.topics.length,
       metricLabel: "Topics saved",
       actions: (
-        <Button onClick={addTopic} variant="default" size="sm">
+        <Button onClick={addTopic} variant="default" size="sm" disabled={isReadOnly}>
           <Plus className={styles.buttonIcon} /> Add topic
         </Button>
       ),
       content: (
         <div className={styles.criteriaList}>
+          {renderWeightControl("topic_weight", styles.fullRow)}
+          {formState.topics.length === 0 && Math.abs(Number(formState.weights?.topic_weight || 0)) > 0.0001 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                Topic weighting is configured but no project topics are defined. Add one or more topics so the topic weighting can meaningfully influence team formation.
+              </span>
+            </div>
+          ) : null}
+          {formState.topics.length > 0 && Math.abs(Number(formState.weights?.topic_weight || 0)) <= 0.0001 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                Project topics are present, but the topic weight is set to zero. With a zero weight, topics will not affect team formation — raise the topic weighting to have these topics influence results.
+              </span>
+            </div>
+          ) : null}
+          {formState.topics.length > 10 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                More than 10 topics are configured. This increases model size
+                and can increase the time taken for team formation.
+              </span>
+            </div>
+          ) : null}
+
           {formState.topics.length ? (
             formState.topics.map((topic, index) => (
               <div key={topic.id} className={styles.criterionCard}>
@@ -519,6 +560,7 @@ function CreateForm() {
                     onClick={() => removeTopic(topic.id)}
                     variant="warning"
                     size="icon"
+                    disabled={isReadOnly}
                   >
                     <Trash2 className={styles.buttonIcon} />
                   </Button>
@@ -531,11 +573,14 @@ function CreateForm() {
                   }
                   placeholder="Example: AI product design"
                   className={styles.input}
+                  disabled={isReadOnly}
                 />
               </div>
             ))
           ) : (
-            <p className={styles.emptyState}>No topics added yet.</p>
+            <p className={`${styles.emptyState} ${styles.fullRow}`}>
+              No topics added yet.
+            </p>
           )}
         </div>
       ),
@@ -552,12 +597,39 @@ function CreateForm() {
       metric: formState.skills.length,
       metricLabel: "Skills tracked",
       actions: (
-        <Button onClick={addSkill} variant="default" size="sm">
+        <Button onClick={addSkill} variant="default" size="sm" disabled={isReadOnly}>
           <Plus className={styles.buttonIcon} /> Add skill
         </Button>
       ),
       content: (
         <div className={styles.criteriaList}>
+          {renderWeightControl("skill_weight", styles.fullRow)}
+          {formState.skills.length === 0 && Math.abs(Number(formState.weights?.skill_weight || 0)) > 0.0001 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                Skill weighting is configured but no skills are defined. Add one or more skills so the skill weighting can meaningfully influence team formation.
+              </span>
+            </div>
+          ) : null}
+          {formState.skills.length > 0 && Math.abs(Number(formState.weights?.skill_weight || 0)) <= 0.0001 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                Skills are defined, but the skill weight is currently zero. With zero weighting, skills will not be considered during team formation—increase the skill weighting to make these skills count.
+              </span>
+            </div>
+          ) : null}
+          {formState.skills.length > 10 ? (
+            <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
+              <AlertTriangle className={styles.warningIcon} />
+              <span>
+                More than 10 skills are configured. This increases model size
+                and can increase the time taken for team formation.
+              </span>
+            </div>
+          ) : null}
+
           {formState.skills.length ? (
             formState.skills.map((skill, index) => (
               <div key={skill.id} className={styles.criterionCard}>
@@ -569,6 +641,7 @@ function CreateForm() {
                     onClick={() => removeSkill(skill.id)}
                     variant="warning"
                     size="icon"
+                    disabled={isReadOnly}
                   >
                     <Trash2 className={styles.buttonIcon} />
                   </Button>
@@ -581,27 +654,37 @@ function CreateForm() {
                   }
                   placeholder="Example: React"
                   className={styles.input}
+                  disabled={isReadOnly}
                 />
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Skill importance</span>
+                <div className={styles.field}>
+                  <span className={styles.fieldLabel}>
+                    Skill importance ({Number(skill.skill_importance || 0).toFixed(2)})
+                  </span>
                   <input
-                    type="number"
-                    min="0"
+                    type="range"
+                    min="0.05"
                     max="1"
                     step="0.05"
-                    value={skill.skill_importance}
+                    value={Number(skill.skill_importance || 0)}
                     onChange={(event) =>
                       updateSkill(skill.id, {
                         skill_importance: Number(event.target.value),
                       })
                     }
-                    className={styles.input}
+                    className={styles.sliderInput}
+                    disabled={isReadOnly}
                   />
-                </label>
+                  <div className={styles.sliderScale}>
+                    <span>0.05</span>
+                    <span>1</span>
+                  </div>
+                </div>
               </div>
             ))
           ) : (
-            <p className={styles.emptyState}>No skills added yet.</p>
+            <p className={`${styles.emptyState} ${styles.fullRow}`}>
+              No skills added yet.
+            </p>
           )}
         </div>
       ),
@@ -625,22 +708,13 @@ function CreateForm() {
             {selectedCourse.code} G{selectedGroup.section_number} -{" "}
             {selectedCourse.name}
           </h2>
-          <p className={chrome.subtitle}>
-            Configure the solver inputs for this group using the sidebar
-            workspace.
-          </p>
         </div>
-        <SystemTag tone={backendStatusTone}>
-          {loadSource === "backend"
-            ? "Backend config loaded"
-            : "Fallback values loaded"}
-        </SystemTag>
       </section>
 
       <div className={styles.statusPanel}>
         <div>
-          <p className={styles.statusLabel}>Form Creation</p>
-          <p className={styles.statusText}> Creating form for 
+          <p className={styles.statusLabel}>Formation Configuration</p>
+          <p className={styles.statusText}> Configuring for 
             <strong> {selectedCourse.code}G{selectedGroup.section_number}</strong>
           </p>
         </div>
@@ -651,12 +725,18 @@ function CreateForm() {
       {errorMessage ? (
         <div className={styles.feedbackAlert}>
           <AlertTriangle className={styles.feedbackIcon} />
-          <span>{errorMessage}</span>
+          <span>
+            {errorMessage} <Link to="/instructor/error-logs">Go to Error Logs</Link>
+          </span>
         </div>
       ) : null}
 
       {saveMessage ? (
         <div className={styles.feedbackSuccess}>{saveMessage}</div>
+      ) : null}
+
+      {isFetchingConfig ? (
+        <p className={styles.helperText}>Loading saved formation criteria...</p>
       ) : null}
 
       <div className={styles.workspace}>
@@ -696,6 +776,9 @@ function CreateForm() {
           >
             <div className={styles.detailHeader}>
               <p className={styles.helperText}>{activeSection.description}</p>
+              {isReadOnly ? (
+                <SystemTag tone="neutral">View-only mode</SystemTag>
+              ) : null}
             </div>
             {activeSection.content}
           </ModuleBlock>
@@ -703,18 +786,23 @@ function CreateForm() {
           <div className={styles.actionRow}>
             <Button
               variant="default"
-              onClick={() => handleSave("draft")}
-              disabled={isSaving || isLoading}
+              onClick={handleSaveDraft}
+              disabled={isReadOnly || isSaving || isLoading || isPublishingLinks}
             >
-              {isSaving ? <Save className={styles.buttonIcon} /> : null} Save
-              draft
+              {isSaving ? "Saving draft..." : "Save Draft"}
             </Button>
             <Button
               variant="success"
-              onClick={handlePublish}
-              disabled={isSaving || isLoading || isPublishingLinks}
+              onClick={handleSaveAndContinue}
+              disabled={isReadOnly || isSaving || isLoading || isPublishingLinks}
             >
-              {isPublishingLinks ? "Publishing..." : "Publish form"}
+              {isPublishingLinks
+                ? formsRequired
+                  ? "Saving and publishing..."
+                  : "Saving and forming teams..."
+                : formsRequired
+                  ? "Save and Publish"
+                  : "Save and Form Teams"}
             </Button>
           </div>
         </div>

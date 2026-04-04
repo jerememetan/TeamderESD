@@ -55,3 +55,4 @@ Notes
 - Ports are taken from `docker-compose.yaml` / `docker-compose.scenario1.yaml` mappings.
 - Use the listed path fragments as example request URLs (e.g. `http://localhost:3001/api/students`).
 - For browser and frontend use, prefer the same paths via gateway base `http://localhost:8000`.
+- Formation-notification now publishes one batch RabbitMQ message per section request to notification service; frontend request/response payloads are unchanged.

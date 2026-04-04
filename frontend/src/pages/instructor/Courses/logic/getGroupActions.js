@@ -1,30 +1,49 @@
 // takes in conversion of cell strucuture for the cards
+import { GROUP_STAGE, getEffectiveGroupStage } from "../../logic/formationFlow";
 
 // uses the requires the current group object, the course id checks the existance of a form
-export function getGroupActions(courseCode, group, existingForm) {
-  switch (group.lifecycleStage) {
-    case "setup":
+export function getGroupActions(courseCode, group, options = {}) {
+  const stage = getEffectiveGroupStage(group, options.formingSectionIds);
+
+  switch (stage) {
+    case GROUP_STAGE.SETUP:
       return [
         {
-          label: existingForm ? "Edit group form" : "Create group form",
+          label: "Configure formation criteria",
           to: `/instructor/courses/${courseCode}/groups/${group.id}/create-form`,
           variant: "default",
         },
       ];
-    case "collecting":
+    case GROUP_STAGE.COLLECTING:
       return [
         {
-          label: "Edit group form",
-          to: `/instructor/courses/${courseCode}/groups/${group.id}/create-form`,
+          label: "View formation criteria",
+          to: `/instructor/courses/${courseCode}/groups/${group.id}/create-form?mode=view`,
           variant: "default",
         },
         {
           label: "View completion status",
-          to: `/instructor/courses/${courseCode}/groups/${group.id}/analytics`,
+          to: `/instructor/courses/${courseCode}/groups/${group.id}/completion-status`,
+          variant: "outline",
+        },
+        {
+          label: options.isEndingCollection ? "Ending collection..." : "End form collection",
+          kind: "button",
+          onClick: () => options.onEndCollection?.(courseCode, group),
+          variant: "outline",
+          disabled: Boolean(options.isEndingCollection),
+        },
+      ];
+    case GROUP_STAGE.FORMING:
+      return [
+        {
+          label: "View formation criteria",
+          to: `/instructor/courses/${courseCode}/groups/${group.id}/create-form?mode=view`,
           variant: "outline",
         },
       ];
-    case "completed":
+    case GROUP_STAGE.COMPLETED:
+    case GROUP_STAGE.FORMED:
       return [
         {
           label: "View teams",
@@ -42,18 +61,12 @@ export function getGroupActions(courseCode, group, existingForm) {
           variant: "outline",
         },
       ];
-    case "formed":
     default:
       return [
         {
-          label: "View teams",
-          to: `/instructor/courses/${courseCode}/groups/${group.id}/teams`,
+          label: "Configure formation criteria",
+          to: `/instructor/courses/${courseCode}/groups/${group.id}/create-form`,
           variant: "default",
-        },
-        {
-          label: "View analytics",
-          to: `/instructor/courses/${courseCode}/groups/${group.id}/analytics`,
-          variant: "outline",
         },
       ];
   }
