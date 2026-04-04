@@ -86,7 +86,7 @@ function FillForm() {
   if (isLoadingStudents) {
     return (
       <div className={styles.page}>
-        <p className={styles.notFound}>Loading backend student session...</p>
+        <p className={styles.notFound}>Loading student session...</p>
       </div>
     );
   }
@@ -98,7 +98,7 @@ function FillForm() {
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
         <p className={styles.notFound}>
-          {studentLoadError || "Backend student data is unavailable."}
+          {studentLoadError || "Student data is unavailable."}
         </p>
       </div>
     );
@@ -313,7 +313,7 @@ function FillForm() {
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
         <p className={styles.notFound}>
-          Backend form records are not available for this route.
+          Form records are not available for this route.
         </p>
       </div>
     );

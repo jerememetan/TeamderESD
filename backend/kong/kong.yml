@@ -6,6 +6,7 @@ plugins:
     config:
       origins:
         - http://localhost:5173
+        - http://localhost:5174
       methods:
         - GET
         - POST
@@ -233,6 +234,14 @@ services:
       - name: student-form-submission-service-route
         paths:
           - /student-form-submission
+        strip_path: false
+
+  - name: student-form-gateway-service
+    url: http://student-form-gateway-service:4007
+    routes:
+      - name: student-form-gateway-service-route
+        paths:
+          - /graphql
         strip_path: false
 
   - name: swap-orchestrator-service

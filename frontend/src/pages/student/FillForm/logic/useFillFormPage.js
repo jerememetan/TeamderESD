@@ -1,16 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  fetchFormationConfig,
-  resolveFormationFieldVisibility,
-} from "../../../../services/formationConfigService";
-import { fetchEnrollmentsBySectionId } from "../../../../services/enrollmentService";
-import { fetchAllCourses } from "../../../../services/courseService";
-import { fetchAllSections } from "../../../../services/sectionService";
-import { fetchStudentForms } from "../../../../services/studentFormService";
-import {
-  buildStudentMapByBackendId,
-  fetchAllStudents,
-} from "../../../../services/studentService";
+  fetchStudentFormAssignments,
+  fetchStudentFormPage,
+} from "../../../../services/studentFormPageGraphqlService";
 
 const DEFAULT_FIELD_VISIBILITY = {
   mbtiEnabled: false,
@@ -65,64 +57,14 @@ export function useFillFormPage({
           );
         }
 
-        const [forms, sections, courses] = await Promise.all([
-          fetchStudentForms({ studentId: backendStudentId }),
-          fetchAllSections(),
-          fetchAllCourses(),
-        ]);
+        const forms = await fetchStudentFormAssignments({
+          studentId: backendStudentId,
+        });
         if (ignore) {
           return;
         }
 
-        const sectionById = new Map(
-          (Array.isArray(sections) ? sections : []).map((section) => [
-            String(section?.id ?? ""),
-            section,
-          ]),
-        );
-
-        const courseById = new Map(
-          (Array.isArray(courses) ? courses : []).map((course) => [
-            String(course?.id ?? course?.course_id ?? ""),
-            {
-              code: String(course?.code ?? course?.course_code ?? "").trim(),
-              name: String(course?.name ?? course?.course_name ?? "").trim(),
-            },
-          ]),
-        );
-
-        setAvailableForms(
-          forms.map((form, index) => ({
-            id: String(form.id),
-            sectionId: String(form.sectionId || "").trim(),
-            submitted: Boolean(form.submitted),
-            title: (() => {
-              const sectionRecord = sectionById.get(String(form.sectionId));
-              const sectionNumber = Number(sectionRecord?.section_number);
-              const courseId = String(sectionRecord?.course_id ?? "");
-              const course = courseById.get(courseId);
-              const courseCode = String(course?.code || "").trim();
-
-              if (courseCode && Number.isFinite(sectionNumber)) {
-                return `${courseCode} G${sectionNumber}`;
-              }
-
-              if (courseCode) {
-                return courseCode;
-              }
-
-              return Number.isFinite(sectionNumber)
-                ? `Section ${sectionNumber}`
-                : `Form ${index + 1}`;
-            })(),
-            description: (() => {
-              const sectionRecord = sectionById.get(String(form.sectionId));
-              const courseId = String(sectionRecord?.course_id ?? "");
-              const course = courseById.get(courseId);
-              return String(course?.name || "").trim() || "Course form";
-            })(),
-          })),
-        );
+        setAvailableForms(forms);
       } catch (error) {
         if (ignore) {
           return;
@@ -143,7 +85,7 @@ export function useFillFormPage({
     return () => {
       ignore = true;
     };
-  }, [activeStudent, isLoadingStudents]);
+  }, [activeStudent?.backendStudentId, isLoadingStudents]);
 
   const availableFormList = useMemo(
     () => availableForms.filter((form) => !form.submitted),
@@ -198,6 +140,7 @@ export function useFillFormPage({
         setFormationConfig(null);
         setFieldVisibility(DEFAULT_FIELD_VISIBILITY);
         setBuddyOptions([]);
+        setIsLoadingBuddyOptions(false);
         setSkillScores({});
         setTopicRankings({});
         setBuddyRequestStudentId("");
@@ -210,6 +153,7 @@ export function useFillFormPage({
       const activeStudentId = Number(activeStudent.backendStudentId);
 
       setIsLoadingConfig(true);
+      setIsLoadingBuddyOptions(true);
       setFormLoadError("");
       setFormSubmissionError("");
       setBuddyRequestStudentId("");
@@ -217,32 +161,81 @@ export function useFillFormPage({
       setBuddyOptions([]);
 
       try {
-        const matchingForms = await fetchStudentForms({
+        const pageData = await fetchStudentFormPage({
           studentId: activeStudentId,
           sectionId,
         });
-        const effectiveSectionId = matchingForms[0]?.sectionId || sectionId;
 
-        if (!effectiveSectionId) {
+        if (!isMounted) {
+          return;
+        }
+
+        if (!pageData?.sectionId) {
           throw new Error(
             "Unable to resolve a valid section for this student form.",
           );
         }
 
-        const configResponse = await fetchFormationConfig(effectiveSectionId);
-        if (!isMounted) {
-          return;
-        }
+        const nextVisibility = {
+          mbtiEnabled: Boolean(pageData?.fieldVisibility?.mbtiEnabled),
+          buddyEnabled: Boolean(pageData?.fieldVisibility?.buddyEnabled),
+          buddyWeight: Number(pageData?.fieldVisibility?.buddyWeight ?? 0),
+          skillEnabled: Boolean(pageData?.fieldVisibility?.skillEnabled),
+          topicEnabled: Boolean(pageData?.fieldVisibility?.topicEnabled),
+        };
 
-        const nextVisibility = resolveFormationFieldVisibility(configResponse);
-        const skills = Array.isArray(configResponse?.skills)
-          ? configResponse.skills
-          : [];
-        const topics = Array.isArray(configResponse?.topics)
-          ? configResponse.topics
+        const skills = Array.isArray(pageData?.skillCatalog)
+          ? pageData.skillCatalog
+              .map((skill) => ({
+                skill_id: String(skill?.value || "").trim(),
+                skill_label: String(skill?.label || "Skill").trim() || "Skill",
+              }))
+              .filter((skill) => Boolean(skill.skill_id))
           : [];
 
-        setFormationConfig(configResponse);
+        const topics = Array.isArray(pageData?.topicCatalog)
+          ? pageData.topicCatalog
+              .map((topic) => ({
+                topic_id: String(topic?.value || "").trim(),
+                topic_label:
+                  String(topic?.label || "Project topic").trim() ||
+                  "Project topic",
+              }))
+              .filter((topic) => Boolean(topic.topic_id))
+          : [];
+
+        setAvailableForms((currentForms) => {
+          let hasChanged = false;
+          const nextForms = currentForms.map((form) => {
+            if (form.id !== resolvedForm.id) {
+              return form;
+            }
+
+            const nextSectionId = String(pageData.sectionId);
+            const nextSubmitted = Boolean(pageData.submitted);
+            if (
+              String(form.sectionId) === nextSectionId &&
+              Boolean(form.submitted) === nextSubmitted
+            ) {
+              return form;
+            }
+
+            hasChanged = true;
+            return {
+              ...form,
+              sectionId: nextSectionId,
+              submitted: nextSubmitted,
+            };
+          });
+
+          return hasChanged ? nextForms : currentForms;
+        });
+
+        setFormationConfig({
+          section_id: pageData.sectionId,
+          skills,
+          topics,
+        });
         setFieldVisibility(nextVisibility);
         setSkillScores(
           skills.reduce((acc, skill) => {
@@ -261,42 +254,18 @@ export function useFillFormPage({
           }, {}),
         );
 
-        if (!nextVisibility.buddyEnabled) {
-          return;
-        }
-
-        setIsLoadingBuddyOptions(true);
-        const [enrollments, students] = await Promise.all([
-          fetchEnrollmentsBySectionId(effectiveSectionId),
-          fetchAllStudents(),
-        ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        const rosterIds = Array.from(
-          new Set(
-            (Array.isArray(enrollments) ? enrollments : [])
-              .map((enrollment) => Number(enrollment?.student_id))
-              .filter(
-                (studentId) =>
-                  Number.isFinite(studentId) && studentId !== activeStudentId,
-              ),
-          ),
-        );
-
-        const studentsByBackendId = buildStudentMapByBackendId(students);
-
         setBuddyOptions(
-          rosterIds
-            .map((studentId) => ({
-              value: String(studentId),
-              label:
-                String(studentsByBackendId.get(studentId)?.name || "").trim() ||
-                `Student ${studentId}`,
-            }))
-            .sort((left, right) => left.label.localeCompare(right.label)),
+          nextVisibility.buddyEnabled && Array.isArray(pageData?.buddyOptions)
+            ? pageData.buddyOptions
+                .map((option) => ({
+                  value: String(option?.value || "").trim(),
+                  label:
+                    String(option?.label || "").trim() ||
+                    `Student ${option?.value}`,
+                }))
+                .filter((option) => Boolean(option.value))
+                .sort((left, right) => left.label.localeCompare(right.label))
+            : [],
         );
       } catch (error) {
         if (!isMounted) {
@@ -324,7 +293,12 @@ export function useFillFormPage({
     return () => {
       isMounted = false;
     };
-  }, [activeStudent, resolvedForm]);
+  }, [
+    activeStudent?.backendStudentId,
+    resolvedForm?.id,
+    resolvedForm?.sectionId,
+    resolvedForm?.submitted,
+  ]);
 
   const availableFormCount = availableFormList.length;
 
