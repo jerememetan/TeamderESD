@@ -4,31 +4,33 @@ import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
-import MockStudentSwitcher from "../../components/student/MockStudentSwitcher";
-import { useMockStudentSession } from "../../services/mockStudentSession";
+import StudentSwitcher from "../../components/student/StudentSwitcher";
+import { useStudentSession } from "../../services/studentSession";
 import {
   getPeerEvaluationRound,
   getPeerEvaluationSubmission,
   submitPeerEvaluation,
 } from "../../services/peerEvaluationService";
 import { fetchTeamsBySection } from "../../services/teamService";
-import { fetchStudentProfile } from "../../services/studentProfileService";
+import { fetchAllStudents, buildStudentMapByBackendId } from "../../services/studentService";
 import styles from "./PeerEvaluationForm.module.css";
 import { Button } from "../../components/ui/button";
 
 function PeerEvaluationForm() {
-  const { roundId } = useParams();
+  const { roundId, studentId: routeStudentId } = useParams();
   const navigate = useNavigate();
   const {
     activeStudent,
-    activeStudentId,
-    setActiveStudentId,
+    activeStudentRouteId,
     availableStudents,
-  } = useMockStudentSession();
+    studentLoadError,
+    isLoadingStudents,
+  } = useStudentSession(routeStudentId);
+  const studentBasePath = `/student/${activeStudentRouteId}`;
 
   const [round, setRound] = useState(null);
   const [teams, setTeams] = useState([]);
-  const [studentProfiles, setStudentProfiles] = useState([]);
+  const [studentsByBackendId, setStudentsByBackendId] = useState(new Map());
   const [existingSubmission, setExistingSubmission] = useState(null);
   const [responses, setResponses] = useState({});
   const [isLoading, setIsLoading] = useState(true);
@@ -36,12 +38,7 @@ function PeerEvaluationForm() {
   const [submitError, setSubmitError] = useState("");
 
   // Determine the current student's backend ID from available students
-  const currentBackendId = useMemo(() => {
-    const numId = parseInt(activeStudent?.id, 10);
-    if (!isNaN(numId) && numId > 0) return numId;
-    if (activeStudent?.student_id) return activeStudent.student_id;
-    return null;
-  }, [activeStudent]);
+  const currentBackendId = useMemo(() => activeStudent?.backendStudentId ?? null, [activeStudent]);
 
   // Load round, teams, and profiles
   useEffect(() => {
@@ -68,14 +65,14 @@ function PeerEvaluationForm() {
         if (!isMounted) return;
         setTeams(sectionTeams);
 
-        let profiles = [];
+        let students = [];
         try {
-          profiles = await fetchStudentProfile(fetchedRound.sectionId);
+          students = await fetchAllStudents();
         } catch (err) {
-          console.error("Failed to fetch student profiles:", err);
+          console.error("Failed to fetch students:", err);
         }
         if (!isMounted) return;
-        setStudentProfiles(profiles);
+        setStudentsByBackendId(buildStudentMapByBackendId(students));
 
         if (currentBackendId) {
           const submission = await getPeerEvaluationSubmission(
@@ -95,14 +92,6 @@ function PeerEvaluationForm() {
     return () => { isMounted = false; };
   }, [roundId, currentBackendId]);
 
-  const profileLookup = useMemo(() => {
-    const map = new Map();
-    for (const s of studentProfiles) {
-      map.set(s.student_id, s.profile || s);
-    }
-    return map;
-  }, [studentProfiles]);
-
   const myTeam = useMemo(() => {
     if (!currentBackendId) return null;
     return teams.find((team) =>
@@ -113,23 +102,27 @@ function PeerEvaluationForm() {
   const memberList = useMemo(() => {
     if (!myTeam) return [];
     return (myTeam.students || []).map((s) => {
-      const profile = profileLookup.get(s.student_id);
+      const studentRecord = studentsByBackendId.get(Number(s.student_id));
       return {
         id: String(s.student_id),
-        name: profile?.name || `Student ${s.student_id}`,
-        email: profile?.email || "No email",
+        name: String(studentRecord?.name || "").trim() || `Student ${s.student_id}`,
+        email: String(studentRecord?.email || "").trim() || "No email",
         studentId: `ID-${s.student_id}`,
       };
     });
-  }, [myTeam, profileLookup]);
+  }, [myTeam, studentsByBackendId]);
 
   const teammates = useMemo(
     () => memberList.filter((m) => m.id !== String(currentBackendId)),
     [memberList, currentBackendId]
   );
 
-  if (isLoading) {
+  if (isLoading || isLoadingStudents) {
     return <div className={styles.notFound}>Loading peer evaluation...</div>;
+  }
+
+  if (studentLoadError || !activeStudent) {
+    return <div className={styles.notFound}>{studentLoadError || "Backend student data is unavailable."}</div>;
   }
 
   if (!round) {
@@ -154,7 +147,7 @@ function PeerEvaluationForm() {
   if (existingSubmission) {
     return (
       <div className={styles.page}>
-        <Link to="/student" className={styles.backLink}>
+        <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
         <ModuleBlock
@@ -169,7 +162,7 @@ function PeerEvaluationForm() {
             effects remain private and are not shown here.
           </p>
           <div className={styles.actionRow}>
-            <Button type="button" onClick={() => navigate("/student")}>
+            <Button type="button" onClick={() => navigate(studentBasePath)}>
               Return to dashboard
             </Button>
           </div>
@@ -213,7 +206,7 @@ function PeerEvaluationForm() {
         entries,
       });
 
-      navigate("/student");
+      navigate(studentBasePath);
     } catch (err) {
       setSubmitError(
         err.message || "Failed to submit evaluation. Please try again."
@@ -225,7 +218,7 @@ function PeerEvaluationForm() {
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
-      <Link to="/student" className={styles.backLink}>
+      <Link to={studentBasePath} className={styles.backLink}>
         <ArrowLeft className={styles.backIcon} /> Return to student console
       </Link>
 
@@ -239,10 +232,10 @@ function PeerEvaluationForm() {
           </p>
         </div>
         <div className={styles.heroTags}>
-          <MockStudentSwitcher
-            activeStudentId={activeStudentId}
+          <StudentSwitcher
+            activeStudentId={activeStudent.id}
             availableStudents={availableStudents}
-            onChange={setActiveStudentId}
+            onChange={(nextStudentId) => navigate(`/student/${nextStudentId}/peer-evaluation/${roundId}`)}
           />
           <SystemTag
             tone={round.status === "active" ? "success" : "neutral"}
@@ -328,7 +321,7 @@ function PeerEvaluationForm() {
           </Button>
           <Button
             type="button"
-            onClick={() => navigate("/student")}
+            onClick={() => navigate(studentBasePath)}
             variant="outline"
           >
             Cancel

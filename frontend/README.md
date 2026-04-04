@@ -14,3 +14,13 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Instructor Courses Loading Strategy
+
+The instructor Courses page uses progressive loading to improve responsiveness:
+
+- Stage 1: Fetch courses and sections, then render course/group cards immediately.
+- Stage 2: Fetch enrollment and team aggregates asynchronously, then hydrate per-group counts.
+- If aggregate calls fail, the page stays usable and only count fields remain in loading/default state.
+
+This approach reduces perceived wait time and avoids blocking the entire page on slower downstream microservices.

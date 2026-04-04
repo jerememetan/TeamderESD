@@ -44,7 +44,7 @@ function InstructorDashboard() {
           <div>Loading stats...</div>
         ) : error ? (
           <div className={styles.rosterError}>
-            Dashboard load failed: {error}
+            Dashboard load failed: {error}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
           </div>
         ) : (
           [

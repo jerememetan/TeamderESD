@@ -219,6 +219,14 @@ services:
           - /formation-notifications
         strip_path: false
 
+  - name: student-form-submission-service
+    url: http://student-form-submission-service:4006
+    routes:
+      - name: student-form-submission-service-route
+        paths:
+          - /student-form-submission
+        strip_path: false
+
   - name: swap-orchestrator-service
     url: http://swap-orchestrator-service:4005
     routes:

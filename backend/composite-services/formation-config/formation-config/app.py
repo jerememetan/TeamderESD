@@ -13,6 +13,7 @@ from swagger_helper import register_swagger
 from flask import Flask, request, jsonify
 import requests
 import os
+from uuid import UUID
 from schemas import FormationRequestSchema, FormationResponseSchema, FormationGetResponseSchema
 
 _p = Path(__file__).resolve()
@@ -238,6 +239,10 @@ def aggregate_get():
     section_id = request.args.get("section_id")
     if not section_id:
         return jsonify({"error": "Missing section_id in query params"}), 400
+    try:
+        UUID(str(section_id))
+    except (ValueError, TypeError):
+        return jsonify({"error": "section_id must be a valid UUID"}), 400
 
     try:
         crit_resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
@@ -279,7 +284,12 @@ def aggregate_get():
     if topic_resp.status_code == 200:
         topic_json = safe_json(topic_resp)
         for t in topic_json.get("data", []):
-            topics.append({"topic_label": t.get("topic_label")})
+            topics.append(
+                {
+                    "topic_id": t.get("topic_id"),
+                    "topic_label": t.get("topic_label"),
+                }
+            )
 
     try:
         skill_resp = requests.get(SKILL_URL, params={"section_id": section_id})
@@ -298,6 +308,7 @@ def aggregate_get():
         skill_json = safe_json(skill_resp)
         for s in skill_json.get("data", []):
             skills.append({
+                "skill_id": s.get("skill_id"),
                 "skill_label": s.get("skill_label"),
                 "skill_importance": s.get("skill_importance")
             })

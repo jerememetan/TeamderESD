@@ -13,6 +13,30 @@ update_schema = StudentFormUpdateSchema()
 response_schema = StudentFormResponseSchema()
 
 
+def _extract_student_form_filters():
+    section_id = request.args.get("section_id")
+    student_id = request.args.get("student_id")
+    if not section_id and not student_id:
+        return None, (
+            jsonify(
+                {
+                    "error": {
+                        "code": "MISSING_PARAMS",
+                        "message": "At least one of section_id or student_id is required",
+                    }
+                }
+            ),
+            400,
+        )
+
+    filters = {}
+    if section_id:
+        filters["section_id"] = section_id
+    if student_id:
+        filters["student_id"] = student_id
+    return filters, None
+
+
 @student_form_bp.route("", methods=["POST"])
 def create_or_update_student_form():
     payload = request.get_json()
@@ -46,34 +70,45 @@ def create_or_update_student_form():
 
 @student_form_bp.route("", methods=["GET"])
 def get_student_form():
-    section_id = request.args.get("section_id")
-    student_id = request.args.get("student_id")
-    if not section_id:
-        return jsonify({"error": {"code": "MISSING_PARAMS", "message": "section_id is required"}}), 400
-    if student_id:
-        obj = StudentForm.query.filter_by(student_id=student_id, section_id=section_id).first()
-        if obj:
-            return jsonify({"data": response_schema.dump(obj)}), 200
+    filters, error_response = _extract_student_form_filters()
+    if error_response:
+        return error_response
+
+    objs = StudentForm.query.filter_by(**filters).all()
+    if "section_id" in filters and "student_id" in filters and not objs:
         return jsonify({"error": {"code": "NOT_FOUND", "message": "Student form not found"}}), 404
-    objs = StudentForm.query.filter_by(section_id=section_id).all()
     return jsonify({"data": response_schema.dump(objs, many=True)}), 200
+
+
+@student_form_bp.route("/<int:form_id>", methods=["GET"])
+def get_student_form_by_id(form_id):
+    obj = StudentForm.query.filter_by(id=form_id).first()
+    if not obj:
+        return jsonify({"error": {"code": "NOT_FOUND", "message": "Student form not found"}}), 404
+    return jsonify({"data": response_schema.dump(obj)}), 200
 
 
 @student_form_bp.route("/submitted", methods=["GET"])
 def get_submitted_forms():
-    section_id = request.args.get("section_id")
-    if not section_id:
-        return jsonify({"error": {"code": "MISSING_PARAMS", "message": "section_id is required"}}), 400
-    objs = StudentForm.query.filter_by(section_id=section_id, submitted=True).all()
+    filters, error_response = _extract_student_form_filters()
+    if error_response:
+        return error_response
+
+    objs = StudentForm.query.filter_by(submitted=True, **filters).all()
+    if "section_id" in filters and "student_id" in filters and not objs:
+        return jsonify({"error": {"code": "NOT_FOUND", "message": "Student form not found"}}), 404
     return jsonify({"data": response_schema.dump(objs, many=True)}), 200
 
 
 @student_form_bp.route("/unsubmitted", methods=["GET"])
 def get_unsubmitted_forms():
-    section_id = request.args.get("section_id")
-    if not section_id:
-        return jsonify({"error": {"code": "MISSING_PARAMS", "message": "section_id is required"}}), 400
-    objs = StudentForm.query.filter_by(section_id=section_id, submitted=False).all()
+    filters, error_response = _extract_student_form_filters()
+    if error_response:
+        return error_response
+
+    objs = StudentForm.query.filter_by(submitted=False, **filters).all()
+    if "section_id" in filters and "student_id" in filters and not objs:
+        return jsonify({"error": {"code": "NOT_FOUND", "message": "Student form not found"}}), 404
     return jsonify({"data": response_schema.dump(objs, many=True)}), 200
 
 
@@ -129,11 +164,36 @@ class StudentFormListEnvelope(StudentFormResponseSchema):
     data = fields.List(fields.Nested(StudentFormResponseSchema()))
 
 
+_OPENAPI_STUDENT_FORM_QUERY_PARAMETERS = [
+    {
+        "name": "section_id",
+        "in": "query",
+        "required": False,
+        "schema": {"type": "string", "format": "uuid"},
+        "description": "Filter by section UUID. Provide section_id, student_id, or both.",
+    },
+    {
+        "name": "student_id",
+        "in": "query",
+        "required": False,
+        "schema": {"type": "integer"},
+        "description": "Filter by student ID. Provide section_id, student_id, or both.",
+    },
+]
+
+
 create_or_update_student_form._openapi_request_schema = StudentFormCreateSchema()
 create_or_update_student_form._openapi_response_schema = StudentFormCreateEnvelope()
 get_student_form._openapi_response_schema = StudentFormListEnvelope()
+get_student_form._openapi_query_parameters = _OPENAPI_STUDENT_FORM_QUERY_PARAMETERS
+get_student_form._openapi_description = "Get student forms filtered by section_id, student_id, or both. At least one filter must be provided."
+get_student_form_by_id._openapi_response_schema = StudentFormResponseSchema()
 get_submitted_forms._openapi_response_schema = StudentFormListEnvelope()
+get_submitted_forms._openapi_query_parameters = _OPENAPI_STUDENT_FORM_QUERY_PARAMETERS
+get_submitted_forms._openapi_description = "Get submitted student forms filtered by section_id, student_id, or both. At least one filter must be provided."
 get_unsubmitted_forms._openapi_response_schema = StudentFormListEnvelope()
+get_unsubmitted_forms._openapi_query_parameters = _OPENAPI_STUDENT_FORM_QUERY_PARAMETERS
+get_unsubmitted_forms._openapi_description = "Get unsubmitted student forms filtered by section_id, student_id, or both. At least one filter must be provided."
 update_student_form_submitted._openapi_request_schema = StudentFormUpdateSchema()
 update_student_form_submitted._openapi_response_schema = StudentFormResponseSchema()
 delete_student_form._openapi_response_schema = StudentFormListEnvelope()

@@ -133,6 +133,45 @@
   gap: var(--td-space-xs);
 }
 
+.fieldGroup {
+  display: grid;
+  gap: var(--td-space-xs);
+}
+
+.fieldLabel {
+  margin: 0;
+  font-family: var(--td-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.helpLink {
+  width: fit-content;
+  color: var(--td-color-primary);
+  text-decoration: none;
+  font-family: var(--td-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.helpLink:hover {
+  text-decoration: underline;
+}
+
+.listGrid {
+  display: grid;
+  gap: var(--td-space-xs);
+}
+
+.editorGrid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: var(--td-space-xs);
+  align-items: center;
+}
+
 .primaryButton,
 .secondaryButton {
   display: inline-flex;
@@ -165,6 +204,10 @@
 
   .scaleGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .editorGrid {
+    grid-template-columns: 1fr;
   }
 }
 

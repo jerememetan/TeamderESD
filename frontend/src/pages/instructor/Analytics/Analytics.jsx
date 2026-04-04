@@ -22,8 +22,8 @@ import GroupChip from "../../../components/schematic/GroupChip";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import { getBackendSectionId } from "../../../data/backendIds";
-import { mockCourses, mockTeams } from "../../../data/mockData";
-import { fetchStudentProfile } from "../../../services/studentProfileService";
+import { fetchEnrollmentsBySectionId } from "../../../services/enrollmentService";
+import { fetchAllStudents, buildSectionRoster } from "../../../services/studentService";
 import styles from "./Analytics.module.css";
 import { fetchCourseByCode } from "../../../services/courseService";
 import { getSectionById } from "../../../services/sectionService";
@@ -41,15 +41,16 @@ function Analytics() {
   console.log(groupTeams);
   const selectedCourseGroups = selectedCourse?.groups ?? [];
   const backendSectionId = getBackendSectionId(groupId || "");
+  const rosterSectionId = backendSectionId || groupId;
   
   useEffect(()=> {
     async function loadTeams() {
       try{
-        if (!groupId) {
+        if (!rosterSectionId) {
           setGroupTeams([]);
           return;
         }
-        const pulledteams = await fetchTeamsBySection(groupId);
+        const pulledteams = await fetchTeamsBySection(rosterSectionId);
         setGroupTeams(pulledteams || []);
       } catch(error){
         console.log("load teams failed", error);
@@ -59,7 +60,7 @@ function Analytics() {
     }
     loadTeams();
     console.log("GROUP TEAMS",groupTeams);
-  }, [groupId])
+  }, [rosterSectionId])
 
   useEffect(() =>{
     async function loadCourse(){
@@ -104,15 +105,24 @@ function Analytics() {
 
     async function loadRoster() {
       console.log("1");
+      if (!rosterSectionId) {
+        setBackendStudents([]);
+        setIsLoadingRoster(false);
+        setRosterError("Missing group ID");
+        return;
+      }
+
       setIsLoadingRoster(true);
       setRosterError("");
       try {
-        const students = await fetchStudentProfile(groupId);
+        const [enrollments, students] = await Promise.all([
+          fetchEnrollmentsBySectionId(rosterSectionId),
+          fetchAllStudents(),
+        ]);
         if (!isMounted) {
           return;
         }
-        console.log("STUDENTS",students);
-        setBackendStudents(students);
+        setBackendStudents(buildSectionRoster(enrollments, students));
       } catch (error) {
         if (!isMounted) {
           return;
@@ -131,7 +141,7 @@ function Analytics() {
     return () => {
       isMounted = false;
     };
-  }, [groupId]);
+  }, [rosterSectionId]);
 
   const siblingGroupSummaryData = selectedCourseGroups.map((group) => ({
     name: group.code,
@@ -223,7 +233,7 @@ function Analytics() {
 
       {rosterError ? (
         <p className={styles.rosterError}>
-          Student-profile load failed: {rosterError}
+          Atomic roster load failed: {rosterError}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
         </p>
       ) : null}
 
@@ -250,7 +260,7 @@ function Analytics() {
           metric={String(totalStudents).padStart(2, "0")}
           metricLabel={
             backendStudents.length
-              ? "Pulled from student-profile"
+              ? "Pulled from enrollment + student-service"
               : "Using frontend fallback count"
           }
           accent="orange"

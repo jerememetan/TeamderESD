@@ -1,86 +1,95 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
-import { AlertTriangle, FileText, Users, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import { AlertTriangle, FileText, Users } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
-import MockStudentSwitcher from "../../components/student/MockStudentSwitcher";
-import { mockCourses, mockForms } from "../../data/mockData";
-import { loadAssignmentsForStudent } from "./logic/studentDashboardLogic";
-import { useMockStudentSession } from "../../services/mockStudentSession";
-import { getPendingPeerEvaluations } from "../../services/peerEvaluationService";
+import StudentSwitcher from "../../components/student/StudentSwitcher";
+import { useStudentSession } from "../../services/studentSession";
+import { loadDashboardSummary } from "./logic/studentDashboardLogic";
 import styles from "./StudentDashboard.module.css";
 
 function StudentDashBoard() {
+  const navigate = useNavigate();
+  const { studentId: routeStudentId } = useParams();
   const {
     activeStudent,
-    activeStudentTeams,
+    activeStudentRouteId,
     activeStudentId,
-    setActiveStudentId,
     availableStudents,
-  } = useMockStudentSession();
-  const studentProfile = activeStudent;
-  const [teamAssignments, setTeamAssignments] = useState(activeStudentTeams);
-  const [assignmentSource, setAssignmentSource] = useState("mock");
-  const [assignmentError, setAssignmentError] = useState("");
-  const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
-  const [pendingPeerRounds, setPendingPeerRounds] = useState([]);
+    isLoadingStudents,
+    studentLoadError,
+  } = useStudentSession(routeStudentId, { deferStudentsLoad: true });
+
+  const [teamCount, setTeamCount] = useState(0);
+  const [peerEvalCount, setPeerEvalCount] = useState(0);
+  const [nextPeerRound, setNextPeerRound] = useState(null);
+  const [availableForms, setAvailableForms] = useState([]);
+  const [summaryError, setSummaryError] = useState("");
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true);
 
   useEffect(() => {
-    loadAssignmentsForStudent(
-      studentProfile,
-      activeStudentTeams,
-      setTeamAssignments,
-      setAssignmentSource,
-      setPendingPeerRounds,
-      setAssignmentError,
-      setIsLoadingAssignments,
-    );
-  }, [activeStudentTeams, studentProfile]);
+    if (!activeStudent) {
+      setTeamCount(0);
+      setPeerEvalCount(0);
+      setNextPeerRound(null);
+      setAvailableForms([]);
+      setIsLoadingSummary(isLoadingStudents);
+      return;
+    }
 
-  const groupIds = new Set(teamAssignments.map((team) => team.groupId));
-  const availableFormList = Object.values(mockForms).filter((form) =>
-    groupIds.has(form.groupId),
-  );
-  const nextForm = availableFormList[0] || null;
-  const formActionTo =
-    availableFormList.length > 1
-      ? "/student/form"
-      : nextForm
-        ? `/student/form/${nextForm.id}`
-        : "/student";
-  const formActionState =
-    availableFormList.length > 1
-      ? { availableFormIds: availableFormList.map((form) => form.id) }
-      : undefined;
+    let ignore = false;
+
+    async function loadSummary() {
+      setIsLoadingSummary(true);
+      setSummaryError("");
+
+      try {
+        const summary = await loadDashboardSummary(activeStudent);
+        if (ignore) {
+          return;
+        }
+
+        setTeamCount(summary.teamCount);
+        setPeerEvalCount(summary.peerEvalCount);
+        setNextPeerRound(summary.nextPeerRound);
+        setAvailableForms(summary.availableForms);
+      } catch (error) {
+        if (ignore) {
+          return;
+        }
+
+        setTeamCount(0);
+        setPeerEvalCount(0);
+        setNextPeerRound(null);
+        setAvailableForms([]);
+        setSummaryError(error?.message || "Unable to load dashboard metrics from the backend.");
+      } finally {
+        if (!ignore) {
+          setIsLoadingSummary(false);
+        }
+      }
+    }
+
+    loadSummary();
+
+    return () => {
+      ignore = true;
+    };
+  }, [activeStudent, isLoadingStudents]);
+
+  const resolvedRouteStudentId = routeStudentId || activeStudentRouteId || "backend-unavailable";
+  const studentBasePath = `/student/${resolvedRouteStudentId}`;
+  const resolvedStudentName = activeStudent?.name || `Student ${resolvedRouteStudentId}`;
+  const availableFormList = availableForms;
+  const formActionTo = `${studentBasePath}/form`;
   const formActionText =
-    availableFormList.length > 1
-      ? "Choose which group form you want to complete before submitting your answers."
-      : "Open one of your group forms and submit your answers.";
-  const pendingConfirmations = useMemo(
-    () =>
-      teamAssignments.filter((team) =>
-        team.members.some(
-          (member) =>
-            (member.id === studentProfile.id ||
-              member.studentId === studentProfile.studentId ||
-              member.email === studentProfile.email) &&
-            member.confirmationStatus === "pending",
-        ),
-      ).length,
-    [
-      studentProfile.email,
-      studentProfile.id,
-      studentProfile.studentId,
-      teamAssignments,
-    ],
-  );
-  const assignmentTone = assignmentError
-    ? "alert"
-    : assignmentSource === "backend"
-      ? "success"
-      : "neutral";
-  const nextPeerRound = pendingPeerRounds[0] || null;
+    isLoadingSummary || isLoadingStudents
+      ? "Loading your available section forms."
+      : availableFormList.length > 1
+      ? "View your available forms"
+        : "No forms assigned to you.";
+  const feedbackMessage = [studentLoadError, summaryError].filter(Boolean).join(" ");
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -91,41 +100,44 @@ function StudentDashBoard() {
         <div>
           <h2 className={styles.title}>Student Dashboard</h2>
           <p className={styles.subtitle}>
-            Welcome back, {studentProfile.name}. You are currently assigned to{" "}
-            {teamAssignments.length} course group
-            {teamAssignments.length > 1 ? "s" : ""}.
+            Welcome back, {resolvedStudentName}
           </p>
         </div>
         <div className={styles.heroMeta}>
-          <MockStudentSwitcher
-            activeStudentId={activeStudentId}
-            availableStudents={availableStudents}
-            onChange={setActiveStudentId}
-          />
-          <SystemTag tone={assignmentTone}>
-            {isLoadingAssignments
-              ? "Loading assignments"
-              : assignmentSource === "backend"
-                ? "Backend teams loaded"
-                : "Mock assignments active"}
-          </SystemTag>
+          {availableStudents.length ? (
+            <StudentSwitcher
+              activeStudentId={activeStudentId}
+              availableStudents={availableStudents}
+              onChange={(nextStudentId) => navigate(`/student/${nextStudentId}`)}
+            />
+          ) : (
+            <p className={styles.sourceNote}>Loading students...</p>
+          )}
         </div>
       </section>
+
+      {feedbackMessage ? (
+        <p className={styles.feedbackAlert}>
+          <AlertTriangle className={styles.actionIcon} />
+          {feedbackMessage}
+        </p>
+      ) : null}
+
       <section className={styles.statsGrid}>
         {[
           {
             title: "My Teams",
-            metric: String(teamAssignments.length).padStart(2, "0"),
+            metric: isLoadingSummary || isLoadingStudents ? "--" : String(teamCount).padStart(2, "0"),
             accent: "blue",
           },
           {
             title: "Available Forms",
-            metric: String(availableFormList.length).padStart(2, "0"),
+            metric: isLoadingSummary || isLoadingStudents ? "--" : String(availableFormList.length).padStart(2, "0"),
             accent: "green",
           },
           {
             title: "Peer Evaluations",
-            metric: String(pendingPeerRounds.length).padStart(2, "0"),
+            metric: isLoadingSummary || isLoadingStudents ? "--" : String(peerEvalCount).padStart(2, "0"),
             accent: "orange",
           },
         ].map((item, index) => (
@@ -143,15 +155,14 @@ function StudentDashBoard() {
       <section className={styles.actionGrid}>
         {[
           {
-            to: "/student/team",
+            to: `${studentBasePath}/team`,
             icon: <Users className={styles.actionIcon} />,
             code: "Quick Link",
             title: "View My Teams",
-            text: "See every team you have been assigned to and confirm your place.",
+            text: "See your assigned teams",
           },
           {
             to: formActionTo,
-            state: formActionState,
             icon: <FileText className={styles.actionIcon} />,
             code: "Quick Link",
             title:
@@ -160,8 +171,8 @@ function StudentDashBoard() {
           },
           {
             to: nextPeerRound
-              ? `/student/peer-evaluation/${nextPeerRound.id}`
-              : "/student",
+              ? `${studentBasePath}/peer-evaluation/${nextPeerRound.id}`
+              : studentBasePath,
             icon: <FileText className={styles.actionIcon} />,
             code: "Peer Review",
             title: "Complete Peer Evaluation",
@@ -173,7 +184,6 @@ function StudentDashBoard() {
           <Link
             key={action.code + index}
             to={action.to}
-            state={action.state}
             className={`${styles.actionCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem} ${!nextPeerRound && action.code === "Peer Review" ? styles.actionCardDisabled : ""}`}
             style={{ "--td-stagger-delay": `${(index + 4) * 50}ms` }}
           >
@@ -186,24 +196,6 @@ function StudentDashBoard() {
           </Link>
         ))}
       </section>
-
-      <ModuleBlock
-        componentId="MOD-15"
-        eyebrow="Recent Activity"
-        title="Form History"
-        className={`${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
-        style={{ "--td-stagger-delay": "350ms" }}
-      >
-        <div className={styles.historyState}>
-          <Clock className={styles.historyIcon} />
-          <div>
-            <p className={styles.historyTitle}>Latest submission</p>
-            <p className={styles.historyText}>
-              Team Formation Survey completed on March 5, 2026.
-            </p>
-          </div>
-        </div>
-      </ModuleBlock>
     </div>
   );
 }

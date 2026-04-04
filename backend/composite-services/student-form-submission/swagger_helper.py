@@ -1,10 +1,9 @@
-﻿import os
+import os
 from typing import Any, Dict, List
 
 from flask import Flask, Response
 from pydantic import BaseModel
 
-# Optional marshmallow support
 try:
     import marshmallow
     from marshmallow import Schema as MarshmallowSchema
@@ -159,18 +158,7 @@ def _build_openapi_spec(app: Flask, metadata: ServiceDocMetadata) -> Dict[str, A
                     },
                 }
 
-            # If marshmallow is available, allow view functions to provide
-            # `_openapi_request_schema` and `_openapi_response_schema` (Schema instances)
             view_func = app.view_functions.get(rule.endpoint)
-            if view_func is not None:
-                custom_description = getattr(view_func, "_openapi_description", None)
-                if custom_description:
-                    operation["description"] = custom_description
-
-                query_parameters = getattr(view_func, "_openapi_query_parameters", None)
-                if isinstance(query_parameters, list) and query_parameters:
-                    operation["parameters"] = [*operation.get("parameters", []), *query_parameters]
-
             if _HAS_MARSHMALLOW and view_func is not None:
                 req_schema = getattr(view_func, "_openapi_request_schema", None)
                 res_schema = getattr(view_func, "_openapi_response_schema", None)
@@ -231,13 +219,13 @@ def register_swagger(app: Flask, default_service_name: str) -> None:
         html = """<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
+  <meta charset=\"utf-8\" />
   <title>{title}</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  <link rel=\"stylesheet\" href=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui.css\" />
 </head>
 <body>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <div id=\"swagger-ui\"></div>
+  <script src=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js\"></script>
   <script>
     window.onload = function() {{
       window.ui = SwaggerUIBundle({{

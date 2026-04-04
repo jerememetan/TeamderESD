@@ -14,5 +14,6 @@ export async function generateTeamsForSection(sectionId) {
   });
 
   invalidateFetchCache('GET:http://localhost:8000/team');
+  invalidateFetchCache('GET:http://localhost:8000/section');
   return payload?.data?.teams ?? [];
 }
