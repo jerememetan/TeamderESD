@@ -87,16 +87,8 @@ function StudentDashBoard() {
     isLoadingSummary || isLoadingStudents
       ? "Loading your available section forms."
       : availableFormList.length > 1
-      ? "Choose which section form you want to complete."
-      : availableFormList.length === 1
-        ? "Open your assigned section form and submit your answers."
-        : "No section forms are currently available for this student.";
-  const assignmentTone = studentLoadError || summaryError ? "alert" : isLoadingSummary || isLoadingStudents ? "neutral" : "success";
-  const statusText = isLoadingSummary || isLoadingStudents
-    ? "Loading dashboard"
-    : studentLoadError || summaryError
-      ? "Backend data unavailable"
-      : "Dashboard metrics loaded";
+      ? "View your available forms"
+        : "No forms assigned to you.";
   const feedbackMessage = [studentLoadError, summaryError].filter(Boolean).join(" ");
 
   return (
@@ -108,8 +100,7 @@ function StudentDashBoard() {
         <div>
           <h2 className={styles.title}>Student Dashboard</h2>
           <p className={styles.subtitle}>
-            Welcome back, {resolvedStudentName}. You are currently assigned to {teamCount} course group
-            {teamCount > 1 ? "s" : ""}.
+            Welcome back, {resolvedStudentName}
           </p>
         </div>
         <div className={styles.heroMeta}>
@@ -122,7 +113,6 @@ function StudentDashBoard() {
           ) : (
             <p className={styles.sourceNote}>Loading students...</p>
           )}
-          <SystemTag tone={assignmentTone}>{statusText}</SystemTag>
         </div>
       </section>
 
@@ -169,7 +159,7 @@ function StudentDashBoard() {
             icon: <Users className={styles.actionIcon} />,
             code: "Quick Link",
             title: "View My Teams",
-            text: "See every team returned by the backend for this student.",
+            text: "See your assigned teams",
           },
           {
             to: formActionTo,

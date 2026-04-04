@@ -233,7 +233,7 @@ function Analytics() {
 
       {rosterError ? (
         <p className={styles.rosterError}>
-          Atomic roster load failed: {rosterError}
+          Atomic roster load failed: {rosterError}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
         </p>
       ) : null}
 

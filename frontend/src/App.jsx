@@ -1,6 +1,7 @@
 import { RouterProvider, createBrowserRouter } from 'react-router'
 import AppShell from './app/layouts/AppShell'
 import Analytics from './pages/instructor/Analytics/Analytics'
+import CompletionStatus from './pages/instructor/CompletionStatus/CompletionStatus'
 import CreateForm from './pages/instructor/CreateForm/CreateForm'
 import Courses from './pages/instructor/Courses/Courses'
 import InstructorDashboard from './pages/instructor/Dashboard/InstructorDashboard'
@@ -42,6 +43,10 @@ const router = createBrowserRouter([
       {
         path: 'instructor/courses/:courseId/groups/:groupId/analytics',
         element: <Analytics />,
+      },
+      {
+        path: 'instructor/courses/:courseId/groups/:groupId/completion-status',
+        element: <CompletionStatus />,
       },
       {
         path: 'instructor/courses/:courseId/groups/:groupId/create-form',

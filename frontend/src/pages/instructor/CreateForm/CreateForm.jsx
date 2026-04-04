@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
 import {
   AlertTriangle,
   ArrowLeft,
   Plus,
-  Save,
   Settings2,
   SlidersHorizontal,
   Sparkles,
@@ -15,12 +14,6 @@ import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import { Button } from "../../../components/ui/button";
 import chrome from "../../../styles/instructorChrome.module.css";
-import {
-  getBackendCourseId,
-  getBackendSectionId,
-  backendSectionIds,
-} from "../../../data/backendIds";
-import { mockCourses, mockForms } from "../../../data/mockData";
 import {
   fetchFormationConfig,
   saveFormationConfig,
@@ -41,53 +34,25 @@ import { sendFormLinks } from "./service/notificationService";
 import { fetchCourseByCode } from "../../../services/courseService";
 import { getSectionById } from "../../../services/sectionService";
 import { fetchEnrollmentCountBySectionId } from "../../../services/enrollmentService";
+import { generateTeamsForSection } from "../../../services/teamFormationService";
+import { isFormsRequired } from "../logic/formationFlow";
 function CreateForm() {
   // takes course Id and Group ID from the params (already configured)
   const { courseId, groupId } = useParams();
-  // Resolve selected course/group from params. Support frontend codes/ids
-  // fetchEnrollmentCountBySectionId
-  const resolved = (() => {
-    let course =
-      mockCourses.find((c) => c.code === courseId) ||
-      mockCourses.find((c) => c.id === courseId) ||
-      null;
-    let frontendGroupId = groupId;
-
-    if (!course) {
-      // If `groupId` looks like a backend UUID, reverse-lookup frontend key
-      const frontendKey = Object.keys(backendSectionIds).find(
-        (k) => backendSectionIds[k] === groupId,
-      );
-      if (frontendKey) {
-        frontendGroupId = frontendKey;
-        course =
-          mockCourses.find((c) => c.groups.some((g) => g.id === frontendKey)) ||
-          null;
-      }
-
-      // fallback: find a course containing the provided groupId directly
-      if (!course) {
-        course =
-          mockCourses.find((c) => c.groups.some((g) => g.id === groupId)) ||
-          null;
-      }
-    }
-
-    return { course, frontendGroupId };
-  })();
+  const location = useLocation();
+  const isReadOnly = new URLSearchParams(location.search).get("mode") === "view";
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
-  const existingForm = mockForms[resolved.frontendGroupId || ""];
+  const [bootstrapError, setBootstrapError] = useState("");
 
   const defaultState = useMemo(
-    () => buildDefaultState(selectedGroup, existingForm),
-    [selectedGroup, existingForm],
+    () => buildDefaultState(selectedGroup),
+    [selectedGroup],
   );
   const [formState, setFormState] = useState(defaultState);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [loadSource, setLoadSource] = useState("mock");
   const [errorMessage, setErrorMessage] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [isPublishingLinks, setIsPublishingLinks] = useState(false);
@@ -101,40 +66,62 @@ function CreateForm() {
         const res = await fetchEnrollmentCountBySectionId(groupId);
         setStudentCount(res);
       } catch (error) {
-        console.log("EnrollmentCountPullFailed:" + error);
+        setErrorMessage(`Failed to load enrollment count. ${error?.message || String(error)}`);
       }
     }
-    
+
     fetchStudentCount();
-    console.log("STUDENT COUNT", studentCount);
   }, [groupId]);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchCourse() {
       try {
         const course = await fetchCourseByCode(courseId);
+        if (!isMounted) {
+          return;
+        }
         setSelectedCourse(course);
       } catch (error) {
-        console.log("course not found: " + courseId, error);
+        if (!isMounted) {
+          return;
+        }
+        setBootstrapError(`Course load failed. ${error?.message || String(error)}`);
       }
     }
-    
+
     fetchCourse();
-    console.log("SELECTED COURSE", selectedCourse);
+
+    return () => {
+      isMounted = false;
+    };
   }, [courseId]);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchSection() {
       try {
         const section = await getSectionById(groupId);
+        if (!isMounted) {
+          return;
+        }
         setSelectedGroup(section);
       } catch (error) {
-        console.log("section not found:" + error);
+        if (!isMounted) {
+          return;
+        }
+        setBootstrapError(`Section load failed. ${error?.message || String(error)}`);
       }
     }
+
     fetchSection();
-    console.log("SELECTED GROUP", selectedGroup);
-  }, [selectedCourse]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [groupId]);
 
 
   useEffect(() => {
@@ -147,11 +134,9 @@ function CreateForm() {
       setIsLoading(true);
       setErrorMessage("");
       setSaveMessage("");
-      // tries to get Course Id but if it fails it will use a mock source
-      if (!courseId || !courseId) {
-        setLoadSource("mock");
+      if (!groupId) {
         setIsLoading(false);
-        setErrorMessage("Missing backend UUID mapping for this course group.");
+        setErrorMessage("Missing backend section id for this course group.");
         return;
       }
 
@@ -168,17 +153,18 @@ function CreateForm() {
           defaultState,
         );
         setFormState(normalized);
-        setLoadSource(response?.criteria ? "backend" : "mock");
       } catch (error) {
         if (!isMounted) {
           return;
         }
 
         setFormState(defaultState);
-        setLoadSource("mock");
-        setErrorMessage(
-          `Backend load failed. Showing fallback values instead. ${error.message}`,
-        );
+        const message = error?.message || String(error);
+        if (String(message).includes("404")) {
+          setSaveMessage("No existing formation criteria found yet. You can configure and save now.");
+        } else {
+          setErrorMessage(`Backend load failed. ${message}`);
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -192,6 +178,10 @@ function CreateForm() {
       isMounted = false;
     };
   }, [defaultState, selectedCourse, selectedGroup]);
+  if (bootstrapError) {
+    return <div className={styles.notFound}>{bootstrapError}</div>;
+  }
+
   if (!selectedCourse || !selectedGroup) {
     return <div className={styles.notFound}>Loading course...</div>;
   }
@@ -277,24 +267,18 @@ function CreateForm() {
     }));
   };
 
-  const handleSave = async (mode) => {
+  const handleSave = async () => {
     setIsSaving(true);
     setSaveMessage("");
     setErrorMessage("");
-    const backendCourseId =
-      // prefer actual backend UUIDs returned from the course service
-      (selectedCourse && (selectedCourse.id || selectedCourse.course_id)) ||
-      // fallback to static mapping
-      getBackendCourseId(courseId) ||
-      null;
+    const backendCourseId = selectedCourse?.id || selectedCourse?.course_id || null;
+    const backendSectionId = selectedGroup?.id || selectedGroup?.section_id || null;
 
-    const backendSectionId =
-      // prefer actual backend UUID returned from the section service
-      (selectedGroup && (selectedGroup.id || selectedGroup.section_id)) ||
-      // fallback to static mapping using the frontend group key
-      getBackendSectionId(resolved.frontendGroupId || groupId) ||
-      groupId ||
-      null;
+    if (!backendCourseId || !backendSectionId) {
+      setErrorMessage("Cannot save because course/section backend identifiers are missing.");
+      setIsSaving(false);
+      return false;
+    }
 
     const payload = buildSavePayload(
       formState,
@@ -303,13 +287,7 @@ function CreateForm() {
     );
     try {
       await saveFormationConfig(payload);
-      console.log("SUBMITTED PAYLOAD", payload);
-      setLoadSource("backend");
-      setSaveMessage(
-        mode === "publish"
-          ? "Group form published to formation-config."
-          : "Group form draft saved to formation-config.",
-      );
+      setSaveMessage("Formation criteria saved.");
       return true;
 
     } catch (error) {
@@ -320,8 +298,6 @@ function CreateForm() {
     }
   };
 
-  const backendStatusTone =
-    loadSource === "backend" ? "success" : errorMessage ? "alert" : "neutral";
   const activeParameterCount = WEIGHT_FIELDS.filter(
     (field) => Math.abs(Number(formState.weights[field.key] || 0)) > 0.0001,
   ).length;
@@ -362,6 +338,7 @@ function CreateForm() {
           value={value}
           onChange={(event) => setWeightValue(weightKey, event.target.value)}
           className={styles.sliderInput}
+          disabled={isReadOnly}
         />
         <div className={styles.sliderScale}>
           <span>{slider.min}</span>
@@ -390,23 +367,30 @@ function CreateForm() {
     );
   };
 
-  const handlePublish = async () => {
+  const handleSaveAndContinue = async () => {
     setIsPublishingLinks(true);
     setErrorMessage("");
     setSaveMessage("");
     try {
-      const saved = await handleSave("publish");
+      const saved = await handleSave();
       if (!saved) {
         throw new Error(
           "Unable to save formation-config before notification dispatch.",
         );
       }
-      // just need a JSON of section_id : your actual section id
-      const result = await sendFormLinks({ "section_id": groupId });
+
+      if (!isFormsRequired(formState)) {
+        await generateTeamsForSection(groupId);
+        setSaveMessage(
+          "Criteria saved. No student form fields are required, so team formation started immediately.",
+        );
+        return;
+      }
+
+      const result = await sendFormLinks({ section_id: groupId });
       const data = result || {};
-      console.log("PUBLISH OUTPUT",data);
       setSaveMessage(
-        `Published. Generated ${data.summary.total_students ?? 0} link(s); notification success: ${data.summary.success_count ?? 0}, failure: ${data.summary.failure_count ?? 0}.`,
+        `Criteria saved and forms dispatched. Generated ${data.summary?.total_students ?? 0} link(s); notification success: ${data.summary?.success_count ?? 0}, failure: ${data.summary?.failure_count ?? 0}.`,
       );
     } catch (error) {
       setErrorMessage(`Publish failed. ${error.message}`);
@@ -447,6 +431,7 @@ function CreateForm() {
                 );
               }}
               className={styles.input}
+              disabled={isReadOnly}
             />
           </label>
           {studentCount > 0 && formState.numGroups > 0 ? (
@@ -501,7 +486,7 @@ function CreateForm() {
       metric: formState.topics.length,
       metricLabel: "Topics saved",
       actions: (
-        <Button onClick={addTopic} variant="default" size="sm">
+        <Button onClick={addTopic} variant="default" size="sm" disabled={isReadOnly}>
           <Plus className={styles.buttonIcon} /> Add topic
         </Button>
       ),
@@ -529,6 +514,7 @@ function CreateForm() {
                     onClick={() => removeTopic(topic.id)}
                     variant="warning"
                     size="icon"
+                    disabled={isReadOnly}
                   >
                     <Trash2 className={styles.buttonIcon} />
                   </Button>
@@ -541,6 +527,7 @@ function CreateForm() {
                   }
                   placeholder="Example: AI product design"
                   className={styles.input}
+                  disabled={isReadOnly}
                 />
               </div>
             ))
@@ -564,7 +551,7 @@ function CreateForm() {
       metric: formState.skills.length,
       metricLabel: "Skills tracked",
       actions: (
-        <Button onClick={addSkill} variant="default" size="sm">
+        <Button onClick={addSkill} variant="default" size="sm" disabled={isReadOnly}>
           <Plus className={styles.buttonIcon} /> Add skill
         </Button>
       ),
@@ -592,6 +579,7 @@ function CreateForm() {
                     onClick={() => removeSkill(skill.id)}
                     variant="warning"
                     size="icon"
+                    disabled={isReadOnly}
                   >
                     <Trash2 className={styles.buttonIcon} />
                   </Button>
@@ -604,6 +592,7 @@ function CreateForm() {
                   }
                   placeholder="Example: React"
                   className={styles.input}
+                  disabled={isReadOnly}
                 />
                 <div className={styles.field}>
                   <span className={styles.fieldLabel}>
@@ -621,6 +610,7 @@ function CreateForm() {
                       })
                     }
                     className={styles.sliderInput}
+                    disabled={isReadOnly}
                   />
                   <div className={styles.sliderScale}>
                     <span>0.05</span>
@@ -661,11 +651,6 @@ function CreateForm() {
             workspace.
           </p>
         </div>
-        <SystemTag tone={backendStatusTone}>
-          {loadSource === "backend"
-            ? "Backend config loaded"
-            : "Fallback values loaded"}
-        </SystemTag>
       </section>
 
       <div className={styles.statusPanel}>
@@ -682,7 +667,9 @@ function CreateForm() {
       {errorMessage ? (
         <div className={styles.feedbackAlert}>
           <AlertTriangle className={styles.feedbackIcon} />
-          <span>{errorMessage}</span>
+          <span>
+            {errorMessage} <Link to="/instructor/error-logs">Go to Error Logs</Link>
+          </span>
         </div>
       ) : null}
 
@@ -727,25 +714,22 @@ function CreateForm() {
           >
             <div className={styles.detailHeader}>
               <p className={styles.helperText}>{activeSection.description}</p>
+              {isReadOnly ? (
+                <SystemTag tone="neutral">View-only mode</SystemTag>
+              ) : null}
             </div>
             {activeSection.content}
           </ModuleBlock>
 
           <div className={styles.actionRow}>
             <Button
-              variant="default"
-              onClick={() => handleSave("draft")}
-              disabled={isSaving || isLoading}
-            >
-              {isSaving ? <Save className={styles.buttonIcon} /> : null} Save
-              draft
-            </Button>
-            <Button
               variant="success"
-              onClick={handlePublish}
-              disabled={isSaving || isLoading || isPublishingLinks}
+              onClick={handleSaveAndContinue}
+              disabled={isReadOnly || isSaving || isLoading || isPublishingLinks}
             >
-              {isPublishingLinks ? "Publishing..." : "Publish form"}
+              {isPublishingLinks
+                ? "Submitting..."
+                : "Save criteria and continue"}
             </Button>
           </div>
         </div>

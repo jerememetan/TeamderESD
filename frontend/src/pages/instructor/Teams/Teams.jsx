@@ -12,17 +12,11 @@ import GroupChip from "../../../components/schematic/GroupChip";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
-import { getBackendSectionId } from "../../../data/backendIds";
 import {
   mockCourses,
   mockSwapRequests,
   mockTeams,
 } from "../../../data/mockData";
-import {
-  getPeerEvaluationRoundForGroup,
-  getPeerEvaluationSummary,
-  startPeerEvaluationRound,
-} from "../../../services/peerEvaluationService";
 import { fetchEnrollmentsBySectionId } from "../../../services/enrollmentService";
 import { fetchAllStudents, buildSectionRoster } from "../../../services/studentService";
 import { generateTeamsForSection } from "../../../services/teamFormationService";
@@ -38,6 +32,8 @@ import {getSectionById} from "../../../services/sectionService";
 
 function Teams() {
   const { courseId, groupId: backendSectionId } = useParams();
+  const [isCourseLoading, setIsCourseLoading] = useState(true);
+  const [courseLoadError, setCourseLoadError] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [swapRequestList, setSwapRequestList] = useState(mockSwapRequests);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -50,7 +46,6 @@ function Teams() {
   const [rosterError, setRosterError] = useState("");
   const [teamError, setTeamError] = useState("");
   const [teamMessage, setTeamMessage] = useState("");
-  const [peerRound, setPeerRound] = useState(null);
   const [swapMode, setSwapMode] = useState(false);
   const [selectedSwapMember, setSelectedSwapMember] = useState(null);
 
@@ -74,6 +69,9 @@ function Teams() {
     let isMounted = true;
 
     async function fetchCourseAndSection() {
+      setIsCourseLoading(true);
+      setCourseLoadError("");
+
       try {
         const [course, section] = await Promise.all([
           fetchCourseByCode(courseId),
@@ -90,7 +88,12 @@ function Teams() {
         if (!isMounted) {
           return;
         }
+        setCourseLoadError(error?.message || "Unable to load course information.");
         console.log("course or section not found:", courseId, backendSectionId, error);
+      } finally {
+        if (isMounted) {
+          setIsCourseLoading(false);
+        }
       }
     }
 
@@ -185,16 +188,6 @@ function Teams() {
     };
   }, [backendSectionId]);
 
-  useEffect(() => {
-    if (!backendSectionId) {
-      setPeerRound(null);
-      return;
-    }
-
-    const round = getPeerEvaluationRoundForGroup(backendSectionId);
-    setPeerRound(round ? getPeerEvaluationSummary(round.id) : null);
-  }, [backendSectionId]);
-
   const rosterById = useMemo(
     () =>
       new Map(backendStudents.map((student) => [student.student_id, student])),
@@ -247,6 +240,35 @@ function Teams() {
     [visibleSwapRequests],
   );
 
+  if (isCourseLoading) {
+    return (
+      <div className={`${styles.page} ${motionStyles.motionPage}`}>
+        <ModuleBlock
+          eyebrow="Loading"
+          title="Loading teams"
+          metric="..."
+          metricLabel="Fetching course and section data"
+        >
+          <p className={styles.sourceNote}>
+            Preparing the teams workspace for this section.
+          </p>
+        </ModuleBlock>
+      </div>
+    );
+  }
+
+  if (courseLoadError) {
+    return (
+      <div className={`${styles.page} ${motionStyles.motionPage}`}>
+        <ModuleBlock eyebrow="Load Error" title="Unable to load teams" accent="orange">
+          <p className={styles.rosterError}>
+            {courseLoadError}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
+          </p>
+        </ModuleBlock>
+      </div>
+    );
+  }
+
   if (!selectedCourse) {
     return <div className={styles.notFound}>Course not found</div>;
   }
@@ -274,28 +296,6 @@ function Teams() {
         ? { ...currentRequest, status: "rejected" }
         : currentRequest,
     );
-  };
-
-  const handleStartPeerEvaluation = () => {
-    if (!selectedGroup) {
-      return;
-    }
-
-    const round = startPeerEvaluationRound({
-      courseId,
-      groupId: selectedGroup.id,
-      teamIds: visibleTeams.map((team) => team.id),
-      eligibleStudentEmails: Array.from(
-        new Set(
-          visibleTeams
-            .flatMap((team) => team.members.map((member) => member.email))
-            .filter(Boolean),
-        ),
-      ),
-    });
-
-    setPeerRound(getPeerEvaluationSummary(round.id));
-    setTeamMessage(`Peer evaluation round started for ${selectedCourse.code}.`);
   };
 
   const handleGenerateTeams = async () => {
@@ -427,9 +427,6 @@ function Teams() {
                 ? "Backend teams loaded"
                 : "Mock teams active"}
           </SystemTag>
-          {peerRound ? (
-            <SystemTag tone="success">Peer evaluation active</SystemTag>
-          ) : null}
           <SystemTag hazard>
             {
               visibleSwapRequests.filter(
@@ -470,14 +467,16 @@ function Teams() {
           </div>
           {rosterError ? (
             <p className={styles.rosterError}>
-              Atomic roster load failed: {rosterError}
+              Atomic roster load failed: {rosterError}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
             </p>
           ) : null}
         </ModuleBlock>
       ) : null}
 
       {teamError ? (
-        <p className={styles.rosterError}>Team load failed: {teamError}</p>
+        <p className={styles.rosterError}>
+          Team load failed: {teamError}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
+        </p>
       ) : null}
       {teamMessage ? <p className={styles.teamMessage}>{teamMessage}</p> : null}
 
@@ -492,7 +491,7 @@ function Teams() {
             <div className={styles.moduleActions}>
               <Button
                 onClick={handleGenerateTeams}
-                disabled={isGeneratingTeams || !backendSectionId}
+                disabled={isGeneratingTeams || isTeamsLoading || !backendSectionId}
                 variant="success"
                 size="sm"
               >
@@ -519,16 +518,6 @@ function Teams() {
                   Cancel selection
                 </Button>
               ) : null}
-              <Button
-                onClick={handleStartPeerEvaluation}
-                disabled={
-                  !selectedGroup || !visibleTeams.length || Boolean(peerRound)
-                }
-                variant="outline"
-                size="sm"
-              >
-                Start peer evaluation
-              </Button>
             </div>
           }
         >
@@ -543,18 +532,10 @@ function Teams() {
               another team to exchange them.
             </p>
           ) : null}
-          {peerRound ? (
-            <p className={styles.sourceNote}>
-              Peer evaluation round is active for this group.{" "}
-              {peerRound.submissionCount} submitted :: {peerRound.pendingCount}{" "}
-              pending.
-            </p>
-          ) : (
-            <p className={styles.sourceNote}>
-              Peer evaluation has not started for this group yet.
-            </p>
-          )}
           <div className={styles.teamList}>
+            {isTeamsLoading && !visibleTeams.length ? (
+              <p className={styles.sourceNote}>Loading teams for this section...</p>
+            ) : null}
             {visibleTeams.map((team, index) => {
               const hasPendingRequest = team.members.some(
                 (member) => pendingRequestMap[member.id],

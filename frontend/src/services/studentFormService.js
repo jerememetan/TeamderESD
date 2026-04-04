@@ -49,3 +49,34 @@ export async function fetchStudentFormById(formId) {
   const form = payload?.data;
   return form ? normalizeStudentForm(form) : null;
 }
+
+function requireSectionId(sectionId) {
+  if (sectionId === undefined || sectionId === null || !String(sectionId).trim()) {
+    throw new Error("section_id is required");
+  }
+  return String(sectionId).trim();
+}
+
+export async function fetchSubmittedStudentFormsBySectionId(sectionId) {
+  const safeSectionId = requireSectionId(sectionId);
+  const payload = await fetchJson(
+    `${STUDENT_FORM_URL}/submitted?section_id=${encodeURIComponent(safeSectionId)}`,
+    {
+      headers: { Accept: "application/json" },
+    },
+  );
+
+  return extractForms(payload);
+}
+
+export async function fetchUnsubmittedStudentFormsBySectionId(sectionId) {
+  const safeSectionId = requireSectionId(sectionId);
+  const payload = await fetchJson(
+    `${STUDENT_FORM_URL}/unsubmitted?section_id=${encodeURIComponent(safeSectionId)}`,
+    {
+      headers: { Accept: "application/json" },
+    },
+  );
+
+  return extractForms(payload);
+}

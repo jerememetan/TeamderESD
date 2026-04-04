@@ -11,6 +11,8 @@ import { STAGE_CONFIG } from "./logic/stageConfig";
 import { getGroupActions } from "./logic/getGroupActions";
 import { fetchCoursesBase, hydrateCoursesStats } from "./service/courseService";
 import { useEffect, useState } from "react";
+import { generateTeamsForSection } from "../../../services/teamFormationService";
+import { getEffectiveGroupStage } from "../logic/formationFlow";
 
 function Courses() {
   // currently taking from mockCourses
@@ -18,6 +20,9 @@ function Courses() {
   const [courseList, setCourseList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [endingSectionId, setEndingSectionId] = useState(null);
+  const [formingSectionIds, setFormingSectionIds] = useState(new Set());
   const formMap = mockForms;
 
   useEffect(() => {
@@ -25,6 +30,7 @@ function Courses() {
 
     async function loadCourses() {
       try {
+        setLoadError("");
         const { courses, sectionIds } = await fetchCoursesBase();
         if (!isMounted) {
           return;
@@ -46,6 +52,9 @@ function Courses() {
         }
         setCourseList([]);
         setLoading(false);
+        setLoadError(
+          "Unable to load instructor courses. Open Error Logs to inspect downstream failures.",
+        );
       } finally {
         if (isMounted) {
           setStatsLoading(false);
@@ -59,6 +68,45 @@ function Courses() {
       isMounted = false;
     };
   }, []);
+
+  async function refreshCoursesAfterAction() {
+    try {
+      const { courses, sectionIds } = await fetchCoursesBase();
+      const hydratedCourses = await hydrateCoursesStats(courses, sectionIds);
+      setCourseList(hydratedCourses);
+    } catch {
+      setLoadError(
+        "Unable to refresh course data after action. Open Error Logs to inspect downstream failures.",
+      );
+    }
+  }
+
+  async function handleEndCollection(_courseCode, group) {
+    const sectionId = group?.id;
+    if (!sectionId || endingSectionId) {
+      return;
+    }
+
+    setEndingSectionId(sectionId);
+    setFormingSectionIds((current) => new Set(current).add(sectionId));
+    setLoadError("");
+
+    try {
+      await generateTeamsForSection(sectionId);
+      await refreshCoursesAfterAction();
+    } catch (error) {
+      setLoadError(
+        `Unable to end form collection for ${group.code}. ${error?.message || "Unknown error"}`,
+      );
+    } finally {
+      setEndingSectionId(null);
+      setFormingSectionIds((current) => {
+        const next = new Set(current);
+        next.delete(sectionId);
+        return next;
+      });
+    }
+  }
 
   if (loading) {
     return (
@@ -85,6 +133,11 @@ function Courses() {
           <h2 className={chrome.title}>Manage my courses</h2>
           {statsLoading ? (
             <p className={styles.statsLoading}>Updating student and team counts...</p>
+          ) : null}
+          {loadError ? (
+            <p className={styles.statsLoading}>
+              {loadError} <Link to="/instructor/error-logs">Go to Error Logs</Link>
+            </p>
           ) : null}
         </div>
         {/* Button for Add course Not done yet */}
@@ -124,12 +177,17 @@ function Courses() {
               <div className={styles.groupGrid}>
                 {course.groups.map((group, groupIndex) => {
                   const existingForm = formMap[group.id];
+                  const effectiveStage = getEffectiveGroupStage(group, formingSectionIds);
                   const actions = getGroupActions(
                     course.code,
                     group,
-                    existingForm,
+                    {
+                      onEndCollection: handleEndCollection,
+                      isEndingCollection: endingSectionId === group.id,
+                      formingSectionIds,
+                    },
                   );
-                  const stage = STAGE_CONFIG[group.lifecycleStage];
+                  const stage = STAGE_CONFIG[effectiveStage] || STAGE_CONFIG.setup;
                   const completionText = existingForm
                     ? `${existingForm.responseCount} / ${existingForm.totalStudents} submitted`
                     : "No form published";
@@ -165,7 +223,7 @@ function Courses() {
                             ? "Loading formed teams..."
                             : `${group.teamsCount} formed teams`}
                         </p>
-                        {group.lifecycleStage === "collecting" ? (
+                        {effectiveStage === "collecting" ? (
                           <p className={styles.groupStageMeta}>
                             {completionText}
                           </p>
@@ -178,10 +236,16 @@ function Courses() {
                         {actions.map((action) => (
                           <Button
                             key={action.label}
-                            asChild
+                            asChild={action.kind !== "button"}
                             variant={action.variant}
+                            onClick={action.kind === "button" ? action.onClick : undefined}
+                            disabled={action.disabled}
                           >
-                            <Link to={action.to}>{action.label}</Link>
+                            {action.kind === "button" ? (
+                              <span>{action.label}</span>
+                            ) : (
+                              <Link to={action.to}>{action.label}</Link>
+                            )}
                           </Button>
                         ))}
                       </div>

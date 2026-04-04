@@ -367,7 +367,7 @@ function FillForm() {
         <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
-        <ModuleBlock componentId="MOD-FLOAD" eyebrow="Loading" title="Loading forms">
+        <ModuleBlock eyebrow="Loading" title="Loading forms">
           <p>Fetching your available forms from student-form service...</p>
         </ModuleBlock>
       </div>
@@ -484,9 +484,8 @@ function FillForm() {
         </Link>
         <section className={styles.hero}>
           <div>
-            <p className={styles.kicker}>[GROUP FORM]</p>
             <h2 className={styles.title}>Choose a form</h2>
-            <p className={styles.subtitle}>You have more than one backend form record. Pick the section you want to complete first.</p>
+            <p className={styles.subtitle}>Available forms</p>
           </div>
           <div className={styles.heroMeta}>
             <SystemTag tone="neutral">{availableFormCount} forms available</SystemTag>
@@ -501,7 +500,6 @@ function FillForm() {
                 className={styles.chooserCard}
               >
                 <ModuleBlock
-                  componentId={`MOD-FSEL-${index + 1}`}
                   eyebrow="Course"
                   title={form.title}
                 >
@@ -554,9 +552,8 @@ function FillForm() {
       </Link>
       <section className={styles.hero}>
         <div>
-          <p className={styles.kicker}>[GROUP FORM]</p>
           <h2 className={styles.title}>{resolvedAssignmentLabel} form</h2>
-          <p className={styles.subtitle}>Complete this backend form record for {activeStudent.name}.</p>
+          <p className={styles.subtitle}>Logged In As: {activeStudent.name}.</p>
         </div>
         <div className={styles.heroMeta}>
           <SystemTag tone="success">Form open</SystemTag>
@@ -573,7 +570,7 @@ function FillForm() {
         ) : null}
 
         {shouldCollectBuddy ? (
-          <ModuleBlock componentId="MOD-R1" eyebrow="Profile" title={fieldVisibility.buddyWeight < 0 ? "Preferred Avoid" : "Preferred Buddy"}>
+          <ModuleBlock eyebrow="Profile" title={fieldVisibility.buddyWeight < 0 ? "Preferred Avoid" : "Preferred Buddy"}>
             <p className={styles.subtitle}>Optional buddy preference for your current section enrollment list.</p>
             <div className={styles.fieldGroup}>
               <label className={styles.fieldLabel} htmlFor="buddy-select">
@@ -599,7 +596,7 @@ function FillForm() {
         ) : null}
 
         {shouldCollectMbti ? (
-          <ModuleBlock componentId="MOD-R1-MBTI" eyebrow="Profile" title="MBTI">
+          <ModuleBlock eyebrow="Profile" title="MBTI">
             <p className={styles.subtitle}>Optional personality preference for this section.</p>
             <div className={styles.fieldGroup}>
               <label className={styles.fieldLabel} htmlFor="mbti-select">Personality type</label>
@@ -627,7 +624,7 @@ function FillForm() {
         ) : null}
 
         {fieldVisibility.skillEnabled ? (
-          <ModuleBlock componentId="MOD-R2" eyebrow="Skills" title="Skill Scores">
+          <ModuleBlock eyebrow="Skills" title="Skill Scores">
             <p className={styles.subtitle}>Rate your section skills from 0 (None) to 5 (Expert).</p>
             {shouldCollectSkills ? (
               <div className={styles.listGrid}>
@@ -663,7 +660,7 @@ function FillForm() {
         ) : null}
 
         {fieldVisibility.topicEnabled ? (
-          <ModuleBlock componentId="MOD-R3" eyebrow="Topics" title="Project Topic Rankings">
+          <ModuleBlock eyebrow="Topics" title="Project Topic Rankings">
             <p className={styles.subtitle}>Rank every section topic from most preferred (1) to least preferred.</p>
             {shouldCollectTopics ? (
               <div className={styles.listGrid}>
@@ -699,7 +696,7 @@ function FillForm() {
         ) : null}
 
         {isLoadingForms ? (
-          <ModuleBlock componentId="MOD-LOAD" eyebrow="Loading" title="Loading forms">
+          <ModuleBlock eyebrow="Loading" title="Loading forms">
             <p>Fetching forms for the selected student...</p>
           </ModuleBlock>
         ) : null}
