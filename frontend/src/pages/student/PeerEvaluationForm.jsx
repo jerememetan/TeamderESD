@@ -5,155 +5,299 @@ import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
 import motionStyles from "../../components/schematic/motion.module.css";
 import MockStudentSwitcher from "../../components/student/MockStudentSwitcher";
-import { mockCourses } from "../../data/mockData";
-import { fetchStudentAssignments } from "../../services/studentAssignmentService";
 import { useMockStudentSession } from "../../services/mockStudentSession";
-import { getPeerEvaluationRound, getPeerEvaluationSubmission, submitPeerEvaluation } from "../../services/peerEvaluationService";
+import {
+  getPeerEvaluationRound,
+  getPeerEvaluationSubmission,
+  submitPeerEvaluation,
+} from "../../services/peerEvaluationService";
+import { fetchTeamsBySection } from "../../services/teamService";
+import { fetchStudentProfile } from "../../services/studentProfileService";
 import styles from "./PeerEvaluationForm.module.css";
 import { Button } from "../../components/ui/button";
 
 function PeerEvaluationForm() {
   const { roundId } = useParams();
   const navigate = useNavigate();
-  const { activeStudent, activeStudentTeams, activeStudentId, setActiveStudentId, availableStudents } = useMockStudentSession();
-  const studentProfile = activeStudent;
-  const [teamAssignments, setTeamAssignments] = useState(activeStudentTeams);
+  const {
+    activeStudent,
+    activeStudentId,
+    setActiveStudentId,
+    availableStudents,
+  } = useMockStudentSession();
+
+  const [round, setRound] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [studentProfiles, setStudentProfiles] = useState([]);
+  const [existingSubmission, setExistingSubmission] = useState(null);
   const [responses, setResponses] = useState({});
-  const [assignmentSource, setAssignmentSource] = useState("mock");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  useEffect(() => {
-    setTeamAssignments(activeStudentTeams);
-  }, [activeStudentTeams]);
+  // Determine the current student's backend ID from available students
+  const currentBackendId = useMemo(() => {
+    const numId = parseInt(activeStudent?.id, 10);
+    if (!isNaN(numId) && numId > 0) return numId;
+    if (activeStudent?.student_id) return activeStudent.student_id;
+    return null;
+  }, [activeStudent]);
 
+  // Load round, teams, and profiles
   useEffect(() => {
     let isMounted = true;
 
-    async function loadAssignments() {
+    async function loadAll() {
+      setIsLoading(true);
       try {
-        const backendAssignments = await fetchStudentAssignments({
-          currentStudentId: studentProfile.id,
-          courses: mockCourses,
-        });
+        const fetchedRound = await getPeerEvaluationRound(roundId || "");
+        if (!isMounted) return;
+        setRound(fetchedRound);
 
-        if (!isMounted) {
+        if (!fetchedRound || !fetchedRound.sectionId) {
+          setIsLoading(false);
           return;
         }
 
-        if (backendAssignments.length) {
-          setTeamAssignments(backendAssignments);
-          setAssignmentSource("backend");
-        } else {
-          setTeamAssignments(activeStudentTeams);
-          setAssignmentSource("mock");
+        let sectionTeams = [];
+        try {
+          sectionTeams = await fetchTeamsBySection(fetchedRound.sectionId);
+        } catch (err) {
+          console.error("Failed to fetch teams:", err);
         }
-      } catch {
-        if (isMounted) {
-          setTeamAssignments(activeStudentTeams);
-          setAssignmentSource("mock");
+        if (!isMounted) return;
+        setTeams(sectionTeams);
+
+        let profiles = [];
+        try {
+          profiles = await fetchStudentProfile(fetchedRound.sectionId);
+        } catch (err) {
+          console.error("Failed to fetch student profiles:", err);
         }
+        if (!isMounted) return;
+        setStudentProfiles(profiles);
+
+        if (currentBackendId) {
+          const submission = await getPeerEvaluationSubmission(
+            fetchedRound.id,
+            currentBackendId
+          );
+          if (isMounted) setExistingSubmission(submission);
+        }
+      } catch (err) {
+        console.error("Failed to load peer eval data:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     }
 
-    loadAssignments();
+    loadAll();
+    return () => { isMounted = false; };
+  }, [roundId, currentBackendId]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [activeStudentTeams, studentProfile.id]);
+  const profileLookup = useMemo(() => {
+    const map = new Map();
+    for (const s of studentProfiles) {
+      map.set(s.student_id, s.profile || s);
+    }
+    return map;
+  }, [studentProfiles]);
 
-  const round = getPeerEvaluationRound(roundId || "");
-  const existingSubmission = round ? getPeerEvaluationSubmission(round.id, studentProfile.email) : null;
-  const activeAssignment = teamAssignments.find((team) => team.groupId === round?.groupId) || teamAssignments[0] || null;
-  const selectedCourse = mockCourses.find((course) => course.id === activeAssignment?.courseId);
-  const selectedGroup = selectedCourse?.groups.find((group) => group.id === activeAssignment?.groupId);
+  const myTeam = useMemo(() => {
+    if (!currentBackendId) return null;
+    return teams.find((team) =>
+      (team.students || []).some((s) => s.student_id === currentBackendId)
+    ) || null;
+  }, [teams, currentBackendId]);
 
-  const memberList = useMemo(() => activeAssignment?.members ?? [], [activeAssignment]);
+  const memberList = useMemo(() => {
+    if (!myTeam) return [];
+    return (myTeam.students || []).map((s) => {
+      const profile = profileLookup.get(s.student_id);
+      return {
+        id: String(s.student_id),
+        name: profile?.name || `Student ${s.student_id}`,
+        email: profile?.email || "No email",
+        studentId: `ID-${s.student_id}`,
+      };
+    });
+  }, [myTeam, profileLookup]);
 
-  if (!round || !activeAssignment) {
-    return <div className={styles.notFound}>Peer evaluation round not available.</div>;
+  const teammates = useMemo(
+    () => memberList.filter((m) => m.id !== String(currentBackendId)),
+    [memberList, currentBackendId]
+  );
+
+  if (isLoading) {
+    return <div className={styles.notFound}>Loading peer evaluation...</div>;
+  }
+
+  if (!round) {
+    return (
+      <div className={styles.notFound}>Peer evaluation round not available.</div>
+    );
+  }
+
+  if (!myTeam) {
+    return (
+      <div className={styles.notFound}>
+        You are not assigned to a team in this section. Make sure you are
+        logged in as a student enrolled in this section.
+        <br /><br />
+        Current student ID: {currentBackendId || "unknown"}
+        <br />
+        Available students: {availableStudents.map(s => `${s.name} (${s.id})`).join(", ")}
+      </div>
+    );
   }
 
   if (existingSubmission) {
     return (
       <div className={styles.page}>
-        <Link to="/student" className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to student console</Link>
-        <ModuleBlock componentId="MOD-PDONE" eyebrow="Peer Evaluation" title="Submission received" metric="DONE" metricLabel="Your evaluation has been recorded">
-          <p className={styles.infoText}>You have already completed this peer evaluation round. Reputation effects remain private and are not shown here.</p>
+        <Link to="/student" className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <ModuleBlock
+          componentId="MOD-PDONE"
+          eyebrow="Peer Evaluation"
+          title="Submission received"
+          metric="DONE"
+          metricLabel="Your evaluation has been recorded"
+        >
+          <p className={styles.infoText}>
+            You have already completed this peer evaluation round. Reputation
+            effects remain private and are not shown here.
+          </p>
           <div className={styles.actionRow}>
-            <Button type="button" onClick={() => navigate('/student')}>Return to dashboard</Button>
+            <Button type="button" onClick={() => navigate("/student")}>
+              Return to dashboard
+            </Button>
           </div>
         </ModuleBlock>
       </div>
     );
   }
 
-  const handleChange = (memberEmail, field, value) => {
+  const handleChange = (memberId, field, value) => {
     setResponses((current) => ({
       ...current,
-      [memberEmail]: {
-        ...current[memberEmail],
-        memberName: memberList.find((member) => member.email === memberEmail)?.name || memberEmail,
+      [memberId]: {
+        ...current[memberId],
         [field]: value,
       },
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError("");
 
-    const entries = memberList.map((member) => ({
-      memberEmail: member.email,
-      memberName: member.name,
-      rating: Number(responses[member.email]?.rating || 0),
-      justification: responses[member.email]?.justification || "",
+    const entries = teammates.map((member) => ({
+      evaluateeId: parseInt(member.id, 10),
+      rating: Number(responses[member.id]?.rating || 0),
+      justification: responses[member.id]?.justification || "",
     }));
 
-    submitPeerEvaluation({
-      roundId: round.id,
-      studentEmail: studentProfile.email,
-      teamId: activeAssignment.id,
-      entries,
-    });
+    if (entries.some((e) => !e.rating)) {
+      setSubmitError("Please rate all teammates before submitting.");
+      setIsSubmitting(false);
+      return;
+    }
 
-    alert("Peer evaluation submitted successfully.");
-    navigate('/student');
+    try {
+      await submitPeerEvaluation({
+        roundId: round.id,
+        evaluatorId: currentBackendId,
+        teamId: myTeam.team_id,
+        entries,
+      });
+
+      navigate("/student");
+    } catch (err) {
+      setSubmitError(
+        err.message || "Failed to submit evaluation. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
-      <Link to="/student" className={styles.backLink}><ArrowLeft className={styles.backIcon} /> Return to student console</Link>
+      <Link to="/student" className={styles.backLink}>
+        <ArrowLeft className={styles.backIcon} /> Return to student console
+      </Link>
 
       <section className={styles.hero}>
         <div>
           <p className={styles.kicker}>[PEER EVALUATION]</p>
-          <h2 className={styles.title}>{selectedGroup?.code || activeAssignment.groupId} peer evaluation</h2>
-          <p className={styles.subtitle}>Rate each teammate and yourself from 1 to 5, then add a short justification. Reputation impact is private and will not be shown to students.</p>
+          <h2 className={styles.title}>{round.title || "Peer Evaluation"}</h2>
+          <p className={styles.subtitle}>
+            Rate each teammate from 1 to 5, then add a short justification.
+            Reputation impact is private and will not be shown to students.
+          </p>
         </div>
         <div className={styles.heroTags}>
-          <MockStudentSwitcher activeStudentId={activeStudentId} availableStudents={availableStudents} onChange={setActiveStudentId} />
-          <SystemTag tone="success">Round active</SystemTag>
-          <SystemTag tone="neutral">Due {new Date(round.dueAt).toLocaleDateString()}</SystemTag>
+          <MockStudentSwitcher
+            activeStudentId={activeStudentId}
+            availableStudents={availableStudents}
+            onChange={setActiveStudentId}
+          />
+          <SystemTag
+            tone={round.status === "active" ? "success" : "neutral"}
+          >
+            {round.status === "active"
+              ? "Round active"
+              : `Round ${round.status}`}
+          </SystemTag>
+          {round.dueAt && (
+            <SystemTag tone="neutral">
+              Due {new Date(round.dueAt).toLocaleDateString()}
+            </SystemTag>
+          )}
         </div>
       </section>
 
-      <p className={styles.infoText}>Current team source: {assignmentSource === 'backend' ? 'assigned team loaded from backend roster and team data' : 'mock fallback team assignment'}</p>
+      <p className={styles.infoText}>
+        Evaluating as: {activeStudent?.name} (ID: {currentBackendId}) — Team{" "}
+        {myTeam.team_number || "N/A"} ({memberList.length} members)
+      </p>
+
+      {submitError && (
+        <p style={{ color: "red", padding: "0.5rem 1rem" }}>{submitError}</p>
+      )}
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        {memberList.map((member, index) => (
-          <ModuleBlock key={member.email} componentId={`MOD-PE${index + 1}`} eyebrow={member.email === studentProfile.email ? 'Self Review' : 'Peer Review'} title={member.email === studentProfile.email ? `Rate yourself :: ${member.name}` : `Rate ${member.name}`}>
+        {teammates.map((member, index) => (
+          <ModuleBlock
+            key={member.id}
+            componentId={`MOD-PE${index + 1}`}
+            eyebrow="Peer Review"
+            title={`Rate ${member.name}`}
+          >
             <div className={styles.memberHeader}>
-              <p className={styles.memberMeta}>{member.studentId}</p>
-              <SystemTag tone={member.email === studentProfile.email ? 'neutral' : 'success'}>{member.email === studentProfile.email ? 'Self evaluation' : 'Teammate evaluation'}</SystemTag>
+              <p className={styles.memberMeta}>{member.email}</p>
+              <SystemTag tone="success">Teammate evaluation</SystemTag>
             </div>
             <div className={styles.scaleGrid}>
               {[1, 2, 3, 4, 5].map((score) => (
-                <label key={score} className={`${styles.scoreCard} ${Number(responses[member.email]?.rating || 0) === score ? styles.scoreCardActive : ''}`}>
+                <label
+                  key={score}
+                  className={`${styles.scoreCard} ${
+                    Number(responses[member.id]?.rating || 0) === score
+                      ? styles.scoreCardActive
+                      : ""
+                  }`}
+                >
                   <input
                     type="radio"
-                    name={`rating-${member.email}`}
+                    name={`rating-${member.id}`}
                     value={score}
-                    checked={Number(responses[member.email]?.rating || 0) === score}
-                    onChange={() => handleChange(member.email, 'rating', score)}
+                    checked={
+                      Number(responses[member.id]?.rating || 0) === score
+                    }
+                    onChange={() => handleChange(member.id, "rating", score)}
                     className={styles.hiddenInput}
                     required
                   />
@@ -165,11 +309,13 @@ function PeerEvaluationForm() {
             <label className={styles.field}>
               <span className={styles.fieldLabel}>Short justification</span>
               <textarea
-                value={responses[member.email]?.justification || ''}
-                onChange={(event) => handleChange(member.email, 'justification', event.target.value)}
+                value={responses[member.id]?.justification || ""}
+                onChange={(event) =>
+                  handleChange(member.id, "justification", event.target.value)
+                }
                 rows={4}
                 className={styles.textarea}
-                placeholder={member.email === studentProfile.email ? 'Briefly explain how you contributed to the team.' : 'Briefly explain why you chose this rating.'}
+                placeholder="Briefly explain why you chose this rating."
                 required
               />
             </label>
@@ -177,8 +323,16 @@ function PeerEvaluationForm() {
         ))}
 
         <div className={styles.actionRow}>
-          <Button type="submit">Submit peer evaluation</Button>
-          <Button type="button" onClick={() => navigate('/student')} variant="outline">Cancel</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Submitting..." : "Submit peer evaluation"}
+          </Button>
+          <Button
+            type="button"
+            onClick={() => navigate("/student")}
+            variant="outline"
+          >
+            Cancel
+          </Button>
         </div>
       </form>
     </div>

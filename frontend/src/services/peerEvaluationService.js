@@ -1,107 +1,194 @@
-import { mockPeerEvaluationRounds, mockPeerEvaluationSubmissions } from '../data/mockData';
+import { fetchJson } from './httpClient';
 
-const peerEvaluationRounds = [...mockPeerEvaluationRounds];
-const peerEvaluationSubmissions = [...mockPeerEvaluationSubmissions];
+const PEER_EVAL_URL =
+  import.meta.env.VITE_PEER_EVAL_URL ?? 'http://localhost:3020/peer-eval';
 
-function addDays(days) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString();
-}
+const DASHBOARD_URL =
+  import.meta.env.VITE_DASHBOARD_URL ?? 'http://localhost:8000/dashboard';
 
-function createPrivateReputationSignal(entries) {
-  if (!entries.length) {
-    return 0;
-  }
-
-  const average = entries.reduce((sum, entry) => sum + Number(entry.rating || 0), 0) / entries.length;
-  return Number((average - 3).toFixed(2));
-}
-
-export function getPeerEvaluationRoundForGroup(groupId) {
-  return peerEvaluationRounds.find((round) => round.groupId === groupId && round.status === 'active') || null;
-}
-
-export function getPeerEvaluationRound(roundId) {
-  return peerEvaluationRounds.find((round) => round.id === roundId) || null;
-}
-
-export function startPeerEvaluationRound({ courseId, groupId, teamIds, eligibleStudentEmails }) {
-  const existingRound = getPeerEvaluationRoundForGroup(groupId);
-  if (existingRound) {
-    return existingRound;
-  }
-
-  const round = {
-    id: `peer-round-${groupId}`,
-    courseId,
-    groupId,
-    status: 'active',
-    title: `Peer Evaluation Round :: ${groupId}`,
-    startedAt: new Date().toISOString(),
-    dueAt: addDays(7),
-    teamIds,
-    eligibleStudentEmails,
-  };
-
-  peerEvaluationRounds.push(round);
-  return round;
-}
-
-export function getPeerEvaluationSubmission(roundId, studentEmail) {
-  return peerEvaluationSubmissions.find(
-    (submission) => submission.roundId === roundId && submission.studentEmail === studentEmail,
-  ) || null;
-}
-
-export function submitPeerEvaluation({ roundId, studentEmail, teamId, entries }) {
-  const existing = getPeerEvaluationSubmission(roundId, studentEmail);
-  if (existing) {
-    return existing;
-  }
-
-  const submission = {
-    id: `peer-submission-${roundId}-${studentEmail}`,
-    roundId,
-    studentEmail,
-    teamId,
-    entries,
-    submittedAt: new Date().toISOString(),
-    privateReputationSignal: createPrivateReputationSignal(entries),
-  };
-
-  peerEvaluationSubmissions.push(submission);
-  return submission;
-}
-
-export function getPendingPeerEvaluations({ studentEmail, groupIds }) {
-  return peerEvaluationRounds.filter((round) => {
-    if (round.status !== 'active') {
-      return false;
-    }
-
-    if (!groupIds.has(round.groupId)) {
-      return false;
-    }
-
-    if (!round.eligibleStudentEmails.includes(studentEmail)) {
-      return false;
-    }
-
-    return !getPeerEvaluationSubmission(round.id, studentEmail);
-  });
-}
-
-export function getPeerEvaluationSummary(roundId) {
-  const round = getPeerEvaluationRound(roundId);
-  if (!round) {
+/**
+ * Get a peer evaluation round by ID.
+ */
+export async function getPeerEvaluationRound(roundId) {
+  try {
+    const payload = await fetchJson(`${PEER_EVAL_URL}/rounds/${roundId}`, {
+      headers: { Accept: 'application/json' },
+    });
+    const round = payload?.data;
+    if (!round) return null;
+    // Normalize to match the shape the frontend expects
+    return {
+      id: round.round_id,
+      sectionId: round.section_id,
+      status: round.status,
+      title: round.title,
+      dueAt: round.due_at,
+      startedAt: round.created_at,
+      submissionCount: round.submission_count ?? 0,
+      evaluatorCount: round.evaluator_count ?? 0,
+    };
+  } catch {
     return null;
   }
+}
 
-  const submissions = peerEvaluationSubmissions.filter((submission) => submission.roundId === roundId);
+/**
+ * Get the active peer evaluation round for a section.
+ */
+export async function getPeerEvaluationRoundForSection(sectionId) {
+  try {
+    const payload = await fetchJson(
+      `${PEER_EVAL_URL}/rounds?section_id=${encodeURIComponent(sectionId)}&status=active`,
+      { headers: { Accept: 'application/json' } }
+    );
+    const rounds = payload?.data ?? [];
+    if (!rounds.length) return null;
+    const round = rounds[0];
+    return {
+      id: round.round_id,
+      sectionId: round.section_id,
+      status: round.status,
+      title: round.title,
+      dueAt: round.due_at,
+      startedAt: round.created_at,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if a student has already submitted for a round.
+ * Returns the submission data if found, null otherwise.
+ */
+export async function getPeerEvaluationSubmission(roundId, evaluatorId) {
+  try {
+    const numericId = typeof evaluatorId === 'string' ? parseInt(evaluatorId, 10) : evaluatorId;
+    const payload = await fetchJson(
+      `${PEER_EVAL_URL}/rounds/${roundId}/submissions?evaluator_id=${numericId}`,
+      { headers: { Accept: 'application/json' }, cache: false }
+    );
+    const submissions = payload?.data ?? [];
+    if (!submissions.length) return null;
+    return {
+      id: `submission-${roundId}-${numericId}`,
+      roundId,
+      evaluatorId: numericId,
+      entries: submissions,
+      submittedAt: submissions[0]?.submitted_at,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Submit peer evaluations for all teammates.
+ */
+export async function submitPeerEvaluation({ roundId, evaluatorId, teamId, entries }) {
+  const numericEvaluatorId = typeof evaluatorId === 'string' ? parseInt(evaluatorId, 10) : evaluatorId;
+
+  const payload = await fetchJson(`${PEER_EVAL_URL}/rounds/${roundId}/submit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      evaluator_id: numericEvaluatorId,
+      team_id: teamId,
+      entries: entries.map((entry) => ({
+        evaluatee_id: typeof entry.evaluateeId === 'string' ? parseInt(entry.evaluateeId, 10) : entry.evaluateeId,
+        rating: Number(entry.rating),
+        justification: entry.justification || '',
+      })),
+    }),
+    cache: false,
+  });
+
+  return payload?.data;
+}
+
+/**
+ * Get pending peer evaluations for a student across their sections.
+ * Returns array of active rounds where the student hasn't submitted yet.
+ */
+export async function getPendingPeerEvaluations({ studentId, sectionIds }) {
+  const numericId = typeof studentId === 'string' ? parseInt(studentId, 10) : studentId;
+  const pending = [];
+
+  for (const sectionId of sectionIds) {
+    try {
+      const round = await getPeerEvaluationRoundForSection(sectionId);
+      if (!round || round.status !== 'active') continue;
+
+      const existing = await getPeerEvaluationSubmission(round.id, numericId);
+      if (!existing) {
+        pending.push(round);
+      }
+    } catch {
+      // Skip sections that fail
+    }
+  }
+
+  return pending;
+}
+
+/**
+ * Instructor initiates a peer evaluation round via the dashboard orchestrator.
+ */
+export async function startPeerEvaluationRound({ sectionId, title, dueAt }) {
+  const payload = await fetchJson(`${DASHBOARD_URL}/peer-eval/initiate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      section_id: sectionId,
+      title: title || `Peer Evaluation — Section ${sectionId.slice(0, 8)}`,
+      due_at: dueAt || null,
+    }),
+    cache: false,
+  });
+
+  return payload?.data;
+}
+
+/**
+ * Instructor closes a peer evaluation round via the dashboard orchestrator.
+ */
+export async function closePeerEvaluationRound(roundId) {
+  const payload = await fetchJson(`${DASHBOARD_URL}/peer-eval/close`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ round_id: roundId }),
+    cache: false,
+  });
+
+  return payload?.data;
+}
+
+/**
+ * Get summary for a peer evaluation round.
+ */
+export async function getPeerEvaluationSummary(roundId) {
+  const round = await getPeerEvaluationRound(roundId);
+  if (!round) return null;
   return {
     ...round,
-    submissionCount: submissions.length,
-    pendingCount: Math.max(round.eligibleStudentEmails.length - submissions.length, 0),
+    submissionCount: round.submissionCount ?? 0,
+    pendingCount: 0, // Would need to know total eligible students to compute this
   };
+}
+
+export async function getPeerEvaluationRoundForGroup(groupId) {
+  try {
+    return await getPeerEvaluationRoundForSection(groupId);
+  } catch {
+    return null;
+  }
 }
