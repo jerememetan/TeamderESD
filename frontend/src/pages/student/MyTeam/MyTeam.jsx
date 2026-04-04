@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Mail, RefreshCw } from "lucide-react";
 import GroupChip from "../../../components/schematic/GroupChip";
@@ -8,7 +7,7 @@ import motionStyles from "../../../components/schematic/motion.module.css";
 import StudentSwitcher from "../../../components/student/StudentSwitcher";
 import { Button } from "../../../components/ui/button";
 import { useStudentSession } from "../../../services/studentSession";
-import { loadAssignmentsForStudent } from "../StudentDashboard/logic/studentDashboardLogic";
+import { useMyTeamPage } from "./logic/useMyTeamPage";
 import styles from "./MyTeam.module.css";
 
 function MyTeam() {
@@ -23,36 +22,18 @@ function MyTeam() {
     studentLoadError,
   } = useStudentSession(routeStudentId);
 
-  const [teamAssignments, setTeamAssignments] = useState([]);
-  const [selectedTeamId, setSelectedTeamId] = useState(null);
-  const [showSwapModal, setShowSwapModal] = useState(false);
-  const [swapReason, setSwapReason] = useState("");
-  const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
-  const [assignmentSource, setAssignmentSource] = useState("loading");
-  const [assignmentError, setAssignmentError] = useState("");
-
-  useEffect(() => {
-    if (isLoadingStudents || !activeStudent) {
-      return;
-    }
-
-    loadAssignmentsForStudent(
-      activeStudent,
-      setTeamAssignments,
-      setAssignmentSource,
-      () => {},
-      setAssignmentError,
-      setIsLoadingAssignments,
-    );
-  }, [activeStudent, isLoadingStudents]);
-
-  const selectedTeam = useMemo(
-    () =>
-      teamAssignments.find((team) => team.id === selectedTeamId) ||
-      teamAssignments[0] ||
-      null,
-    [selectedTeamId, teamAssignments],
-  );
+  const {
+    teamAssignments,
+    selectedTeam,
+    setSelectedTeamId,
+    showSwapModal,
+    setShowSwapModal,
+    swapReason,
+    setSwapReason,
+    isLoadingAssignments,
+    assignmentSource,
+    assignmentError,
+  } = useMyTeamPage(activeStudent, isLoadingStudents);
 
   if (isLoadingStudents) {
     return (
