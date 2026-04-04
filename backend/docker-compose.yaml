@@ -436,6 +436,7 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
       SWAP_REQUEST_URL: "http://swap-request-service:3011/swap-request"
       SWAP_CONSTRAINTS_URL: "http://swap-constraints-service:3012/swap-constraints"
+      COURSE_SERVICE_URL: "http://course-service:3017/api/courses"
       TEAM_URL: "http://team-service:3007/team"
       TEAM_SWAP_OPTIMIZE_URL: "http://team-swap-service:3013/team-swap/optimize"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
@@ -449,6 +450,7 @@ services:
     depends_on:
       - swap-request-service
       - swap-constraints-service
+      - course-service
       - team-service
       - team-swap-service
       - enrollment-service

@@ -68,6 +68,9 @@ SWAP_REQUEST_URL = os.getenv("SWAP_REQUEST_URL", "http://localhost:3011/swap-req
 SWAP_CONSTRAINTS_URL = os.getenv(
     "SWAP_CONSTRAINTS_URL", "http://localhost:3012/swap-constraints"
 ).rstrip("/")
+COURSE_SERVICE_URL = os.getenv(
+    "COURSE_SERVICE_URL", "http://localhost:3017/api/courses"
+).rstrip("/")
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team").rstrip("/")
 TEAM_SWAP_OPTIMIZE_URL = os.getenv(
     "TEAM_SWAP_OPTIMIZE_URL", "http://localhost:3013/team-swap/optimize"
@@ -855,6 +858,203 @@ def _fetch_cycle_request_details(cycle):
     return details, None
 
 
+def _extract_course_rows(payload):
+    body = _extract_data(payload)
+
+    if isinstance(body, list):
+        return body
+
+    if isinstance(body, dict):
+        for key in (
+            "Courses",
+            "courses",
+            "course_list",
+            "CourseList",
+            "items",
+            "Items",
+            "records",
+            "Records",
+            "results",
+            "Results",
+        ):
+            rows = body.get(key)
+            if isinstance(rows, list):
+                return rows
+
+        if _pick_first(
+            body,
+            [
+                "course_id",
+                "courseId",
+                "CourseID",
+                "id",
+                "Id",
+                "code",
+                "Code",
+                "course_code",
+                "CourseCode",
+            ],
+        ) is not None:
+            return [body]
+
+    return []
+
+
+def _course_row_key(row):
+    if not isinstance(row, dict):
+        return None
+
+    candidate = _pick_first(
+        row,
+        [
+            "course_id",
+            "courseId",
+            "CourseID",
+            "id",
+            "Id",
+            "code",
+            "Code",
+            "course_code",
+            "CourseCode",
+        ],
+    )
+    if candidate is None:
+        return None
+    return str(candidate).strip()
+
+
+def _course_row_name(row):
+    if not isinstance(row, dict):
+        return None
+
+    candidate = _pick_first(
+        row,
+        [
+            "course_name",
+            "courseName",
+            "CourseName",
+            "name",
+            "Name",
+            "title",
+            "Title",
+        ],
+    )
+    if candidate is None:
+        return None
+
+    text = str(candidate).strip()
+    return text if text else None
+
+
+def _resolve_course_name(course_id):
+    if not course_id:
+        return "Course"
+
+    course_id_text = str(course_id)
+    fallback = f"Course {course_id_text}"
+
+    payload, error = _http_json(
+        "GET",
+        COURSE_SERVICE_URL,
+        label="course-service",
+    )
+    if error:
+        return fallback
+
+    rows = _extract_course_rows(payload)
+    if not rows:
+        return fallback
+
+    for row in rows:
+        if _course_row_key(row) == course_id_text:
+            return _course_row_name(row) or fallback
+
+    return fallback
+
+
+def _team_name_from_lookup(team_id, team_name_by_id):
+    team_id_text = str(team_id) if team_id is not None else ""
+    if team_id_text in team_name_by_id:
+        return team_name_by_id[team_id_text]
+
+    suffix = team_id_text[-8:] if team_id_text else "Unknown"
+    return f"Team {suffix}"
+
+
+def _coerce_created_at(row, mapping):
+    if isinstance(row, dict):
+        value = row.get("created_at")
+        if value is not None:
+            return str(value)
+
+    if isinstance(mapping, dict):
+        value = mapping.get("submitted_at")
+        if value is not None:
+            return str(value)
+
+    return _as_iso(_utc_now())
+
+
+def _to_processed_request(
+    cycle,
+    request_row,
+    mapping,
+    course_name,
+    student_name_by_id,
+    team_name_by_id,
+):
+    raw_id = None
+    if isinstance(request_row, dict):
+        raw_id = request_row.get("swap_request_id")
+    if raw_id is None and isinstance(mapping, dict):
+        raw_id = mapping.get("swap_request_id")
+    request_id = str(raw_id) if raw_id is not None else ""
+
+    raw_student_id = None
+    if isinstance(request_row, dict):
+        raw_student_id = _int_or_none(request_row.get("student_id"))
+    if raw_student_id is None and isinstance(mapping, dict):
+        raw_student_id = _int_or_none(mapping.get("student_id"))
+
+    student_id_text = str(raw_student_id) if raw_student_id is not None else "unknown"
+    student_name = student_name_by_id.get(raw_student_id)
+    if not student_name:
+        student_name = f"Student {student_id_text}"
+
+    raw_current_team = None
+    if isinstance(request_row, dict):
+        raw_current_team = request_row.get("current_team")
+    if raw_current_team is None and isinstance(mapping, dict):
+        raw_current_team = mapping.get("current_team")
+    current_team_id = str(raw_current_team) if raw_current_team is not None else "unknown-team"
+    current_team_name = _team_name_from_lookup(current_team_id, team_name_by_id)
+
+    reason = ""
+    if isinstance(request_row, dict):
+        raw_reason = request_row.get("reason")
+        if raw_reason is not None:
+            reason = str(raw_reason)
+
+    raw_status = REQUEST_STATUS_PENDING
+    if isinstance(request_row, dict):
+        raw_status = request_row.get("status", REQUEST_STATUS_PENDING)
+    status = str(raw_status).lower()
+
+    return {
+        "id": request_id,
+        "courseId": str(cycle.course_id),
+        "courseName": course_name,
+        "studentId": student_id_text,
+        "studentName": student_name,
+        "currentTeamId": current_team_id,
+        "currentTeamName": current_team_name,
+        "groupId": str(cycle.section_id),
+        "reason": reason,
+        "status": status,
+        "createdAt": _coerce_created_at(request_row, mapping),
+    }
+
+
 def _fetch_section_teams(section_id):
     payload, error = _http_json(
         "GET",
@@ -923,6 +1123,61 @@ def _fetch_section_teams(section_id):
         "team_post_payload": team_post_payload,
         "student_ids": sorted(set(student_ids)),
     }, None
+
+
+def _build_team_name_lookup(section_id):
+    teams_context, error = _fetch_section_teams(section_id)
+    if error:
+        return {}
+
+    lookup = {}
+    for team in teams_context.get("optimizer_teams", []):
+        if not isinstance(team, dict):
+            continue
+
+        team_id = team.get("team_id")
+        if not team_id:
+            continue
+
+        team_number = _int_or_none(team.get("team_number"))
+        if team_number is not None:
+            lookup[str(team_id)] = f"Team {team_number}"
+        else:
+            lookup[str(team_id)] = _team_name_from_lookup(team_id, {})
+
+    return lookup
+
+
+def _build_student_name_lookup(request_details):
+    student_ids = []
+    for row in request_details:
+        request_row = row.get("swap_request") if isinstance(row, dict) else None
+        mapping = row.get("map") if isinstance(row, dict) else None
+
+        student_id = None
+        if isinstance(request_row, dict):
+            student_id = _int_or_none(request_row.get("student_id"))
+        if student_id is None and isinstance(mapping, dict):
+            student_id = _int_or_none(mapping.get("student_id"))
+
+        if student_id is not None:
+            student_ids.append(student_id)
+
+    student_rows, error = _fetch_student_rows(sorted(set(student_ids)))
+    if error or not isinstance(student_rows, dict):
+        return {}
+
+    lookup = {}
+    for student_id, row in student_rows.items():
+        if not isinstance(row, dict):
+            continue
+        name = row.get("name")
+        if name is None:
+            continue
+        text = str(name).strip()
+        if text:
+            lookup[_int_or_none(student_id)] = text
+    return lookup
 
 
 def _normalize_constraints_for_optimizer(constraint_row):
@@ -1528,6 +1783,82 @@ def list_cycle_requests(cycle_id):
                     "transition": transition,
                     "summary": summary,
                     "requests": request_details,
+                },
+            }
+        ),
+        200,
+    )
+
+
+@app.route("/swap-orchestrator/cycles/<uuid:cycle_id>/requests/processed", methods=["GET"])
+def list_processed_cycle_requests(cycle_id):
+    cycle = SwapCycle.query.get(cycle_id)
+    if not cycle:
+        return jsonify({"code": 404, "message": "cycle not found"}), 404
+
+    transition = _state_transition_for_cycle(cycle)
+    request_details, error = _fetch_cycle_request_details(cycle)
+    if error:
+        return jsonify({"code": error.get("status", 502), "message": error.get("message")}), error.get("status", 502)
+
+    summary = {
+        "total": len(request_details),
+        "pending": 0,
+        "approved": 0,
+        "rejected": 0,
+        "executed": 0,
+        "failed": 0,
+    }
+
+    course_name = _resolve_course_name(cycle.course_id)
+    student_name_by_id = _build_student_name_lookup(request_details)
+    team_name_by_id = _build_team_name_lookup(cycle.section_id)
+    status_filter = request.args.get("status")
+    normalized_status_filter = str(status_filter).strip().lower() if status_filter else None
+
+    processed_requests = []
+    for row in request_details:
+        request_row = row.get("swap_request") if isinstance(row, dict) else {}
+        status_upper = str(
+            request_row.get("status", REQUEST_STATUS_PENDING)
+            if isinstance(request_row, dict)
+            else REQUEST_STATUS_PENDING
+        ).upper()
+
+        if status_upper == REQUEST_STATUS_PENDING:
+            summary["pending"] += 1
+        elif status_upper == REQUEST_STATUS_APPROVED:
+            summary["approved"] += 1
+        elif status_upper == REQUEST_STATUS_REJECTED:
+            summary["rejected"] += 1
+        elif status_upper == REQUEST_STATUS_EXECUTED:
+            summary["executed"] += 1
+        elif status_upper == REQUEST_STATUS_FAILED:
+            summary["failed"] += 1
+
+        mapping = row.get("map") if isinstance(row, dict) else {}
+        processed = _to_processed_request(
+            cycle=cycle,
+            request_row=request_row,
+            mapping=mapping,
+            course_name=course_name,
+            student_name_by_id=student_name_by_id,
+            team_name_by_id=team_name_by_id,
+        )
+
+        if normalized_status_filter and processed.get("status") != normalized_status_filter:
+            continue
+        processed_requests.append(processed)
+
+    return (
+        jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "cycle": _serialize_cycle(cycle),
+                    "transition": transition,
+                    "summary": summary,
+                    "requests": processed_requests,
                 },
             }
         ),

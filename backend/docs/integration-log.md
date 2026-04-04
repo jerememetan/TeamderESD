@@ -188,3 +188,29 @@ Add an end-of-project peer evaluation experience to the frontend before the back
 - In the current Supabase setup, only student_form_data.form_data exists, so requests into student-form-service fail at runtime.
 - This affects publish-form flow through ormation-notification and can also produce repeated backend errors whenever composite services query student-form endpoints.
 - Treat this as an open backend provisioning bug until the student_form schema/tables are created or the service is remapped.
+
+## 2026-04-04 :: Step 6 :: Processed swap requests -> swap-orchestrator
+
+### Goal
+Move instructor-facing swap request shaping out of the atomic swap-request service and into swap-orchestrator so frontend consumers can use a processed contract with complete display values.
+
+### Backend scope
+- Composite: `swap-orchestrator`
+- New endpoint: `GET /swap-orchestrator/cycles/:cycle_id/requests/processed`
+
+### Contract
+- Response envelope remains `{ code, data }`.
+- `data.requests` returns processed rows with keys:
+	- `id`, `courseId`, `courseName`, `studentId`, `studentName`, `currentTeamId`, `currentTeamName`, `groupId`, `reason`, `status`, `createdAt`
+- `status` is normalized to lowercase.
+
+### Enrichment behavior
+- Base records come from cycle request mappings + atomic swap-request reads.
+- Student names are enriched through student-service bulk lookup.
+- Team names are enriched through section team lookup (`Team <team_number>`).
+- Course name is resolved through course-service where possible.
+- Deterministic fallbacks are used so display fields are never null.
+
+### Compatibility
+- Existing `GET /swap-orchestrator/cycles/:cycle_id/requests` remains unchanged.
+- Atomic `swap-request` endpoints remain storage-focused and unchanged.
