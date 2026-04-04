@@ -13,7 +13,7 @@ from swagger_helper import register_swagger
 import os
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, jsonify
 
 from .models.swap_constraint_model import db
 
@@ -31,7 +31,13 @@ def create_app():
 
     app.register_blueprint(swap_constraint_bp, url_prefix="/swap-constraints")
     register_swagger(app, 'swap-constraints-service')
+
+    @app.get("/health")
+    def health():
+        return jsonify({"status": "ok", "service": "swap-constraints-service"}), 200
+
     return app
+
 if __name__ == "__main__":
     app = create_app()
     port = os.getenv("PORT", 3012)

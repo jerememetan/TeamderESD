@@ -12,7 +12,7 @@ for _candidate in _SWAGGER_PATH_CANDIDATES:
 from swagger_helper import register_swagger
 import os
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, jsonify
 
 from .models.swap_request_model import db
 
@@ -33,7 +33,13 @@ def create_app():
 
     app.register_blueprint(swap_request_bp, url_prefix="/swap-request")
     register_swagger(app, 'swap-request-service')
+
+    @app.get("/health")
+    def health():
+        return jsonify({"status": "ok", "service": "swap-request-service"}), 200
+
     return app
+
 if __name__ == "__main__":
     app = create_app()
     port = os.getenv("PORT", 3011)

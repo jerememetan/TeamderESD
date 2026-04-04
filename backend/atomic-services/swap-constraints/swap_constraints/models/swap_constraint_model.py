@@ -27,7 +27,14 @@ class SwapConstraint(db.Model):
     class_id = db.Column(db.Uuid, nullable=False, index=True)
 
     # Example hard constraints for scenario configuration.
-    gpa_variance_level = db.Column(db.Enum(GPAVarianceLevel), nullable=False, default=GPAVarianceLevel.STANDARD)
+    gpa_variance_level = db.Column(
+        db.Enum(
+            GPAVarianceLevel,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+        default=GPAVarianceLevel.STANDARD,
+    )
     class_avg_gpa = db.Column(db.Float, nullable=False, default=0.0)
     require_year_diversity = db.Column(db.Boolean, nullable=False, default=False)
     max_skill_imbalance = db.Column(db.Float, nullable=False, default=0.0)
