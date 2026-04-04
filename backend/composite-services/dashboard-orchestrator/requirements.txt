@@ -3,4 +3,3 @@ requests==2.32.3
 flask-cors==6.0.0
 flask-openapi3
 pydantic
-

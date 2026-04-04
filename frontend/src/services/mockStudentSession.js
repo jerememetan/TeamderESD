@@ -15,8 +15,8 @@ function getStoredStudentId() {
 
 function resolveStudent(studentId, students) {
   return (
-    students.find((student) => student.id === studentId) ||
-    students.find((student) => student.id === DEFAULT_STUDENT_ID) ||
+    students.find((student) => String(student.id) === String(studentId)) ||
+    students.find((student) => String(student.id) === String(DEFAULT_STUDENT_ID)) ||
     students[0]
   );
 }
@@ -34,6 +34,7 @@ function getTeamsForStudent(student) {
 export function useMockStudentSession() {
   const [activeStudentId, setActiveStudentId] = useState(getStoredStudentId);
   const [availableStudents, setAvailableStudents] = useState(mockStudents);
+  const [hasLoadedBackend, setHasLoadedBackend] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -46,6 +47,8 @@ export function useMockStudentSession() {
         }
       } catch {
         // Keep mock data if backend student service is unavailable.
+      } finally {
+        if (!ignore) setHasLoadedBackend(true);
       }
     }
 
@@ -57,15 +60,15 @@ export function useMockStudentSession() {
   }, []);
 
   useEffect(() => {
-    if (!availableStudents.length) {
+    if (!hasLoadedBackend || !availableStudents.length) {
       return;
     }
 
-    const hasActiveStudent = availableStudents.some((student) => student.id === activeStudentId);
+    const hasActiveStudent = availableStudents.some((student) => String(student.id) === String(activeStudentId));
     if (!hasActiveStudent) {
       setActiveStudentId(availableStudents[0].id);
     }
-  }, [activeStudentId, availableStudents]);
+  }, [activeStudentId, availableStudents, hasLoadedBackend]);
 
   useEffect(() => {
     if (typeof window === "undefined") {

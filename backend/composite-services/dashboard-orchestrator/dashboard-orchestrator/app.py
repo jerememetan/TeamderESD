@@ -24,14 +24,14 @@ Orchestrates the instructor team dashboard flow:
 """
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 import os
 import json
 from flask_cors import CORS
 
 app = Flask(__name__)
-# Enable CORS for dashboard endpoints to allow frontend origin access
-CORS(app, resources={r"/dashboard*": {"origins": os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")}})
+CORS(app)
 
 # â”€â”€ Upstream service URLs (overridden via docker-compose env) â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -50,6 +50,8 @@ SECTIONS_URL = os.getenv("SECTION_URL", "http://section-service:3018/section")
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://enrollment-service:3005/enrollment")
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 8))
 COURSE_SERVICE_INTERNAL = os.getenv("COURSE_SERVICE_INTERNAL", "http://course-service:3017/api/courses")
+PEER_EVAL_URL = os.getenv("PEER_EVAL_URL", "http://localhost:3020/peer-eval")
+NOTIFICATION_URL = os.getenv("NOTIFICATION_URL", "http://localhost:3016/notification")
 
 
 def _fetch(url, params=None, label="service"):
@@ -220,6 +222,195 @@ def get_dashboard():
 
     return jsonify(analytics_result), analytics_result.get("code", 200)
 
+@app.route("/dashboard/peer-eval/initiate", methods=["POST"])
+def initiate_peer_eval():
+    """
+    Instructor initiates a peer evaluation round.
+
+    Flow:
+    1. Create round in Peer Evaluation Service
+    2. Fetch team rosters from Team Service
+    3. Fetch student profiles (for emails) from Student Profile Service
+    4. Send notification emails via Notification Service (fire-and-forget)
+    5. Return the created round info
+    """
+    payload = request.get_json()
+    if not payload:
+        return jsonify({"code": 400, "message": "request body is required"}), 400
+
+    section_id = payload.get("section_id")
+    if not section_id:
+        return jsonify({"code": 400, "message": "section_id is required"}), 400
+
+    title = payload.get("title", f"Peer Evaluation — Section {section_id[:8]}")
+    due_at = payload.get("due_at")
+
+    # ── 1. Create round in Peer Evaluation Service ────────────────────
+    try:
+        round_resp = requests.post(
+            f"{PEER_EVAL_URL}/rounds",
+            json={"section_id": section_id, "title": title, "due_at": due_at},
+            timeout=REQUEST_TIMEOUT,
+        )
+        round_data = round_resp.json()
+        if round_resp.status_code == 409:
+            return jsonify(round_data), 409
+        round_resp.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        return jsonify({"code": 502, "message": f"failed to create peer eval round: {str(e)}"}), 502
+
+    created_round = round_data.get("data", {})
+    round_id = created_round.get("round_id")
+
+    # ── 2. Fetch team rosters ─────────────────────────────────────────
+    team_data, err = _fetch(
+        TEAM_URL, params={"section_id": section_id}, label="team service"
+    )
+    if err:
+        return jsonify({
+            "code": 200,
+            "data": {
+                "round": created_round,
+                "notification_status": "skipped — could not fetch teams",
+            },
+        }), 200
+
+    teams = team_data.get("data", {}).get("teams", [])
+
+    # ── 3. Fetch student profiles for emails ──────────────────────────
+    profile_data, err = _fetch(
+        STUDENT_PROFILE_URL, params={"section_id": section_id}, label="student profile service"
+    )
+
+    student_email_map = {}
+    if profile_data:
+        for s in profile_data.get("data", {}).get("students", []):
+            sid = s.get("student_id")
+            email = s.get("profile", {}).get("email")
+            if sid and email:
+                student_email_map[sid] = email
+
+    # ── 4. Send notification emails ───────────────────────────────────
+    eval_link = payload.get("eval_link", f"http://localhost:5173/student/peer-evaluation/{round_id}")
+    notification_results = {"sent": 0, "failed": 0, "skipped": 0}
+
+    for team in teams:
+        for student in team.get("students", []):
+            sid = student.get("student_id")
+            email = student_email_map.get(sid)
+            if not email:
+                notification_results["skipped"] += 1
+                continue
+
+            email_payload = {
+                "to": email,
+                "subject": f"Peer Evaluation Round — {title}",
+                "body": (
+                    f"Hello,\n\n"
+                    f"A new peer evaluation round has been initiated for your section.\n\n"
+                    f"Please evaluate your teammates using the link below:\n"
+                    f"{eval_link}\n\n"
+                    f"Due date: {due_at or 'To be announced'}\n\n"
+                    f"Thank you."
+                ),
+                "metadata": {
+                    "event_type": "PeerEvalInitiated",
+                    "round_id": round_id,
+                    "student_id": sid,
+                    "section_id": section_id,
+                },
+            }
+
+            try:
+                notif_resp = requests.post(
+                    f"{NOTIFICATION_URL}/publish-email",
+                    json=email_payload,
+                    timeout=REQUEST_TIMEOUT,
+                )
+                if notif_resp.status_code == 200:
+                    notification_results["sent"] += 1
+                else:
+                    notification_results["failed"] += 1
+            except Exception:
+                notification_results["failed"] += 1
+
+    # ── 5. Return result ──────────────────────────────────────────────
+    return jsonify({
+        "code": 201,
+        "data": {
+            "round": created_round,
+            "teams_count": len(teams),
+            "notification_results": notification_results,
+        },
+    }), 201
+
+
+@app.route("/dashboard/peer-eval/close", methods=["POST"])
+def close_peer_eval():
+    """
+    Instructor closes a peer evaluation round.
+
+    Flow:
+    1. Close the round in Peer Evaluation Service (returns reputation deltas)
+    2. Push each delta to the Reputation Service
+    3. Return summary
+    """
+    payload = request.get_json()
+    if not payload:
+        return jsonify({"code": 400, "message": "request body is required"}), 400
+
+    round_id = payload.get("round_id")
+    if not round_id:
+        return jsonify({"code": 400, "message": "round_id is required"}), 400
+
+    REPUTATION_URL = os.getenv("REPUTATION_URL", "http://localhost:3006/reputation")
+
+    # ── 1. Close round and get deltas ─────────────────────────────────
+    try:
+        close_resp = requests.post(
+            f"{PEER_EVAL_URL}/rounds/{round_id}/close",
+            json={},
+            timeout=REQUEST_TIMEOUT,
+        )
+        close_data = close_resp.json()
+        close_resp.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        return jsonify({"code": 502, "message": f"failed to close peer eval round: {str(e)}"}), 502
+
+    round_info = close_data.get("data", {}).get("round", {})
+    deltas = close_data.get("data", {}).get("reputation_deltas", [])
+
+    # ── 2. Push deltas to Reputation Service ──────────────────────────
+    reputation_results = {"updated": 0, "failed": 0}
+
+    for delta_entry in deltas:
+        student_id = delta_entry.get("student_id")
+        delta = delta_entry.get("delta", 0)
+
+        if delta == 0:
+            continue
+
+        try:
+            rep_resp = requests.put(
+                f"{REPUTATION_URL}/{student_id}",
+                json={"delta": delta},
+                timeout=REQUEST_TIMEOUT,
+            )
+            if rep_resp.status_code == 200:
+                reputation_results["updated"] += 1
+            else:
+                reputation_results["failed"] += 1
+        except Exception:
+            reputation_results["failed"] += 1
+
+    return jsonify({
+        "code": 200,
+        "data": {
+            "round": round_info,
+            "reputation_deltas": deltas,
+            "reputation_update_results": reputation_results,
+        },
+    }), 200
 
 
 @app.route("/dashboard/health", methods=["GET"])
