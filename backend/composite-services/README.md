@@ -204,7 +204,7 @@ This service orchestrates team generation and persistence by:
 
 1. Fetching student data from `student-profile` composite microservice.
 2. Fetching criteria/topics/skills from `formation-config` composite microservice.
-3. Fetching all student-form rows for the section from student-form atomic service.
+3. Fetching all student-form rows for the section from student-form atomic service (team-formation currently uses section_id filter).
 4. Deleting the fetched student-form rows for that section.
 5. Updating reputation by form submission result (`submitted=true` => `+2`, `submitted=false` => `-5`).
 6. Initializing missing reputation rows (`POST /reputation`) before `GET`/`PUT` reputation calls when needed.
@@ -343,7 +343,7 @@ Other possible downstream `502` messages include:
 ### Inputs consumed by team-formation composite
 - `GET {STUDENT_PROFILE_URL}?section_id=<uuid>`
 - `GET {FORMATION_CONFIG_URL}?section_id=<uuid>`
-- `GET {STUDENT_FORM_URL}?section_id=<uuid>`
+- `GET {STUDENT_FORM_URL}?section_id=<uuid>` (current team-formation usage; student-form API also supports student_id filtering)
 - `DELETE {STUDENT_FORM_URL}?section_id=<uuid>`
 - `GET {REPUTATION_URL}/{student_id}`
 - `POST {REPUTATION_URL}` with body `{ "student_id": <int> }`

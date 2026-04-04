@@ -162,6 +162,15 @@ def _build_openapi_spec(app: Flask, metadata: ServiceDocMetadata) -> Dict[str, A
             # If marshmallow is available, allow view functions to provide
             # `_openapi_request_schema` and `_openapi_response_schema` (Schema instances)
             view_func = app.view_functions.get(rule.endpoint)
+            if view_func is not None:
+                custom_description = getattr(view_func, "_openapi_description", None)
+                if custom_description:
+                    operation["description"] = custom_description
+
+                query_parameters = getattr(view_func, "_openapi_query_parameters", None)
+                if isinstance(query_parameters, list) and query_parameters:
+                    operation["parameters"] = [*operation.get("parameters", []), *query_parameters]
+
             if _HAS_MARSHMALLOW and view_func is not None:
                 req_schema = getattr(view_func, "_openapi_request_schema", None)
                 res_schema = getattr(view_func, "_openapi_response_schema", None)
