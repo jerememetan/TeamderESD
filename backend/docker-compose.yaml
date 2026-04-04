@@ -407,7 +407,7 @@ services:
       ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
-      STUDENT_SERVICE_URL: "http://kong-gateway:8000/students"
+      STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
       SECTION_URL: "http://section-service:3018/section"
       FORM_LINK_URL_TEMPLATE: "http://localhost:5173/student/{student_id}/form/{form_id}"
       FORM_LINK_SUBJECT: "Action Required: Complete Your Teamder Student Form"
@@ -422,7 +422,6 @@ services:
       - enrollment-service
       - section-service
       - student-form-service
-      - student-service
       - rabbitmq
 
   swap-orchestrator-service:
@@ -440,8 +439,8 @@ services:
       TEAM_URL: "http://team-service:3007/team"
       TEAM_SWAP_OPTIMIZE_URL: "http://team-swap-service:3013/team-swap/optimize"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
-      STUDENT_SERVICE_URL: "http://kong-gateway:8000/students"
-      STUDENT_BULK_URL: "http://kong-gateway:8000/students/bulk-info"
+      STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
+      STUDENT_BULK_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/students/bulk-info"
       REQUEST_TIMEOUT: 10
       RABBIT_HOST: rabbitmq
       RABBIT_PORT: 5672
@@ -453,7 +452,6 @@ services:
       - team-service
       - team-swap-service
       - enrollment-service
-      - student-service
       - rabbitmq
 
   docs-index-service:

@@ -1,7 +1,7 @@
 import json
 import os
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pika
 
@@ -49,7 +49,7 @@ def _connection_parameters() -> pika.ConnectionParameters:
     )
 
 
-def publish_notification_message(
+def _publish_notification_payload(
     payload: Dict[str, Any], routing_key: Optional[str] = None
 ) -> Tuple[bool, Optional[str]]:
     last_error = None
@@ -93,3 +93,25 @@ def publish_notification_message(
     )
 
     return False, last_error
+
+
+def publish_notification_message(
+    payload: Dict[str, Any], routing_key: Optional[str] = None
+) -> Tuple[bool, Optional[str]]:
+    # Backward-compatible single notification publish.
+    return _publish_notification_payload(payload=payload, routing_key=routing_key)
+
+
+def publish_notification_batch_message(
+    section_id: str,
+    notifications: List[Dict[str, Any]],
+    routing_key: Optional[str] = None,
+) -> Tuple[bool, Optional[str]]:
+    # Publish a single AMQP message that contains all notifications for a section.
+    # Consumer service fans this batch out to per-recipient emails.
+    batch_payload = {
+        "event_type": "FormLinksGeneratedBatch",
+        "section_id": section_id,
+        "notifications": notifications,
+    }
+    return _publish_notification_payload(payload=batch_payload, routing_key=routing_key)

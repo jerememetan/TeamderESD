@@ -74,10 +74,12 @@ TEAM_SWAP_OPTIMIZE_URL = os.getenv(
 ).rstrip("/")
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://localhost:3005/enrollment").rstrip("/")
 STUDENT_SERVICE_URL = os.getenv(
-    "STUDENT_SERVICE_URL", "http://localhost:3001/api/students"
+    "STUDENT_SERVICE_URL",
+    "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student",
 ).rstrip("/")
 STUDENT_BULK_URL = os.getenv(
-    "STUDENT_BULK_URL", f"{STUDENT_SERVICE_URL}/bulk-info"
+    "STUDENT_BULK_URL",
+    "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/students/bulk-info",
 ).rstrip("/")
 
 RABBIT_HOST = os.getenv("RABBIT_HOST", "rabbitmq")
