@@ -282,6 +282,8 @@ export function useTeamsPage(courseId, backendSectionId) {
   };
 
   const handleMemberSwapClick = (team, member) => {
+    console.log("TEAM",team)
+    console.log("MEMMBER", member)
     if (!swapMode) {
       return;
     }

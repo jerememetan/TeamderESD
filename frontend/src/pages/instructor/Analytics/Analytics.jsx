@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import {
@@ -23,7 +22,6 @@ import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import {
   buildSiblingGroupSummaryData,
-  buildTeamScoresData,
 } from "../../../adapters/analyticsAdapter";
 import { useAnalyticsPage } from "./logic/useAnalyticsPage";
 import styles from "./Analytics.module.css";
@@ -39,16 +37,24 @@ function Analytics() {
     rosterError,
   } = useAnalyticsPage(courseId, groupId);
 
-  const siblingGroupSummaryData = useMemo(
-    () => buildSiblingGroupSummaryData(selectedCourse?.groups ?? []),
-    [selectedCourse],
-  );
+  // API integration point (course-group comparison dataset):
+  // Endpoint candidate: GET /section?course_id={courseId}
+  // Expected object per section: { id, section_number, students_count }
+  // Optional enrichment: GET /team?section_ids={id1,id2,...} -> teams count per section
+  // Replace this placeholder row with a mapped array of sibling groups once endpoint shape is finalized.
+  const siblingGroupSummaryData = [
+    buildSiblingGroupSummaryData(
+      selectedCourse?.code + " " +selectedGroup?.code,
+      backendStudents.length,
+      groupTeams.length,
+    ),
+  ];
 
-  const teamScoresData = useMemo(
-    () => buildTeamScoresData(groupTeams),
-    [groupTeams],
-  );
-
+  console.log("COURSE",selectedCourse);
+  // API integration point (team diversity metrics):
+  // Endpoint candidate: GET /analytics?section_id={groupId} or GET /team/{team_id}/metrics
+  // Expected object per team: { team_id, team_name, skill_level_score, background_score, work_style_score }
+  // Keep this static fallback until analytics-service contract is finalized.
   const diversityData = [
     {
       metric: "Skill Level",
@@ -70,6 +76,16 @@ function Analytics() {
     },
   ];
 
+  // API integration point (overall section quality radar):
+  // Endpoint candidate: GET /analytics/section/{groupId}/quality
+  // Expected object: {
+  //   skill_balance: number,
+  //   team_cohesion: number,
+  //   diversity: number,
+  //   communication: number,
+  //   leadership: number
+  // }
+  // Transform backend keys into [{ metric, value }] for RadarChart.
   const radarData = [
     { metric: "Skill Balance", value: 85 },
     { metric: "Team Cohesion", value: 78 },
@@ -188,7 +204,7 @@ function Analytics() {
           </div>
         </ModuleBlock>
 
-        <ModuleBlock
+        {/* <ModuleBlock
           componentId="MOD-A5"
           eyebrow="Team Index"
           title={`Formation Scores :: ${selectedGroup.code}`}
@@ -213,7 +229,7 @@ function Analytics() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </ModuleBlock>
+        </ModuleBlock> */}
 
         <ModuleBlock
           componentId="MOD-A6"

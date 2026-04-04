@@ -71,17 +71,17 @@ export function normalizeAnalyticsTeams(teams = []) {
   });
 }
 
-export function buildSiblingGroupSummaryData(groups = []) {
-  return (Array.isArray(groups) ? groups : []).map((group) => ({
-    name: group.code,
-    students: toNumber(group.studentsCount, 0),
-    teams: toNumber(group.teamsCount, 0),
-  }));
+export function buildSiblingGroupSummaryData(Name, studentCount, TeamCount) {
+  return {
+    name: Name,
+    students: toNumber(studentCount, 0),
+    teams: toNumber(TeamCount, 0),
+  };
 }
 
 export function buildTeamScoresData(teams = []) {
   return (Array.isArray(teams) ? teams : []).map((team) => ({
     name: team.name,
-    score: toNumber(team.score, 0),
+    score: toNumber(team.score, 55),
   }));
 }
