@@ -8,6 +8,30 @@ const DASHBOARD_URL =
 const SWAP_REQUEST_URL =
   import.meta.env.VITE_SWAP_REQUEST_URL ?? "http://localhost:8000/swap-request";
 
+// API integration map (primary orchestrator path):
+// GET /dashboard
+// Expected envelope: { code, data }
+// Expected data object:
+// {
+//   totalCourses: number,
+//   totalGroups: number,
+//   totalStudents: number,
+//   pendingSwapRequests: number
+// }
+
+// API integration map (atomic fallback path):
+// GET /courses -> { code, data: { Courses: Course[] } }
+// GET /section -> { code, data: Section[] }
+// GET /enrollment -> { code, data: Enrollment[] }
+// GET /swap-request -> { code, data } where data may be nested as data.data
+// Fallback summary object returned by this service must always match:
+// {
+//   totalCourses: number,
+//   totalGroups: number,
+//   totalStudents: number,
+//   pendingSwapRequests: number
+// }
+
 function fallbackSummary() {
   return {
     totalCourses: 0,
@@ -26,6 +50,11 @@ function countPendingSwapRequests(requests = []) {
 
 async function fetchDashboardFromAtomicServices() {
   const fetchSwapRequests = async () => {
+    // Endpoint: GET /swap-request
+    // Supported payload shapes observed:
+    // 1) { code, data: SwapRequest[] }
+    // 2) { code, data: { data: SwapRequest[] } }
+    // SwapRequest object fields used here: { status }
     const payload = await fetchJson(SWAP_REQUEST_URL, {
       headers: { Accept: "application/json" },
       cache: false,
@@ -37,8 +66,14 @@ async function fetchDashboardFromAtomicServices() {
 
   const [coursesResult, sectionsResult, enrollmentsResult, swapsResult] =
     await Promise.allSettled([
+      // Endpoint: GET /courses
+      // Expected array item fields for this aggregate: only length is required.
       fetchAllCourses(),
+      // Endpoint: GET /section
+      // Expected array item fields for this aggregate: only length is required.
       fetchAllSections(),
+      // Endpoint: GET /enrollment
+      // Expected array item fields used here: { student_id } for unique student count.
       fetchAllEnrollments(),
       fetchSwapRequests(),
     ]);
@@ -69,6 +104,8 @@ async function fetchDashboardFromAtomicServices() {
 
 export async function fetchDashboardCoursesWithEnrollments() {
   try {
+    // Primary endpoint: GET /dashboard
+    // Preferred source because backend orchestrator owns dashboard contract.
     const payload = await fetchJson(DASHBOARD_URL, {
       headers: { Accept: "application/json" },
       cache: true,
@@ -83,8 +120,10 @@ export async function fetchDashboardCoursesWithEnrollments() {
   }
 
   try {
+    // Atomic fallback path keeps dashboard usable if orchestrator endpoint fails.
     return await fetchDashboardFromAtomicServices();
   } catch {
+    // Last-resort defensive fallback for complete backend outage.
     return fallbackSummary();
   }
 }
