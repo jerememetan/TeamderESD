@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { AlertTriangle, ArrowLeft, RefreshCw, Trash2 } from 'lucide-react';
 import ModuleBlock from '../../../components/schematic/ModuleBlock';
@@ -33,7 +33,7 @@ function ErrorLogs() {
     [logs],
   );
 
-  const loadLogs = async ({ silent = false } = {}) => {
+  const loadLogs = useCallback(async ({ silent = false } = {}) => {
     if (silent) {
       setIsRefreshing(true);
     } else {
@@ -55,11 +55,11 @@ function ErrorLogs() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [sourceFilter, statusFilter]);
 
   useEffect(() => {
     loadLogs();
-  }, [statusFilter, sourceFilter]);
+  }, [loadLogs]);
 
   const handleDelete = async (logId) => {
     const confirmed = window.confirm('Delete this error log? This will mark the row as DELETED.');

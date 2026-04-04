@@ -182,7 +182,7 @@ function CreateForm() {
     return () => {
       isMounted = false;
     };
-  }, [defaultState, selectedCourse, selectedGroup]);
+  }, [defaultState, groupId, selectedCourse, selectedGroup]);
   if (bootstrapError) {
     return <div className={styles.notFound}>{bootstrapError}</div>;
   }

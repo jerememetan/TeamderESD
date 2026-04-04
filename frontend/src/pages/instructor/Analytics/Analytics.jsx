@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import {
@@ -38,7 +38,6 @@ function Analytics() {
   const [selectedCourse,setSelectedCourse] = useState(null);
   const [selectedGroup,setSelectedGroup] = useState(null);
   const [groupTeams,setGroupTeams ]= useState([]);
-  console.log(groupTeams);
   const selectedCourseGroups = selectedCourse?.groups ?? [];
   const backendSectionId = getBackendSectionId(groupId || "");
   const rosterSectionId = backendSectionId || groupId;
@@ -59,7 +58,6 @@ function Analytics() {
       
     }
     loadTeams();
-    console.log("GROUP TEAMS",groupTeams);
   }, [rosterSectionId])
 
   useEffect(() =>{
@@ -104,7 +102,6 @@ function Analytics() {
     let isMounted = true;
 
     async function loadRoster() {
-      console.log("1");
       if (!rosterSectionId) {
         setBackendStudents([]);
         setIsLoadingRoster(false);

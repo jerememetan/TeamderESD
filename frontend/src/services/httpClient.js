@@ -43,7 +43,7 @@ function toErrorMessage(payload, response) {
 
 export async function fetchJson(url, options = {}) {
   const {
-    method = 'GET',
+    method = "GET",
     headers,
     body,
     cache = true,
@@ -54,7 +54,7 @@ export async function fetchJson(url, options = {}) {
 
   const normalizedMethod = method.toUpperCase();
   const key = createCacheKey(normalizedMethod, url, cacheKey);
-  const cacheable = cache && normalizedMethod === 'GET';
+  const cacheable = cache && normalizedMethod === "GET";
 
   if (cacheable) {
     const cachedValue = readCachedValue(key);
@@ -104,7 +104,7 @@ export async function fetchJson(url, options = {}) {
   }
 }
 
-export function invalidateFetchCache(prefix = '') {
+export function invalidateFetchCache(prefix = "") {
   if (!prefix) {
     responseCache.clear();
     inflightRequests.clear();

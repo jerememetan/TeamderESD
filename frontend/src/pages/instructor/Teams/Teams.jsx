@@ -13,9 +13,7 @@ import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
 import {
-  mockCourses,
   mockSwapRequests,
-  mockTeams,
 } from "../../../data/mockData";
 import { fetchEnrollmentsBySectionId } from "../../../services/enrollmentService";
 import { fetchAllStudents, buildSectionRoster } from "../../../services/studentService";
@@ -53,12 +51,6 @@ function Teams() {
 
 
   const [selectedGroup,setSelectedGroup] = useState(null);
-
-
-  const mockVisibleTeams = mockTeams.filter(
-    (team) =>
-      team.courseId === courseId && (!backendSectionId || team.groupId === backendSectionId),
-  );
   const visibleSwapRequests = swapRequestList.filter(
     (request) =>
       request.courseId === courseId &&
@@ -200,10 +192,6 @@ function Teams() {
     [backendTeams, rosterById, courseId, backendSectionId],
   );
 
-  const initialVisibleTeams = useMemo(
-    () => (backendVisibleTeams.length ? backendVisibleTeams : mockVisibleTeams),
-    [backendVisibleTeams, mockVisibleTeams],
-  );
   const teamDataSource = backendVisibleTeams.length ? "backend" : "mock";
 
   useEffect(() => {

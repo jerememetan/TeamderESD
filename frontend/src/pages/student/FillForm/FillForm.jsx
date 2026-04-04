@@ -492,7 +492,7 @@ function FillForm() {
           </div>
         </section>
         <div className={styles.chooserGrid}>
-          {availableFormList.map((form, index) => {
+          {availableFormList.map((form) => {
             return (
               <Link
                 key={form.id}

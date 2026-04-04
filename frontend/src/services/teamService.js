@@ -1,11 +1,14 @@
-import { fetchJson } from './httpClient';
+import { fetchJson } from "./httpClient";
 
-const TEAM_URL = import.meta.env.VITE_TEAM_URL ?? 'http://localhost:8000/team';
+const TEAM_URL = import.meta.env.VITE_TEAM_URL ?? "http://localhost:8000/team";
 
 export async function fetchTeamsBySection(sectionId) {
-  const payload = await fetchJson(`${TEAM_URL}?section_id=${encodeURIComponent(sectionId)}`, {
-    headers: { Accept: 'application/json' },
-  });
+  const payload = await fetchJson(
+    `${TEAM_URL}?section_id=${encodeURIComponent(sectionId)}`,
+    {
+      headers: { Accept: "application/json" },
+    },
+  );
 
   return payload?.data?.teams ?? [];
 }
@@ -16,11 +19,11 @@ export async function fetchTeamById(teamId) {
   }
 
   const payload = await fetchJson(`${TEAM_URL}/${encodeURIComponent(teamId)}`, {
-    headers: { Accept: 'application/json' },
+    headers: { Accept: "application/json" },
   });
 
   const team = payload?.data;
-  if (!team || typeof team !== 'object') {
+  if (!team || typeof team !== "object") {
     return null;
   }
 
@@ -42,10 +45,10 @@ export async function fetchTeamsBySections(sectionIds = []) {
   }
 
   const params = new URLSearchParams();
-  params.set('section_ids', uniqueSectionIds.join(','));
+  params.set("section_ids", uniqueSectionIds.join(","));
 
   const payload = await fetchJson(`${TEAM_URL}?${params.toString()}`, {
-    headers: { Accept: 'application/json' },
+    headers: { Accept: "application/json" },
   });
 
   const sections = payload?.data?.sections;
@@ -58,9 +61,9 @@ export async function fetchTeamsBySections(sectionIds = []) {
     if (!sectionId) {
       return acc;
     }
-    acc[sectionId] = Array.isArray(sectionEntry.teams) ? sectionEntry.teams : [];
+    acc[sectionId] = Array.isArray(sectionEntry.teams)
+      ? sectionEntry.teams
+      : [];
     return acc;
   }, {});
 }
-
-
