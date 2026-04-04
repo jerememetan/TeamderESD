@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
@@ -6,13 +5,7 @@ import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
 import StudentSwitcher from "../../../components/student/StudentSwitcher";
 import { useStudentSession } from "../../../services/studentSession";
-import {
-  getPeerEvaluationRound,
-  getPeerEvaluationSubmission,
-  submitPeerEvaluation,
-} from "../../../services/peerEvaluationService";
-import { fetchTeamsBySection } from "../../../services/teamService";
-import { fetchAllStudents, buildStudentMapByBackendId } from "../../../services/studentService";
+import { usePeerEvaluationForm } from "./logic/usePeerEvaluationForm";
 import styles from "./PeerEvaluationForm.module.css";
 import { Button } from "../../../components/ui/button";
 
@@ -27,95 +20,24 @@ function PeerEvaluationForm() {
     isLoadingStudents,
   } = useStudentSession(routeStudentId);
   const studentBasePath = `/student/${activeStudentRouteId}`;
-
-  const [round, setRound] = useState(null);
-  const [teams, setTeams] = useState([]);
-  const [studentsByBackendId, setStudentsByBackendId] = useState(new Map());
-  const [existingSubmission, setExistingSubmission] = useState(null);
-  const [responses, setResponses] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-
-  // Determine the current student's backend ID from available students
-  const currentBackendId = useMemo(() => activeStudent?.backendStudentId ?? null, [activeStudent]);
-
-  // Load round, teams, and profiles
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadAll() {
-      setIsLoading(true);
-      try {
-        const fetchedRound = await getPeerEvaluationRound(roundId || "");
-        if (!isMounted) return;
-        setRound(fetchedRound);
-
-        if (!fetchedRound || !fetchedRound.sectionId) {
-          setIsLoading(false);
-          return;
-        }
-
-        let sectionTeams = [];
-        try {
-          sectionTeams = await fetchTeamsBySection(fetchedRound.sectionId);
-        } catch (err) {
-          console.error("Failed to fetch teams:", err);
-        }
-        if (!isMounted) return;
-        setTeams(sectionTeams);
-
-        let students = [];
-        try {
-          students = await fetchAllStudents();
-        } catch (err) {
-          console.error("Failed to fetch students:", err);
-        }
-        if (!isMounted) return;
-        setStudentsByBackendId(buildStudentMapByBackendId(students));
-
-        if (currentBackendId) {
-          const submission = await getPeerEvaluationSubmission(
-            fetchedRound.id,
-            currentBackendId
-          );
-          if (isMounted) setExistingSubmission(submission);
-        }
-      } catch (err) {
-        console.error("Failed to load peer eval data:", err);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    }
-
-    loadAll();
-    return () => { isMounted = false; };
-  }, [roundId, currentBackendId]);
-
-  const myTeam = useMemo(() => {
-    if (!currentBackendId) return null;
-    return teams.find((team) =>
-      (team.students || []).some((s) => s.student_id === currentBackendId)
-    ) || null;
-  }, [teams, currentBackendId]);
-
-  const memberList = useMemo(() => {
-    if (!myTeam) return [];
-    return (myTeam.students || []).map((s) => {
-      const studentRecord = studentsByBackendId.get(Number(s.student_id));
-      return {
-        id: String(s.student_id),
-        name: String(studentRecord?.name || "").trim() || `Student ${s.student_id}`,
-        email: String(studentRecord?.email || "").trim() || "No email",
-        studentId: `ID-${s.student_id}`,
-      };
-    });
-  }, [myTeam, studentsByBackendId]);
-
-  const teammates = useMemo(
-    () => memberList.filter((m) => m.id !== String(currentBackendId)),
-    [memberList, currentBackendId]
-  );
+  const {
+    round,
+    currentBackendId,
+    myTeam,
+    memberList,
+    teammates,
+    existingSubmission,
+    responses,
+    isLoading,
+    isSubmitting,
+    submitError,
+    updateResponse,
+    submitResponses,
+  } = usePeerEvaluationForm({
+    roundId,
+    activeStudent,
+    isLoadingStudents,
+  });
 
   if (isLoading || isLoadingStudents) {
     return <div className={styles.notFound}>Loading peer evaluation...</div>;
@@ -171,48 +93,11 @@ function PeerEvaluationForm() {
     );
   }
 
-  const handleChange = (memberId, field, value) => {
-    setResponses((current) => ({
-      ...current,
-      [memberId]: {
-        ...current[memberId],
-        [field]: value,
-      },
-    }));
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError("");
-
-    const entries = teammates.map((member) => ({
-      evaluateeId: parseInt(member.id, 10),
-      rating: Number(responses[member.id]?.rating || 0),
-      justification: responses[member.id]?.justification || "",
-    }));
-
-    if (entries.some((e) => !e.rating)) {
-      setSubmitError("Please rate all teammates before submitting.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      await submitPeerEvaluation({
-        roundId: round.id,
-        evaluatorId: currentBackendId,
-        teamId: myTeam.team_id,
-        entries,
-      });
-
+    const success = await submitResponses();
+    if (success) {
       navigate(studentBasePath);
-    } catch (err) {
-      setSubmitError(
-        err.message || "Failed to submit evaluation. Please try again."
-      );
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -290,7 +175,7 @@ function PeerEvaluationForm() {
                     checked={
                       Number(responses[member.id]?.rating || 0) === score
                     }
-                    onChange={() => handleChange(member.id, "rating", score)}
+                    onChange={() => updateResponse(member.id, "rating", score)}
                     className={styles.hiddenInput}
                     required
                   />
@@ -304,7 +189,7 @@ function PeerEvaluationForm() {
               <textarea
                 value={responses[member.id]?.justification || ""}
                 onChange={(event) =>
-                  handleChange(member.id, "justification", event.target.value)
+                  updateResponse(member.id, "justification", event.target.value)
                 }
                 rows={4}
                 className={styles.textarea}

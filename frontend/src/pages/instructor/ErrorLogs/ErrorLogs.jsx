@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router';
-import { AlertTriangle, ArrowLeft, RefreshCw, Trash2 } from 'lucide-react';
-import ModuleBlock from '../../../components/schematic/ModuleBlock';
-import SystemTag from '../../../components/schematic/SystemTag';
-import { Button } from '../../../components/ui/button';
-import chrome from '../../../styles/instructorChrome.module.css';
-import styles from './ErrorLogs.module.css';
-import { deleteErrorLog, fetchErrorLogs } from '../../../services/errorLogService';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
+import { AlertTriangle, ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
+import ModuleBlock from "../../../components/schematic/ModuleBlock";
+import SystemTag from "../../../components/schematic/SystemTag";
+import { Button } from "../../../components/ui/button";
+import chrome from "../../../styles/instructorChrome.module.css";
+import styles from "./ErrorLogs.module.css";
+import {
+  deleteErrorLog,
+  fetchErrorLogs,
+} from "../../../services/errorLogService";
 
 function formatContext(contextJson) {
   if (!contextJson) {
-    return 'No context payload was recorded.';
+    return "No context payload was recorded.";
   }
 
   try {
@@ -22,47 +25,55 @@ function formatContext(contextJson) {
 
 function ErrorLogs() {
   const [logs, setLogs] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const visibleSources = useMemo(
-    () => Array.from(new Set(logs.map((log) => log.source_service).filter(Boolean))).sort(),
+    () =>
+      Array.from(
+        new Set(logs.map((log) => log.source_service).filter(Boolean)),
+      ).sort(),
     [logs],
   );
 
-  const loadLogs = useCallback(async ({ silent = false } = {}) => {
-    if (silent) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
+  const loadLogs = useCallback(
+    async ({ silent = false } = {}) => {
+      if (silent) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
 
-    setErrorMessage('');
+      setErrorMessage("");
 
-    try {
-      const nextLogs = await fetchErrorLogs({
-        status: statusFilter,
-        sourceService: sourceFilter || undefined,
-      });
-      setLogs(nextLogs);
-    } catch (error) {
-      setErrorMessage(error.message);
-      setLogs([]);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [sourceFilter, statusFilter]);
+      try {
+        const nextLogs = await fetchErrorLogs({
+          status: statusFilter,
+          sourceService: sourceFilter || undefined,
+        });
+        setLogs(nextLogs);
+      } catch (error) {
+        setErrorMessage(error.message);
+        setLogs([]);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [sourceFilter, statusFilter],
+  );
 
   useEffect(() => {
     loadLogs();
   }, [loadLogs]);
 
   const handleDelete = async (logId) => {
-    const confirmed = window.confirm('Delete this error log? This will mark the row as DELETED.');
+    const confirmed = window.confirm(
+      "Delete this error log? This will mark the row as DELETED.",
+    );
     if (!confirmed) {
       return;
     }
@@ -94,19 +105,23 @@ function ErrorLogs() {
       </section>
 
       <div className={chrome.toolbar}>
-        {['all', 'OPEN', 'DELETED'].map((status) => (
+        {["all", "OPEN", "DELETED"].map((status) => (
           <Button
             key={status}
             onClick={() => setStatusFilter(status)}
-            variant={statusFilter === status ? 'default' : 'outline'}
+            variant={statusFilter === status ? "default" : "outline"}
             size="sm"
           >
-            <span>{status === 'all' ? 'All logs' : status}</span>
+            <span>{status === "all" ? "All logs" : status}</span>
           </Button>
         ))}
-        <Button onClick={() => loadLogs({ silent: true })} variant="outline" size="sm">
+        <Button
+          onClick={() => loadLogs({ silent: true })}
+          variant="outline"
+          size="sm"
+        >
           <RefreshCw className={chrome.buttonIcon} />
-          {isRefreshing ? 'Refreshing' : 'Refresh'}
+          {isRefreshing ? "Refreshing" : "Refresh"}
         </Button>
         <label className={styles.filterField}>
           <span className={styles.filterLabel}>Source service</span>
@@ -126,17 +141,36 @@ function ErrorLogs() {
       </div>
 
       {errorMessage ? (
-        <ModuleBlock componentId="MOD-ERR0" eyebrow="Load Error" title="Unable to load logs" accent="orange">
+        <ModuleBlock
+          componentId="MOD-ERR0"
+          eyebrow="Load Error"
+          title="Unable to load logs"
+          accent="orange"
+        >
           <p className={styles.errorText}>{errorMessage}</p>
         </ModuleBlock>
       ) : null}
 
       <div className={styles.logList}>
         {isLoading ? (
-          <ModuleBlock componentId="MOD-ERR1" eyebrow="Loading" title="Fetching error logs" metric="..." metricLabel="Records" />
+          <ModuleBlock
+            componentId="MOD-ERR1"
+            eyebrow="Loading"
+            title="Fetching error logs"
+            metric="..."
+            metricLabel="Records"
+          />
         ) : logs.length === 0 ? (
-          <ModuleBlock componentId="MOD-ERR2" eyebrow="Queue State" title="No error logs" metric="00" metricLabel="Visible records">
-            <p className={styles.emptyText}>No error events match the current filters.</p>
+          <ModuleBlock
+            componentId="MOD-ERR2"
+            eyebrow="Queue State"
+            title="No error logs"
+            metric="00"
+            metricLabel="Visible records"
+          >
+            <p className={styles.emptyText}>
+              No error events match the current filters.
+            </p>
           </ModuleBlock>
         ) : (
           logs.map((log, index) => (
@@ -145,20 +179,38 @@ function ErrorLogs() {
               componentId={`MOD-ERR${index + 10}`}
               eyebrow={`#${log.id}`}
               title={log.error_message}
-              accent={log.status === 'DELETED' ? 'blue' : 'orange'}
+              accent={log.status === "DELETED" ? "blue" : "orange"}
               actions={
-                <Button onClick={() => handleDelete(log.id)} variant="warning" size="sm">
+                <Button
+                  onClick={() => handleDelete(log.id)}
+                  variant="warning"
+                  size="sm"
+                >
                   <Trash2 className={chrome.buttonIcon} /> Remove
                 </Button>
               }
             >
               <div className={styles.metaRow}>
-                <SystemTag tone={log.status === 'DELETED' ? 'neutral' : 'alert'}>{log.status}</SystemTag>
-                {log.error_code ? <SystemTag tone="warning">{log.error_code}</SystemTag> : null}
+                <SystemTag
+                  tone={log.status === "DELETED" ? "neutral" : "alert"}
+                >
+                  {log.status}
+                </SystemTag>
+                {log.error_code ? (
+                  <SystemTag tone="warning">{log.error_code}</SystemTag>
+                ) : null}
                 <p className={chrome.metaPill}>Source | {log.source_service}</p>
-                <p className={chrome.metaPill}>Routing key | {log.routing_key}</p>
-                <p className={chrome.metaPill}>Created | {new Date(log.created_at).toLocaleString()}</p>
-                {log.correlation_id ? <p className={chrome.metaPill}>Correlation | {log.correlation_id}</p> : null}
+                <p className={chrome.metaPill}>
+                  Routing key | {log.routing_key}
+                </p>
+                <p className={chrome.metaPill}>
+                  Created | {new Date(log.created_at).toLocaleString()}
+                </p>
+                {log.correlation_id ? (
+                  <p className={chrome.metaPill}>
+                    Correlation | {log.correlation_id}
+                  </p>
+                ) : null}
               </div>
 
               <div className={styles.contextBox}>
@@ -166,7 +218,9 @@ function ErrorLogs() {
                   <AlertTriangle className={styles.contextIcon} />
                   <p className={styles.contextLabel}>Context payload</p>
                 </div>
-                <pre className={styles.contextText}>{formatContext(log.context_json)}</pre>
+                <pre className={styles.contextText}>
+                  {formatContext(log.context_json)}
+                </pre>
               </div>
             </ModuleBlock>
           ))

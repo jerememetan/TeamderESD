@@ -1,78 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
-import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
 import chrome from "../../../styles/instructorChrome.module.css";
-import { fetchCourseByCode } from "../../../services/courseService";
-import { getSectionById } from "../../../services/sectionService";
-import { fetchAllStudents } from "../../../services/studentService";
-import {
-  fetchSubmittedStudentFormsBySectionId,
-  fetchUnsubmittedStudentFormsBySectionId,
-} from "../../../services/studentFormService";
-import { buildCompletionStatus } from "./logic/buildCompletionStatus";
+import { useCompletionStatus } from "./logic/useCompletionStatus";
 import styles from "./CompletionStatus.module.css";
 
 function CompletionStatus() {
   const { courseId, groupId } = useParams();
-  const [course, setCourse] = useState(null);
-  const [group, setGroup] = useState(null);
-  const [status, setStatus] = useState({
-    total: 0,
-    submitted: [],
-    notSubmitted: [],
-    percentage: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function load() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const [nextCourse, nextGroup] = await Promise.all([
-          fetchCourseByCode(courseId),
-          getSectionById(groupId),
-        ]);
-
-        const [students, submittedForms, unsubmittedForms] = await Promise.all([
-          fetchAllStudents(),
-          fetchSubmittedStudentFormsBySectionId(groupId),
-          fetchUnsubmittedStudentFormsBySectionId(groupId),
-        ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setCourse(nextCourse);
-        setGroup(nextGroup);
-        setStatus(buildCompletionStatus(submittedForms, unsubmittedForms, students));
-      } catch (loadError) {
-        if (!isMounted) {
-          return;
-        }
-        setError(
-          `Completion status load failed: ${loadError?.message || String(loadError)}`,
-        );
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, [courseId, groupId]);
+  const { course, group, status, loading, error } = useCompletionStatus(
+    courseId,
+    groupId,
+  );
 
   const submittedLabel = useMemo(
     () => `${status.submitted.length} submitted`,

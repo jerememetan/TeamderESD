@@ -41,7 +41,8 @@ function CreateForm() {
   // takes course Id and Group ID from the params (already configured)
   const { courseId, groupId } = useParams();
   const location = useLocation();
-  const isReadOnly = new URLSearchParams(location.search).get("mode") === "view";
+  const isReadOnly =
+    new URLSearchParams(location.search).get("mode") === "view";
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -60,15 +61,16 @@ function CreateForm() {
   const [isPublishingLinks, setIsPublishingLinks] = useState(false);
   const [activePanel, setActivePanel] = useState("parameters");
   const [studentCount, setStudentCount] = useState(0);
-  
-  
+
   useEffect(() => {
     async function fetchStudentCount() {
       try {
         const res = await fetchEnrollmentCountBySectionId(groupId);
         setStudentCount(res);
       } catch (error) {
-        setErrorMessage(`Failed to load enrollment count. ${error?.message || String(error)}`);
+        setErrorMessage(
+          `Failed to load enrollment count. ${error?.message || String(error)}`,
+        );
       }
     }
 
@@ -89,7 +91,9 @@ function CreateForm() {
         if (!isMounted) {
           return;
         }
-        setBootstrapError(`Course load failed. ${error?.message || String(error)}`);
+        setBootstrapError(
+          `Course load failed. ${error?.message || String(error)}`,
+        );
       }
     }
 
@@ -114,7 +118,9 @@ function CreateForm() {
         if (!isMounted) {
           return;
         }
-        setBootstrapError(`Section load failed. ${error?.message || String(error)}`);
+        setBootstrapError(
+          `Section load failed. ${error?.message || String(error)}`,
+        );
       }
     }
 
@@ -124,7 +130,6 @@ function CreateForm() {
       isMounted = false;
     };
   }, [groupId]);
-
 
   useEffect(() => {
     let isMounted = true;
@@ -165,7 +170,9 @@ function CreateForm() {
         setFormState(defaultState);
         const message = error?.message || String(error);
         if (String(message).includes("404")) {
-          setSaveMessage("No existing formation criteria found yet. You can configure and save now.");
+          setSaveMessage(
+            "No existing formation criteria found yet. You can configure and save now.",
+          );
         } else {
           setErrorMessage(`Backend load failed. ${message}`);
         }
@@ -276,11 +283,15 @@ function CreateForm() {
     setIsSaving(true);
     setSaveMessage("");
     setErrorMessage("");
-    const backendCourseId = selectedCourse?.id || selectedCourse?.course_id || null;
-    const backendSectionId = selectedGroup?.id || selectedGroup?.section_id || null;
+    const backendCourseId =
+      selectedCourse?.id || selectedCourse?.course_id || null;
+    const backendSectionId =
+      selectedGroup?.id || selectedGroup?.section_id || null;
 
     if (!backendCourseId || !backendSectionId) {
-      setErrorMessage("Cannot save because course/section backend identifiers are missing.");
+      setErrorMessage(
+        "Cannot save because course/section backend identifiers are missing.",
+      );
       setIsSaving(false);
       return false;
     }
@@ -294,7 +305,6 @@ function CreateForm() {
       await saveFormationConfig(payload);
       setSaveMessage("Formation criteria saved.");
       return true;
-
     } catch (error) {
       setErrorMessage(`Save failed. ${error.message}`);
       return false;
@@ -413,7 +423,7 @@ function CreateForm() {
         return;
       }
 
-      const result = await sendFormLinks({"section_id": groupId});
+      const result = await sendFormLinks({ section_id: groupId });
       const data = result?.data || {};
       setSaveMessage(
         `Criteria saved and forms dispatched. Generated ${data.summary?.total_students ?? 0} link(s); notification success: ${data.summary?.success_count ?? 0}, failure: ${data.summary?.failure_count ?? 0}.`,
@@ -454,11 +464,11 @@ function CreateForm() {
               min="2"
               value={formState.numGroups}
               onChange={(event) => {
-                const newNumGroups = Math.max(2, Number(event.target.value) || 2);
-                setStateValue(
-                  "numGroups",
-                  newNumGroups,
+                const newNumGroups = Math.max(
+                  2,
+                  Number(event.target.value) || 2,
                 );
+                setStateValue("numGroups", newNumGroups);
               }}
               className={styles.input}
               disabled={isReadOnly}
@@ -478,7 +488,10 @@ function CreateForm() {
                 }
                 return (
                   <p className={styles.infoText}>
-                    <strong>{baseSize}–{baseSize + 1}</strong> members per group
+                    <strong>
+                      {baseSize}–{baseSize + 1}
+                    </strong>{" "}
+                    members per group
                   </p>
                 );
               })()}
@@ -516,26 +529,38 @@ function CreateForm() {
       metric: formState.topics.length,
       metricLabel: "Topics saved",
       actions: (
-        <Button onClick={addTopic} variant="default" size="sm" disabled={isReadOnly}>
+        <Button
+          onClick={addTopic}
+          variant="default"
+          size="sm"
+          disabled={isReadOnly}
+        >
           <Plus className={styles.buttonIcon} /> Add topic
         </Button>
       ),
       content: (
         <div className={styles.criteriaList}>
           {renderWeightControl("topic_weight", styles.fullRow)}
-          {formState.topics.length === 0 && Math.abs(Number(formState.weights?.topic_weight || 0)) > 0.0001 ? (
+          {formState.topics.length === 0 &&
+          Math.abs(Number(formState.weights?.topic_weight || 0)) > 0.0001 ? (
             <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
               <AlertTriangle className={styles.warningIcon} />
               <span>
-                Topic weighting is configured but no project topics are defined. Add one or more topics so the topic weighting can meaningfully influence team formation.
+                Topic weighting is configured but no project topics are defined.
+                Add one or more topics so the topic weighting can meaningfully
+                influence team formation.
               </span>
             </div>
           ) : null}
-          {formState.topics.length > 0 && Math.abs(Number(formState.weights?.topic_weight || 0)) <= 0.0001 ? (
+          {formState.topics.length > 0 &&
+          Math.abs(Number(formState.weights?.topic_weight || 0)) <= 0.0001 ? (
             <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
               <AlertTriangle className={styles.warningIcon} />
               <span>
-                Project topics are present, but the topic weight is set to zero. With a zero weight, topics will not affect team formation — raise the topic weighting to have these topics influence results.
+                Project topics are present, but the topic weight is set to zero.
+                With a zero weight, topics will not affect team formation —
+                raise the topic weighting to have these topics influence
+                results.
               </span>
             </div>
           ) : null}
@@ -597,26 +622,38 @@ function CreateForm() {
       metric: formState.skills.length,
       metricLabel: "Skills tracked",
       actions: (
-        <Button onClick={addSkill} variant="default" size="sm" disabled={isReadOnly}>
+        <Button
+          onClick={addSkill}
+          variant="default"
+          size="sm"
+          disabled={isReadOnly}
+        >
           <Plus className={styles.buttonIcon} /> Add skill
         </Button>
       ),
       content: (
         <div className={styles.criteriaList}>
           {renderWeightControl("skill_weight", styles.fullRow)}
-          {formState.skills.length === 0 && Math.abs(Number(formState.weights?.skill_weight || 0)) > 0.0001 ? (
+          {formState.skills.length === 0 &&
+          Math.abs(Number(formState.weights?.skill_weight || 0)) > 0.0001 ? (
             <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
               <AlertTriangle className={styles.warningIcon} />
               <span>
-                Skill weighting is configured but no skills are defined. Add one or more skills so the skill weighting can meaningfully influence team formation.
+                Skill weighting is configured but no skills are defined. Add one
+                or more skills so the skill weighting can meaningfully influence
+                team formation.
               </span>
             </div>
           ) : null}
-          {formState.skills.length > 0 && Math.abs(Number(formState.weights?.skill_weight || 0)) <= 0.0001 ? (
+          {formState.skills.length > 0 &&
+          Math.abs(Number(formState.weights?.skill_weight || 0)) <= 0.0001 ? (
             <div className={`${styles.inlineWarning} ${styles.fullRow}`}>
               <AlertTriangle className={styles.warningIcon} />
               <span>
-                Skills are defined, but the skill weight is currently zero. With zero weighting, skills will not be considered during team formation—increase the skill weighting to make these skills count.
+                Skills are defined, but the skill weight is currently zero. With
+                zero weighting, skills will not be considered during team
+                formation—increase the skill weighting to make these skills
+                count.
               </span>
             </div>
           ) : null}
@@ -658,7 +695,8 @@ function CreateForm() {
                 />
                 <div className={styles.field}>
                   <span className={styles.fieldLabel}>
-                    Skill importance ({Number(skill.skill_importance || 0).toFixed(2)})
+                    Skill importance (
+                    {Number(skill.skill_importance || 0).toFixed(2)})
                   </span>
                   <input
                     type="range"
@@ -714,19 +752,27 @@ function CreateForm() {
       <div className={styles.statusPanel}>
         <div>
           <p className={styles.statusLabel}>Formation Configuration</p>
-          <p className={styles.statusText}> Configuring for 
-            <strong> {selectedCourse.code}G{selectedGroup.section_number}</strong>
+          <p className={styles.statusText}>
+            {" "}
+            Configuring for
+            <strong>
+              {" "}
+              {selectedCourse.code}G{selectedGroup.section_number}
+            </strong>
           </p>
         </div>
 
-        <p className={styles.summaryMeta}>Total Students: {studentCount} students</p>
+        <p className={styles.summaryMeta}>
+          Total Students: {studentCount} students
+        </p>
       </div>
 
       {errorMessage ? (
         <div className={styles.feedbackAlert}>
           <AlertTriangle className={styles.feedbackIcon} />
           <span>
-            {errorMessage} <Link to="/instructor/error-logs">Go to Error Logs</Link>
+            {errorMessage}{" "}
+            <Link to="/instructor/error-logs">Go to Error Logs</Link>
           </span>
         </div>
       ) : null}
@@ -787,14 +833,18 @@ function CreateForm() {
             <Button
               variant="default"
               onClick={handleSaveDraft}
-              disabled={isReadOnly || isSaving || isLoading || isPublishingLinks}
+              disabled={
+                isReadOnly || isSaving || isLoading || isPublishingLinks
+              }
             >
               {isSaving ? "Saving draft..." : "Save Draft"}
             </Button>
             <Button
               variant="success"
               onClick={handleSaveAndContinue}
-              disabled={isReadOnly || isSaving || isLoading || isPublishingLinks}
+              disabled={
+                isReadOnly || isSaving || isLoading || isPublishingLinks
+              }
             >
               {isPublishingLinks
                 ? formsRequired

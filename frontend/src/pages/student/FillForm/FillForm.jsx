@@ -13,7 +13,10 @@ import { fetchAllCourses } from "../../../services/courseService";
 import { fetchAllSections } from "../../../services/sectionService";
 import { fetchStudentForms } from "../../../services/studentFormService";
 import { submitStudentForm } from "../../../services/studentFormSubmissionService";
-import { fetchAllStudents, buildStudentMapByBackendId } from "../../../services/studentService";
+import {
+  fetchAllStudents,
+  buildStudentMapByBackendId,
+} from "../../../services/studentService";
 import { useStudentSession } from "../../../services/studentSession";
 import styles from "./FillForm.module.css";
 
@@ -70,7 +73,9 @@ function FillForm() {
   const [isLoadingBuddyOptions, setIsLoadingBuddyOptions] = useState(false);
   const [formLoadError, setFormLoadError] = useState("");
   const [formationConfig, setFormationConfig] = useState(null);
-  const [fieldVisibility, setFieldVisibility] = useState(DEFAULT_FIELD_VISIBILITY);
+  const [fieldVisibility, setFieldVisibility] = useState(
+    DEFAULT_FIELD_VISIBILITY,
+  );
   const [buddyOptions, setBuddyOptions] = useState([]);
   const [buddyRequestStudentId, setBuddyRequestStudentId] = useState("");
   const [mbti, setMbti] = useState("");
@@ -94,7 +99,9 @@ function FillForm() {
       try {
         const backendStudentId = Number(activeStudent.backendStudentId);
         if (!Number.isFinite(backendStudentId)) {
-          throw new Error("Unable to resolve a backend student id for the selected student.");
+          throw new Error(
+            "Unable to resolve a backend student id for the selected student.",
+          );
         }
 
         const [forms, sections, courses] = await Promise.all([
@@ -160,7 +167,9 @@ function FillForm() {
           return;
         }
         setAvailableForms([]);
-        setFormsError(error?.message || "Unable to load forms for this student.");
+        setFormsError(
+          error?.message || "Unable to load forms for this student.",
+        );
       } finally {
         if (!ignore) {
           setIsLoadingForms(false);
@@ -179,16 +188,24 @@ function FillForm() {
     () => availableForms.filter((form) => !form.submitted),
     [availableForms],
   );
-  const resolvedForm = formId ? availableForms.find((form) => form.id === formId) : null;
+  const resolvedForm = formId
+    ? availableForms.find((form) => form.id === formId)
+    : null;
   const chooserMode = !formId;
   const studentBasePath = `/student/${activeStudentRouteId}`;
 
   const resolvedAssignmentLabel = resolvedForm?.title || "Course form";
 
-  const sectionSkills = Array.isArray(formationConfig?.skills) ? formationConfig.skills : [];
-  const sectionTopics = Array.isArray(formationConfig?.topics) ? formationConfig.topics : [];
-  const shouldCollectSkills = fieldVisibility.skillEnabled && sectionSkills.length > 0;
-  const shouldCollectTopics = fieldVisibility.topicEnabled && sectionTopics.length > 0;
+  const sectionSkills = Array.isArray(formationConfig?.skills)
+    ? formationConfig.skills
+    : [];
+  const sectionTopics = Array.isArray(formationConfig?.topics)
+    ? formationConfig.topics
+    : [];
+  const shouldCollectSkills =
+    fieldVisibility.skillEnabled && sectionSkills.length > 0;
+  const shouldCollectTopics =
+    fieldVisibility.topicEnabled && sectionTopics.length > 0;
   const shouldCollectMbti = fieldVisibility.mbtiEnabled;
   const shouldCollectBuddy = fieldVisibility.buddyEnabled;
 
@@ -204,7 +221,13 @@ function FillForm() {
     return () => {
       window.clearTimeout(redirectHandle);
     };
-  }, [formId, isLoadingForms, navigate, resolvedForm?.submitted, studentBasePath]);
+  }, [
+    formId,
+    isLoadingForms,
+    navigate,
+    resolvedForm?.submitted,
+    studentBasePath,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -240,7 +263,9 @@ function FillForm() {
         const effectiveSectionId = matchingForms[0]?.sectionId || sectionId;
 
         if (!effectiveSectionId) {
-          throw new Error("Unable to resolve a valid section for this student form.");
+          throw new Error(
+            "Unable to resolve a valid section for this student form.",
+          );
         }
 
         const configResponse = await fetchFormationConfig(effectiveSectionId);
@@ -249,8 +274,12 @@ function FillForm() {
         }
 
         const nextVisibility = resolveFormationFieldVisibility(configResponse);
-        const skills = Array.isArray(configResponse?.skills) ? configResponse.skills : [];
-        const topics = Array.isArray(configResponse?.topics) ? configResponse.topics : [];
+        const skills = Array.isArray(configResponse?.skills)
+          ? configResponse.skills
+          : [];
+        const topics = Array.isArray(configResponse?.topics)
+          ? configResponse.topics
+          : [];
 
         setFormationConfig(configResponse);
         setFieldVisibility(nextVisibility);
@@ -289,7 +318,10 @@ function FillForm() {
           new Set(
             (Array.isArray(enrollments) ? enrollments : [])
               .map((enrollment) => Number(enrollment?.student_id))
-              .filter((studentId) => Number.isFinite(studentId) && studentId !== activeStudentId),
+              .filter(
+                (studentId) =>
+                  Number.isFinite(studentId) && studentId !== activeStudentId,
+              ),
           ),
         );
 
@@ -315,7 +347,9 @@ function FillForm() {
         setSkillScores({});
         setTopicRankings({});
         setBuddyOptions([]);
-        setFormLoadError(error?.message || "Unable to load section form configuration.");
+        setFormLoadError(
+          error?.message || "Unable to load section form configuration.",
+        );
       } finally {
         if (isMounted) {
           setIsLoadingConfig(false);
@@ -345,7 +379,9 @@ function FillForm() {
         <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
-        <p className={styles.notFound}>{studentLoadError || "Backend student data is unavailable."}</p>
+        <p className={styles.notFound}>
+          {studentLoadError || "Backend student data is unavailable."}
+        </p>
       </div>
     );
   }
@@ -380,7 +416,9 @@ function FillForm() {
         <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
-        <p className={styles.notFound}>No unsubmitted form entries are available for this student.</p>
+        <p className={styles.notFound}>
+          No unsubmitted form entries are available for this student.
+        </p>
       </div>
     );
   }
@@ -391,7 +429,11 @@ function FillForm() {
         <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
-        <ModuleBlock componentId="MOD-FLOAD-DETAIL" eyebrow="Loading" title="Loading form">
+        <ModuleBlock
+          componentId="MOD-FLOAD-DETAIL"
+          eyebrow="Loading"
+          title="Loading form"
+        >
           <p>Resolving this form record for the selected student...</p>
         </ModuleBlock>
       </div>
@@ -411,7 +453,9 @@ function FillForm() {
 
       const resolvedSectionId = String(resolvedForm.sectionId || "").trim();
       if (!resolvedSectionId) {
-        throw new Error("Unable to resolve section_id for this form submission.");
+        throw new Error(
+          "Unable to resolve section_id for this form submission.",
+        );
       }
 
       const normalizedSkills = shouldCollectSkills
@@ -424,7 +468,11 @@ function FillForm() {
         : [];
 
       const invalidSkills = normalizedSkills.filter(
-        (row) => !row.skill_id || !Number.isFinite(row.skill_level) || row.skill_level < 0 || row.skill_level > 5,
+        (row) =>
+          !row.skill_id ||
+          !Number.isFinite(row.skill_level) ||
+          row.skill_level < 0 ||
+          row.skill_level > 5,
       );
       if (invalidSkills.length) {
         throw new Error("Each skill score must be a value between 0 and 5.");
@@ -441,22 +489,34 @@ function FillForm() {
         (row) => !row.topic_id || !Number.isFinite(row.rank) || row.rank < 1,
       );
       if (invalidTopics.length) {
-        throw new Error("Please rank every project topic from most preferred to least preferred.");
+        throw new Error(
+          "Please rank every project topic from most preferred to least preferred.",
+        );
       }
 
-      const sortedTopicRanks = normalizedTopics.map((topic) => topic.rank).sort((a, b) => a - b);
-      const hasInvalidTopicOrder = sortedTopicRanks.some((rankValue, index) => rankValue !== index + 1);
+      const sortedTopicRanks = normalizedTopics
+        .map((topic) => topic.rank)
+        .sort((a, b) => a - b);
+      const hasInvalidTopicOrder = sortedTopicRanks.some(
+        (rankValue, index) => rankValue !== index + 1,
+      );
       if (hasInvalidTopicOrder) {
-        throw new Error("Topic ranks must be unique and contiguous starting from 1.");
+        throw new Error(
+          "Topic ranks must be unique and contiguous starting from 1.",
+        );
       }
 
       const payload = {
         section_id: resolvedSectionId,
         student_id: activeStudent.backendStudentId,
-        ...(shouldCollectBuddy && buddyRequestStudentId ? { buddy_id: Number(buddyRequestStudentId) } : {}),
+        ...(shouldCollectBuddy && buddyRequestStudentId
+          ? { buddy_id: Number(buddyRequestStudentId) }
+          : {}),
         ...(shouldCollectMbti && mbti.trim() ? { mbti: mbti.trim() } : {}),
         ...(normalizedSkills.length ? { skill_scores: normalizedSkills } : {}),
-        ...(normalizedTopics.length ? { topic_rankings: normalizedTopics } : {}),
+        ...(normalizedTopics.length
+          ? { topic_rankings: normalizedTopics }
+          : {}),
       };
 
       await submitStudentForm(payload);
@@ -488,7 +548,9 @@ function FillForm() {
             <p className={styles.subtitle}>Available forms</p>
           </div>
           <div className={styles.heroMeta}>
-            <SystemTag tone="neutral">{availableFormCount} forms available</SystemTag>
+            <SystemTag tone="neutral">
+              {availableFormCount} forms available
+            </SystemTag>
           </div>
         </section>
         <div className={styles.chooserGrid}>
@@ -499,10 +561,7 @@ function FillForm() {
                 to={`/student/${activeStudentRouteId}/form/${form.id}`}
                 className={styles.chooserCard}
               >
-                <ModuleBlock
-                  eyebrow="Course"
-                  title={form.title}
-                >
+                <ModuleBlock eyebrow="Course" title={form.title}>
                   <p className={styles.chooserMeta}>{form.description}</p>
                   <p className={styles.subtitle}>Open form entry</p>
                 </ModuleBlock>
@@ -520,9 +579,14 @@ function FillForm() {
         <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
-        <ModuleBlock componentId="MOD-FSUB" eyebrow="Submitted" title="Form already submitted">
+        <ModuleBlock
+          componentId="MOD-FSUB"
+          eyebrow="Submitted"
+          title="Form already submitted"
+        >
           <p className={styles.subtitle}>
-            This form has already been submitted. Redirecting you back to your dashboard...
+            This form has already been submitted. Redirecting you back to your
+            dashboard...
           </p>
           <div className={styles.actionRow}>
             <Button type="button" onClick={() => navigate(studentBasePath)}>
@@ -540,7 +604,9 @@ function FillForm() {
         <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
-        <p className={styles.notFound}>Backend form records are not available for this route.</p>
+        <p className={styles.notFound}>
+          Backend form records are not available for this route.
+        </p>
       </div>
     );
   }
@@ -560,26 +626,46 @@ function FillForm() {
         </div>
       </section>
 
-      {formSubmissionError ? <p className={styles.notFound}>{formSubmissionError}</p> : null}
+      {formSubmissionError ? (
+        <p className={styles.notFound}>{formSubmissionError}</p>
+      ) : null}
 
       <form onSubmit={handleSubmit} className={styles.form}>
         {isLoadingConfig ? (
-          <ModuleBlock componentId="MOD-CONFIG" eyebrow="Loading" title="Loading formation config">
+          <ModuleBlock
+            componentId="MOD-CONFIG"
+            eyebrow="Loading"
+            title="Loading formation config"
+          >
             <p>Resolving section-specific form fields...</p>
           </ModuleBlock>
         ) : null}
 
         {shouldCollectBuddy ? (
-          <ModuleBlock eyebrow="Profile" title={fieldVisibility.buddyWeight < 0 ? "Preferred Avoid" : "Preferred Buddy"}>
-            <p className={styles.subtitle}>Optional buddy preference for your current section enrollment list.</p>
+          <ModuleBlock
+            eyebrow="Profile"
+            title={
+              fieldVisibility.buddyWeight < 0
+                ? "Preferred Avoid"
+                : "Preferred Buddy"
+            }
+          >
+            <p className={styles.subtitle}>
+              Optional buddy preference for your current section enrollment
+              list.
+            </p>
             <div className={styles.fieldGroup}>
               <label className={styles.fieldLabel} htmlFor="buddy-select">
-                {fieldVisibility.buddyWeight < 0 ? "Select classmate to avoid" : "Select preferred classmate"}
+                {fieldVisibility.buddyWeight < 0
+                  ? "Select classmate to avoid"
+                  : "Select preferred classmate"}
               </label>
               <select
                 id="buddy-select"
                 value={buddyRequestStudentId}
-                onChange={(event) => setBuddyRequestStudentId(event.target.value)}
+                onChange={(event) =>
+                  setBuddyRequestStudentId(event.target.value)
+                }
                 className={styles.select}
                 disabled={isLoadingBuddyOptions}
               >
@@ -590,16 +676,22 @@ function FillForm() {
                   </option>
                 ))}
               </select>
-              {isLoadingBuddyOptions ? <p className={styles.subtitle}>Loading classmates...</p> : null}
+              {isLoadingBuddyOptions ? (
+                <p className={styles.subtitle}>Loading classmates...</p>
+              ) : null}
             </div>
           </ModuleBlock>
         ) : null}
 
         {shouldCollectMbti ? (
           <ModuleBlock eyebrow="Profile" title="MBTI">
-            <p className={styles.subtitle}>Optional personality preference for this section.</p>
+            <p className={styles.subtitle}>
+              Optional personality preference for this section.
+            </p>
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel} htmlFor="mbti-select">Personality type</label>
+              <label className={styles.fieldLabel} htmlFor="mbti-select">
+                Personality type
+              </label>
               <select
                 id="mbti-select"
                 value={mbti}
@@ -608,7 +700,9 @@ function FillForm() {
               >
                 <option value="">None</option>
                 {MBTI_OPTIONS.map((type) => (
-                  <option key={type} value={type}>{type}</option>
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
                 ))}
               </select>
               <a
@@ -625,7 +719,9 @@ function FillForm() {
 
         {fieldVisibility.skillEnabled ? (
           <ModuleBlock eyebrow="Skills" title="Skill Scores">
-            <p className={styles.subtitle}>Rate your section skills from 0 (None) to 5 (Expert).</p>
+            <p className={styles.subtitle}>
+              Rate your section skills from 0 (None) to 5 (Expert).
+            </p>
             {shouldCollectSkills ? (
               <div className={styles.listGrid}>
                 {sectionSkills.map((skill) => {
@@ -636,32 +732,46 @@ function FillForm() {
 
                   return (
                     <div key={skillId} className={styles.editorGrid}>
-                      <p className={styles.fieldLabel}>{skill?.skill_label || "Skill"}</p>
+                      <p className={styles.fieldLabel}>
+                        {skill?.skill_label || "Skill"}
+                      </p>
                       <select
                         className={styles.select}
                         value={skillScores[skillId] ?? ""}
-                        onChange={(event) => updateSkillScore(skillId, event.target.value)}
+                        onChange={(event) =>
+                          updateSkillScore(skillId, event.target.value)
+                        }
                       >
                         <option value="">No score</option>
-                        {Object.entries(SKILL_SCORE_LABELS).map(([score, label]) => (
-                          <option key={`${skillId}-score-${score}`} value={score}>
-                            {score} - {label}
-                          </option>
-                        ))}
+                        {Object.entries(SKILL_SCORE_LABELS).map(
+                          ([score, label]) => (
+                            <option
+                              key={`${skillId}-score-${score}`}
+                              value={score}
+                            >
+                              {score} - {label}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <p className={styles.subtitle}>No skill labels are configured for this section yet.</p>
+              <p className={styles.subtitle}>
+                No skill labels are configured for this section yet.
+              </p>
             )}
           </ModuleBlock>
         ) : null}
 
         {fieldVisibility.topicEnabled ? (
           <ModuleBlock eyebrow="Topics" title="Project Topic Rankings">
-            <p className={styles.subtitle}>Rank every section topic from most preferred (1) to least preferred.</p>
+            <p className={styles.subtitle}>
+              Rank every section topic from most preferred (1) to least
+              preferred.
+            </p>
             {shouldCollectTopics ? (
               <div className={styles.listGrid}>
                 {sectionTopics.map((topic) => {
@@ -672,15 +782,25 @@ function FillForm() {
 
                   return (
                     <div key={topicId} className={styles.editorGrid}>
-                      <p className={styles.fieldLabel}>{topic?.topic_label || "Project topic"}</p>
+                      <p className={styles.fieldLabel}>
+                        {topic?.topic_label || "Project topic"}
+                      </p>
                       <select
                         className={styles.select}
                         value={topicRankings[topicId] ?? ""}
-                        onChange={(event) => updateTopicRank(topicId, event.target.value)}
+                        onChange={(event) =>
+                          updateTopicRank(topicId, event.target.value)
+                        }
                       >
                         <option value="">Select rank</option>
-                        {Array.from({ length: sectionTopics.length }, (_, index) => index + 1).map((rankValue) => (
-                          <option key={`${topicId}-rank-${rankValue}`} value={rankValue}>
+                        {Array.from(
+                          { length: sectionTopics.length },
+                          (_, index) => index + 1,
+                        ).map((rankValue) => (
+                          <option
+                            key={`${topicId}-rank-${rankValue}`}
+                            value={rankValue}
+                          >
                             {rankValue}
                           </option>
                         ))}
@@ -690,7 +810,9 @@ function FillForm() {
                 })}
               </div>
             ) : (
-              <p className={styles.subtitle}>No project topics are configured for this section yet.</p>
+              <p className={styles.subtitle}>
+                No project topics are configured for this section yet.
+              </p>
             )}
           </ModuleBlock>
         ) : null}
@@ -702,10 +824,19 @@ function FillForm() {
         ) : null}
 
         <div className={styles.actionRow}>
-          <Button type="submit" disabled={isLoadingForms || isLoadingConfig || isLoadingBuddyOptions}>
+          <Button
+            type="submit"
+            disabled={
+              isLoadingForms || isLoadingConfig || isLoadingBuddyOptions
+            }
+          >
             Submit form
           </Button>
-          <Button type="button" onClick={() => navigate(studentBasePath)} variant="outline">
+          <Button
+            type="button"
+            onClick={() => navigate(studentBasePath)}
+            variant="outline"
+          >
             Cancel
           </Button>
         </div>

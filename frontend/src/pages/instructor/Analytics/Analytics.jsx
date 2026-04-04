@@ -23,7 +23,10 @@ import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import { getBackendSectionId } from "../../../data/backendIds";
 import { fetchEnrollmentsBySectionId } from "../../../services/enrollmentService";
-import { fetchAllStudents, buildSectionRoster } from "../../../services/studentService";
+import {
+  fetchAllStudents,
+  buildSectionRoster,
+} from "../../../services/studentService";
 import styles from "./Analytics.module.css";
 import { fetchCourseByCode } from "../../../services/courseService";
 import { getSectionById } from "../../../services/sectionService";
@@ -35,34 +38,33 @@ function Analytics() {
   const [isLoadingRoster, setIsLoadingRoster] = useState(true);
   const [rosterError, setRosterError] = useState("");
 
-  const [selectedCourse,setSelectedCourse] = useState(null);
-  const [selectedGroup,setSelectedGroup] = useState(null);
-  const [groupTeams,setGroupTeams ]= useState([]);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [groupTeams, setGroupTeams] = useState([]);
   const selectedCourseGroups = selectedCourse?.groups ?? [];
   const backendSectionId = getBackendSectionId(groupId || "");
   const rosterSectionId = backendSectionId || groupId;
-  
-  useEffect(()=> {
+
+  useEffect(() => {
     async function loadTeams() {
-      try{
+      try {
         if (!rosterSectionId) {
           setGroupTeams([]);
           return;
         }
         const pulledteams = await fetchTeamsBySection(rosterSectionId);
         setGroupTeams(pulledteams || []);
-      } catch(error){
+      } catch (error) {
         console.log("load teams failed", error);
         setGroupTeams([]);
       }
-      
     }
     loadTeams();
-  }, [rosterSectionId])
+  }, [rosterSectionId]);
 
-  useEffect(() =>{
-    async function loadCourse(){
-      if (!groupId){
+  useEffect(() => {
+    async function loadCourse() {
+      if (!groupId) {
         setIsLoadingRoster(false);
         setRosterError("Missing group ID");
         return;
@@ -72,16 +74,15 @@ function Analytics() {
       try {
         const course = await fetchCourseByCode(courseId);
         setSelectedCourse(course);
-      } catch(error){
-        console.log("course fetching failed",error);
-
+      } catch (error) {
+        console.log("course fetching failed", error);
       }
     }
     loadCourse();
-  } ,[courseId, groupId, setSelectedCourse])
-    useEffect(() =>{
-    async function loadGroup(){
-      if (!groupId){
+  }, [courseId, groupId, setSelectedCourse]);
+  useEffect(() => {
+    async function loadGroup() {
+      if (!groupId) {
         setIsLoadingRoster(false);
         setRosterError("Missing group ID");
         return;
@@ -91,13 +92,12 @@ function Analytics() {
       try {
         const group = await getSectionById(groupId);
         setSelectedGroup(group);
-      } catch(error){
-        console.log("course fetching failed",error);
-
+      } catch (error) {
+        console.log("course fetching failed", error);
       }
     }
     loadGroup();
-  }, [groupId, setSelectedGroup])
+  }, [groupId, setSelectedGroup]);
   useEffect(() => {
     let isMounted = true;
 
@@ -180,8 +180,6 @@ function Analytics() {
     { metric: "Leadership", value: 90 },
   ];
 
-
-
   if (!selectedCourse || !selectedGroup) {
     return <div className={styles.notFound}>Course group not found</div>;
   }
@@ -206,10 +204,11 @@ function Analytics() {
       <section className={styles.hero}>
         <div>
           <h2 className={styles.title}>
-            {selectedGroup.code} Analytics Page - {selectedCourse.code} G{selectedGroup.section_number}
+            {selectedGroup.code} Analytics Page - {selectedCourse.code} G
+            {selectedGroup.section_number}
           </h2>
           <p className={styles.subtitle}>
-            <b>Course Name</b> : {selectedCourse.name} 
+            <b>Course Name</b> : {selectedCourse.name}
           </p>
         </div>
         <div className={styles.heroTags}>
@@ -230,7 +229,8 @@ function Analytics() {
 
       {rosterError ? (
         <p className={styles.rosterError}>
-          Atomic roster load failed: {rosterError}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
+          Atomic roster load failed: {rosterError}.{" "}
+          <Link to="/instructor/error-logs">Go to Error Logs</Link>
         </p>
       ) : null}
 
@@ -373,11 +373,7 @@ function Analytics() {
             </ResponsiveContainer>
           </div>
         </ModuleBlock>
-
-
       </section>
-
-
     </div>
   );
 }

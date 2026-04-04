@@ -12,11 +12,12 @@ import GroupChip from "../../../components/schematic/GroupChip";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
-import {
-  mockSwapRequests,
-} from "../../../data/mockData";
+import { mockSwapRequests } from "../../../data/mockData";
 import { fetchEnrollmentsBySectionId } from "../../../services/enrollmentService";
-import { fetchAllStudents, buildSectionRoster } from "../../../services/studentService";
+import {
+  fetchAllStudents,
+  buildSectionRoster,
+} from "../../../services/studentService";
 import { generateTeamsForSection } from "../../../services/teamFormationService";
 import { fetchTeamsBySection } from "../../../services/teamService";
 import {
@@ -25,8 +26,8 @@ import {
 } from "./logic/teamLogic";
 import styles from "./Teams.module.css";
 import { Button } from "../../../components/ui/button";
-import {fetchCourseByCode} from "../../../services/courseService";
-import {getSectionById} from "../../../services/sectionService";
+import { fetchCourseByCode } from "../../../services/courseService";
+import { getSectionById } from "../../../services/sectionService";
 
 function Teams() {
   const { courseId, groupId: backendSectionId } = useParams();
@@ -49,8 +50,7 @@ function Teams() {
 
   const [selectedCourse, setSelectedCourse] = useState(null);
 
-
-  const [selectedGroup,setSelectedGroup] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const visibleSwapRequests = swapRequestList.filter(
     (request) =>
       request.courseId === courseId &&
@@ -67,7 +67,9 @@ function Teams() {
       try {
         const [course, section] = await Promise.all([
           fetchCourseByCode(courseId),
-          backendSectionId ? getSectionById(backendSectionId) : Promise.resolve(null),
+          backendSectionId
+            ? getSectionById(backendSectionId)
+            : Promise.resolve(null),
         ]);
 
         if (!isMounted) {
@@ -80,8 +82,15 @@ function Teams() {
         if (!isMounted) {
           return;
         }
-        setCourseLoadError(error?.message || "Unable to load course information.");
-        console.log("course or section not found:", courseId, backendSectionId, error);
+        setCourseLoadError(
+          error?.message || "Unable to load course information.",
+        );
+        console.log(
+          "course or section not found:",
+          courseId,
+          backendSectionId,
+          error,
+        );
       } finally {
         if (isMounted) {
           setIsCourseLoading(false);
@@ -93,7 +102,7 @@ function Teams() {
     return () => {
       isMounted = false;
     };
-  }, [courseId, backendSectionId])
+  }, [courseId, backendSectionId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -188,7 +197,12 @@ function Teams() {
 
   const backendVisibleTeams = useMemo(
     () =>
-      mapBackendTeamsToViewModel(backendTeams, rosterById, courseId, backendSectionId),
+      mapBackendTeamsToViewModel(
+        backendTeams,
+        rosterById,
+        courseId,
+        backendSectionId,
+      ),
     [backendTeams, rosterById, courseId, backendSectionId],
   );
 
@@ -209,7 +223,6 @@ function Teams() {
     if (!editableTeams.some((team) => team.id === selectedTeamId)) {
       setSelectedTeamId(editableTeams[0]?.id ?? null);
     }
-
   }, [editableTeams, selectedTeamId]);
 
   const visibleTeams = editableTeams;
@@ -248,9 +261,14 @@ function Teams() {
   if (courseLoadError) {
     return (
       <div className={`${styles.page} ${motionStyles.motionPage}`}>
-        <ModuleBlock eyebrow="Load Error" title="Unable to load teams" accent="orange">
+        <ModuleBlock
+          eyebrow="Load Error"
+          title="Unable to load teams"
+          accent="orange"
+        >
           <p className={styles.rosterError}>
-            {courseLoadError}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
+            {courseLoadError}.{" "}
+            <Link to="/instructor/error-logs">Go to Error Logs</Link>
           </p>
         </ModuleBlock>
       </div>
@@ -297,7 +315,7 @@ function Teams() {
     setTeamMessage("");
 
     try {
-      const generatedTeams = await generateTeamsForSection(backendSectionId); 
+      const generatedTeams = await generateTeamsForSection(backendSectionId);
       // TODO: PENDING FIX FROM JIN RAE (422 Error)
       setBackendTeams(generatedTeams);
       setTeamMessage("Backend teams generated and persisted successfully.");
@@ -321,7 +339,7 @@ function Teams() {
   const handleCancelSelection = () => {
     setSelectedSwapMember(null);
   };
-// TODO: ADD SWAP API THINGY IDK
+  // TODO: ADD SWAP API THINGY IDK
   const handleMemberSwapClick = (team, member) => {
     if (!swapMode) {
       return;
@@ -348,12 +366,13 @@ function Teams() {
       return;
     }
 
-    setEditableTeams((currentTeams) =>
-      swapMembersAcrossTeams(currentTeams, selectedSwapMember, {
-        teamId: team.id,
-        member,
-      }),
-      // 
+    setEditableTeams(
+      (currentTeams) =>
+        swapMembersAcrossTeams(currentTeams, selectedSwapMember, {
+          teamId: team.id,
+          member,
+        }),
+      //
     );
     setTeamMessage(
       `Swap completed: ${selectedSwapMember.member.name} and ${member.name}.`,
@@ -455,7 +474,8 @@ function Teams() {
           </div>
           {rosterError ? (
             <p className={styles.rosterError}>
-              Atomic roster load failed: {rosterError}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
+              Atomic roster load failed: {rosterError}.{" "}
+              <Link to="/instructor/error-logs">Go to Error Logs</Link>
             </p>
           ) : null}
         </ModuleBlock>
@@ -463,7 +483,8 @@ function Teams() {
 
       {teamError ? (
         <p className={styles.rosterError}>
-          Team load failed: {teamError}. <Link to="/instructor/error-logs">Go to Error Logs</Link>
+          Team load failed: {teamError}.{" "}
+          <Link to="/instructor/error-logs">Go to Error Logs</Link>
         </p>
       ) : null}
       {teamMessage ? <p className={styles.teamMessage}>{teamMessage}</p> : null}
@@ -479,7 +500,9 @@ function Teams() {
             <div className={styles.moduleActions}>
               <Button
                 onClick={handleGenerateTeams}
-                disabled={isGeneratingTeams || isTeamsLoading || !backendSectionId}
+                disabled={
+                  isGeneratingTeams || isTeamsLoading || !backendSectionId
+                }
                 variant="success"
                 size="sm"
               >
@@ -522,7 +545,9 @@ function Teams() {
           ) : null}
           <div className={styles.teamList}>
             {isTeamsLoading && !visibleTeams.length ? (
-              <p className={styles.sourceNote}>Loading teams for this section...</p>
+              <p className={styles.sourceNote}>
+                Loading teams for this section...
+              </p>
             ) : null}
             {visibleTeams.map((team, index) => {
               const hasPendingRequest = team.members.some(
