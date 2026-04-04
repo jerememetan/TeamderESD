@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 
 SERVICES = [
-    ("student-service", "http://localhost:3001"),
+    ("student-service", "http://localhost:8000/students"),
     ("skill-service", "http://localhost:3002"),
     ("topic-service", "http://localhost:3003"),
     ("criteria-service", "http://localhost:3004"),
@@ -23,7 +23,7 @@ SERVICES = [
     ("analytics-service", "http://localhost:3014"),
     ("student-form-service", "http://localhost:3015"),
     ("notification-service", "http://localhost:3016"),
-    ("course-service", "http://localhost:3017"),
+    ("course-service", "http://localhost:8000/courses"),
     ("section-service", "http://localhost:3018"),
     ("formation-config-service", "http://localhost:4000"),
     ("student-profile-service", "http://localhost:4001"),

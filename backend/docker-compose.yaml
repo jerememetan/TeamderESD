@@ -1,28 +1,8 @@
 services:
-
   # Atomic
 
-  student-service:
-    build:
-      context: ./atomic-services/student
-    container_name: teamder-student-service
-    environment:
-      ENABLE_SWAGGER: "true"
-      PORT: 3001
-      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student
-    ports:
-      - "3001:3001"
-
-  course-service:
-    build:
-      context: ./atomic-services/course
-    container_name: teamder-course-service
-    environment:
-      ENABLE_SWAGGER: "true"
-      PORT: 3017
-      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course
-    ports:
-      - "3017:3017"
+  # Note: `student-service` and `course-service` wrappers removed from this compose
+  # They are replaced by routing through the Kong gateway to the OutSystems APIs.
 
   section-service:
     build:
@@ -45,7 +25,6 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3002:3002"
-
 
   error-service:
     build: ./atomic-services/error
@@ -116,7 +95,7 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3006:3006"
-  
+
   team-service:
     build:
       context: ./atomic-services/team
@@ -137,7 +116,7 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3008:3008"
-  
+
   student-topic-preference-service:
     build: ./atomic-services/student-topic-preference
     container_name: teamder-student-topic-preference-service
@@ -241,7 +220,6 @@ services:
       rabbitmq-setup:
         condition: service_healthy
 
-      
   # Composite
 
   formation-config-service:
@@ -396,9 +374,9 @@ services:
       SKILL_URL: "http://skill-service:3002/skill"
       TOPIC_URL: "http://topic-service:3003/topic"
       ANALYTICS_URL: "http://analytics-service:3014/analytics"
-      PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"          
-      NOTIFICATION_URL: "http://notification-service:3016/notification"        
-      REPUTATION_URL: "http://reputation-service:3006/reputation" 
+      PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
+      NOTIFICATION_URL: "http://notification-service:3016/notification"
+      REPUTATION_URL: "http://reputation-service:3006/reputation"
       REQUEST_TIMEOUT: 8
       PORT: 4003
     depends_on:
@@ -409,7 +387,7 @@ services:
       - skill-service
       - topic-service
       - analytics-service
-      - peer-evaluation-service 
+      - peer-evaluation-service
 
   formation-notification-service:
     build:
@@ -429,7 +407,7 @@ services:
       ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
-      STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
+      STUDENT_SERVICE_URL: "http://kong-gateway:8000/students"
       SECTION_URL: "http://section-service:3018/section"
       FORM_LINK_URL_TEMPLATE: "http://localhost:5173/student/{student_id}/form/{form_id}"
       FORM_LINK_SUBJECT: "Action Required: Complete Your Teamder Student Form"
@@ -462,8 +440,8 @@ services:
       TEAM_URL: "http://team-service:3007/team"
       TEAM_SWAP_OPTIMIZE_URL: "http://team-swap-service:3013/team-swap/optimize"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
-      STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
-      STUDENT_BULK_URL: "http://student-service:3001/api/students/bulk-info"
+      STUDENT_SERVICE_URL: "http://kong-gateway:8000/students"
+      STUDENT_BULK_URL: "http://kong-gateway:8000/students/bulk-info"
       REQUEST_TIMEOUT: 10
       RABBIT_HOST: rabbitmq
       RABBIT_PORT: 5672
@@ -566,11 +544,3 @@ services:
 
 volumes:
   rabbitmq_data:
-
-
-
-
-
-
-
-

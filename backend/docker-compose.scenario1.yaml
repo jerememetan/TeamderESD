@@ -1,28 +1,8 @@
 services:
-
   # Atomic
 
-  student-service:
-    build:
-      context: ./atomic-services/student
-    container_name: teamder-student-service
-    environment:
-      ENABLE_SWAGGER: "true"
-      PORT: 3001
-      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student
-    ports:
-      - "3001:3001"
-
-  course-service:
-    build:
-      context: ./atomic-services/course
-    container_name: teamder-course-service
-    environment:
-      ENABLE_SWAGGER: "true"
-      PORT: 3017
-      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course
-    ports:
-      - "3017:3017"
+  # Note: `student-service` and `course-service` wrappers removed from this compose
+  # They are replaced by routing through the Kong gateway to the OutSystems APIs.
 
   section-service:
     build:
@@ -89,7 +69,7 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3006:3006"
-  
+
   team-service:
     build:
       context: ./atomic-services/team
@@ -110,7 +90,7 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3008:3008"
-  
+
   student-topic-preference-service:
     build: ./atomic-services/student-topic-preference
     container_name: teamder-student-topic-preference-service
@@ -308,7 +288,7 @@ services:
       ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
-      STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
+      STUDENT_SERVICE_URL: "http://kong-gateway:8000/students"
       SECTION_URL: "http://section-service:3018/section"
       FORM_LINK_URL_TEMPLATE: "http://localhost:5173/student/{student_id}/form/{form_id}"
       FORM_LINK_SUBJECT: "Action Required: Complete Your Teamder Student Form"
@@ -353,7 +333,7 @@ services:
       - "8000:8000"
       - "8001:8001"
 
-# RabbitMQ
+  # RabbitMQ
   rabbitmq:
     image: rabbitmq:3-management
     container_name: teamder-rabbitmq
@@ -372,7 +352,6 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
-
 
   rabbitmq-setup:
     image: python:3.12-slim
@@ -412,15 +391,5 @@ services:
       retries: 20
       start_period: 10s
 
-
 volumes:
   rabbitmq_data:
-
-
-
-
-
-
-
-
-

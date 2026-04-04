@@ -15,6 +15,7 @@ import styles from "./SwapRequests.module.css";
 
 function SwapRequests() {
   const [requestList, setRequestList] = useState(mockSwapRequests);
+  console.log(mockSwapRequests);
   const [filter, setFilter] = useState("all");
 
   const filteredRequests = filterRequests(requestList, filter);
