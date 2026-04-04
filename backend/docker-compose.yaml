@@ -176,6 +176,7 @@ services:
     environment:
       ENABLE_SWAGGER: "true"
       PORT: 3011
+      SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3011:3011"
     depends_on:
