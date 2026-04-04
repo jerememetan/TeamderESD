@@ -182,11 +182,43 @@ This README provides simple instructions for calling the endpoints of the three 
 ### Endpoints
 
 - **GET /enrollment**
-  - Query params: `section_id` (optional)
-  - Returns: List of enrollments, optionally filtered by section
+  - Query params:
+    - `section_id` (optional, UUID)
+    - `section_ids` (optional, comma-separated UUIDs or repeated query param)
+  - Returns:
+    - no query params: all enrollments
+    - `section_id`: enrollments for one section
+    - `section_ids`: grouped enrollments for many sections
   - Example:
     ```http
     GET http://localhost:3001/enrollment?section_id={uuid}
+    ```
+
+  - Bulk example:
+    ```http
+    GET http://localhost:3001/enrollment?section_ids=11111111-1111-1111-1111-111111111111,22222222-2222-2222-2222-222222222222
+    ```
+
+  - Bulk response example:
+    ```json
+    {
+      "code": 200,
+      "data": {
+        "sections": [
+          {
+            "section_id": "11111111-1111-1111-1111-111111111111",
+            "enrollments": [
+              { "section_id": "11111111-1111-1111-1111-111111111111", "student_id": 101 },
+              { "section_id": "11111111-1111-1111-1111-111111111111", "student_id": 102 }
+            ]
+          },
+          {
+            "section_id": "22222222-2222-2222-2222-222222222222",
+            "enrollments": []
+          }
+        ]
+      }
+    }
     ```
 
 - **GET /enrollment**
