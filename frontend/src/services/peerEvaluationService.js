@@ -1,10 +1,10 @@
-import { fetchJson } from './httpClient';
+import { fetchJson } from "./httpClient";
 
 const PEER_EVAL_URL =
-  import.meta.env.VITE_PEER_EVAL_URL ?? 'http://localhost:8000/peer-eval';
+  import.meta.env.VITE_PEER_EVAL_URL ?? "http://localhost:8000/peer-eval";
 
 const DASHBOARD_URL =
-  import.meta.env.VITE_DASHBOARD_URL ?? 'http://localhost:8000/dashboard';
+  import.meta.env.VITE_DASHBOARD_URL ?? "http://localhost:8000/dashboard";
 
 /**
  * Get a peer evaluation round by ID.
@@ -12,7 +12,7 @@ const DASHBOARD_URL =
 export async function getPeerEvaluationRound(roundId) {
   try {
     const payload = await fetchJson(`${PEER_EVAL_URL}/rounds/${roundId}`, {
-      headers: { Accept: 'application/json' },
+      headers: { Accept: "application/json" },
     });
     const round = payload?.data;
     if (!round) return null;
@@ -39,7 +39,7 @@ export async function getPeerEvaluationRoundForSection(sectionId) {
   try {
     const payload = await fetchJson(
       `${PEER_EVAL_URL}/rounds?section_id=${encodeURIComponent(sectionId)}&status=active`,
-      { headers: { Accept: 'application/json' } }
+      { headers: { Accept: "application/json" } },
     );
     const rounds = payload?.data ?? [];
     if (!rounds.length) return null;
@@ -63,10 +63,11 @@ export async function getPeerEvaluationRoundForSection(sectionId) {
  */
 export async function getPeerEvaluationSubmission(roundId, evaluatorId) {
   try {
-    const numericId = typeof evaluatorId === 'string' ? parseInt(evaluatorId, 10) : evaluatorId;
+    const numericId =
+      typeof evaluatorId === "string" ? parseInt(evaluatorId, 10) : evaluatorId;
     const payload = await fetchJson(
       `${PEER_EVAL_URL}/rounds/${roundId}/submissions?evaluator_id=${numericId}`,
-      { headers: { Accept: 'application/json' }, cache: false }
+      { headers: { Accept: "application/json" }, cache: false },
     );
     const submissions = payload?.data ?? [];
     if (!submissions.length) return null;
@@ -85,22 +86,31 @@ export async function getPeerEvaluationSubmission(roundId, evaluatorId) {
 /**
  * Submit peer evaluations for all teammates.
  */
-export async function submitPeerEvaluation({ roundId, evaluatorId, teamId, entries }) {
-  const numericEvaluatorId = typeof evaluatorId === 'string' ? parseInt(evaluatorId, 10) : evaluatorId;
+export async function submitPeerEvaluation({
+  roundId,
+  evaluatorId,
+  teamId,
+  entries,
+}) {
+  const numericEvaluatorId =
+    typeof evaluatorId === "string" ? parseInt(evaluatorId, 10) : evaluatorId;
 
   const payload = await fetchJson(`${PEER_EVAL_URL}/rounds/${roundId}/submit`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
+      "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: JSON.stringify({
       evaluator_id: numericEvaluatorId,
       team_id: teamId,
       entries: entries.map((entry) => ({
-        evaluatee_id: typeof entry.evaluateeId === 'string' ? parseInt(entry.evaluateeId, 10) : entry.evaluateeId,
+        evaluatee_id:
+          typeof entry.evaluateeId === "string"
+            ? parseInt(entry.evaluateeId, 10)
+            : entry.evaluateeId,
         rating: Number(entry.rating),
-        justification: entry.justification || '',
+        justification: entry.justification || "",
       })),
     }),
     cache: false,
@@ -114,13 +124,14 @@ export async function submitPeerEvaluation({ roundId, evaluatorId, teamId, entri
  * Returns array of active rounds where the student hasn't submitted yet.
  */
 export async function getPendingPeerEvaluations({ studentId, sectionIds }) {
-  const numericId = typeof studentId === 'string' ? parseInt(studentId, 10) : studentId;
+  const numericId =
+    typeof studentId === "string" ? parseInt(studentId, 10) : studentId;
   const pending = [];
 
   for (const sectionId of sectionIds) {
     try {
       const round = await getPeerEvaluationRoundForSection(sectionId);
-      if (!round || round.status !== 'active') continue;
+      if (!round || round.status !== "active") continue;
 
       const existing = await getPeerEvaluationSubmission(round.id, numericId);
       if (!existing) {
@@ -147,7 +158,7 @@ export async function getActivePeerEvaluationRoundsBySections(sectionIds = []) {
     uniqueSectionIds.map(async (sectionId) => {
       const payload = await fetchJson(
         `${PEER_EVAL_URL}/rounds?section_id=${encodeURIComponent(sectionId)}&status=active`,
-        { headers: { Accept: 'application/json' } }
+        { headers: { Accept: "application/json" } },
       );
 
       const rounds = Array.isArray(payload?.data) ? payload.data : [];
@@ -162,11 +173,11 @@ export async function getActivePeerEvaluationRoundsBySections(sectionIds = []) {
           startedAt: round.created_at,
         })),
       };
-    })
+    }),
   );
 
   return results.reduce((acc, result) => {
-    if (result.status !== 'fulfilled') {
+    if (result.status !== "fulfilled") {
       return acc;
     }
 
@@ -180,10 +191,10 @@ export async function getActivePeerEvaluationRoundsBySections(sectionIds = []) {
  */
 export async function startPeerEvaluationRound({ sectionId, title, dueAt }) {
   const payload = await fetchJson(`${DASHBOARD_URL}/peer-eval/initiate`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
+      "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: JSON.stringify({
       section_id: sectionId,
@@ -201,10 +212,10 @@ export async function startPeerEvaluationRound({ sectionId, title, dueAt }) {
  */
 export async function closePeerEvaluationRound(roundId) {
   const payload = await fetchJson(`${DASHBOARD_URL}/peer-eval/close`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
+      "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: JSON.stringify({ round_id: roundId }),
     cache: false,

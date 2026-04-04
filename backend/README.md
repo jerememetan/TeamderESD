@@ -3,12 +3,14 @@
 This file lists the local HTTP endpoints for the atomic and composite microservices (localhost).
 
 API gateway
+
 - Kong gateway proxy: http://localhost:8000
 - Kong admin API: http://localhost:8001
 - Frontend/browser traffic should use Kong routes (for example `http://localhost:8000/team-formation`).
 - CORS is now centralized at Kong; per-service Flask CORS middleware is removed.
 
 Atomic services
+
 - student-service: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/#/
 - course-service: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/#/
 - skill-service: http://localhost:3002 - /skill (GET/POST), /skill/{id}
@@ -31,19 +33,22 @@ Atomic services
 - error-service: http://localhost:3019 - /errors (GET, GET /errors/<id>, DELETE /errors/<id>)
 
 Composite services
+
 - formation-config-service: http://localhost:4000 - /formation-config (GET/POST)
 - student-profile-service: http://localhost:4001 - /student-profile (GET)
 - team-formation-service: http://localhost:4002 - /team-formation (POST; orchestrates student-form consumption and reputation updates before solve)
 - dashboard-orchestrator-service: http://localhost:4003 - /dashboard, /dashboard/health
 - formation-notification-service: http://localhost:4004 - /formation-notifications, /health
-- swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/*
+- swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/\*
 
 Shared error logging
+
 - Error service: http://localhost:3019 - /errors (GET, GET /errors/<id>, DELETE /errors/<id>)
 - Composite services publish structured downstream failures to RabbitMQ using `ERROR_EXCHANGE_NAME`, `ERROR_EXCHANGE_TYPE`, and `ERROR_ROUTING_KEY_PREFIX`.
 - The error service consumes `*.error` routing keys and stores the resulting log entries for the frontend error-log view.
 
 Swagger docs
+
 - Per service:
   - Swagger UI: `http://localhost:<service-port>/docs`
   - OpenAPI JSON: `http://localhost:<service-port>/openapi.json`
@@ -53,6 +58,7 @@ Swagger docs
 RabbitMQ management UI: http://localhost:15672 (guest/guest)
 
 Notes
+
 - Ports are taken from `docker-compose.yaml` / `docker-compose.scenario1.yaml` mappings.
 - Use the listed path fragments as example request URLs (e.g. `http://localhost:3001/api/students`).
 - For browser and frontend use, prefer the same paths via gateway base `http://localhost:8000`.
