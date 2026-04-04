@@ -123,7 +123,14 @@ def normalize_profile(record):
         logger.warning("profile student_id is invalid", extra={"record": record})
         return None
 
-    return student_id, {
+    return student_id, extract_profile_fields(record)
+
+
+def extract_profile_fields(record):
+    if not isinstance(record, dict):
+        return None
+
+    return {
         "name": record.get("name"),
         "email": record.get("email"),
         "school_id": record.get("school_id"),
@@ -291,7 +298,7 @@ def collect_student_details(section_id, student_id):
         "competences": lambda: fetch_competences(section_id, student_id),
     }
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, 4)) as executor:
         future_map = {executor.submit(fn): key for key, fn in fetchers.items()}
         for future in as_completed(future_map):
             key = future_map[future]
@@ -475,7 +482,7 @@ def get_student_profile():
         students.append(
             {
                 "student_id": sid,
-                "profile": compose_profile(profiles_by_student_id.get(sid), details),
+                "profile": details,
             }
         )
 

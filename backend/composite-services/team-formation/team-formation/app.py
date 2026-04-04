@@ -14,6 +14,7 @@ import logging
 import os
 from uuid import uuid4
 from typing import Any, Dict, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from flask import Flask, jsonify, request
@@ -170,85 +171,10 @@ def extract_students_missing_reputation(student_profile: Dict[str, Any]) -> set[
     return missing
 
 
-def fetch_student_forms(section_id: str) -> tuple[Optional[list[Dict[str, Any]]], Optional[str]]:
-    try:
-        response = http_get(STUDENT_FORM_URL, {"section_id": section_id})
-    except requests.RequestException:
-        logger.exception(
-            "failed to call student-form service (GET)",
-            extra={"section_id": section_id, "url": STUDENT_FORM_URL},
-        )
-        publish_downstream_error(
-            "student-form",
-            "STUDENT_FORM_LOOKUP_UNREACHABLE",
-            "failed to fetch student forms",
-            request_context={"section_id": section_id, "operation": "fetch-student-forms"},
-        )
-        return None, "failed to fetch student forms"
-
-    payload = safe_json(response)
-    if response.status_code < 200 or response.status_code >= 300:
-        logger.error(
-            "student-form service GET returned non-2xx",
-            extra={
-                "section_id": section_id,
-                "status_code": response.status_code,
-                "payload": payload,
-            },
-        )
-        publish_downstream_error(
-            "student-form",
-            "STUDENT_FORM_LOOKUP_FAILED",
-            "failed to fetch student forms",
-            request_context={"section_id": section_id, "operation": "fetch-student-forms"},
-            http_status=response.status_code,
-            response_payload=payload,
-        )
-        return None, "failed to fetch student forms"
-
-    rows = extract_data(payload)
-    if not isinstance(rows, list):
-        rows = []
-    return rows, None
 
 
-def delete_student_forms(section_id: str) -> Optional[str]:
-    try:
-        response = http_delete(STUDENT_FORM_URL, {"section_id": section_id})
-    except requests.RequestException:
-        logger.exception(
-            "failed to call student-form service (DELETE)",
-            extra={"section_id": section_id, "url": STUDENT_FORM_URL},
-        )
-        publish_downstream_error(
-            "student-form",
-            "STUDENT_FORM_DELETE_UNREACHABLE",
-            "failed to delete student forms",
-            request_context={"section_id": section_id, "operation": "delete-student-forms"},
-        )
-        return "failed to delete student forms"
 
-    payload = safe_json(response)
-    if response.status_code < 200 or response.status_code >= 300:
-        logger.error(
-            "student-form service DELETE returned non-2xx",
-            extra={
-                "section_id": section_id,
-                "status_code": response.status_code,
-                "payload": payload,
-            },
-        )
-        publish_downstream_error(
-            "student-form",
-            "STUDENT_FORM_DELETE_FAILED",
-            "failed to delete student forms",
-            request_context={"section_id": section_id, "operation": "delete-student-forms"},
-            http_status=response.status_code,
-            response_payload=payload,
-        )
-        return "failed to delete student forms"
 
-    return None
 
 
 def initialize_reputation(student_id: int) -> Optional[str]:
@@ -407,49 +333,56 @@ def apply_reputation_delta(student_id: int, delta: int) -> Optional[str]:
     return None
 
 
-def orchestrate_form_submissions_and_reputation(
-    section_id: str,
-    student_profile: Dict[str, Any],
-) -> tuple[Optional[Dict[str, Any]], Optional[str]]:
-    student_forms, forms_error = fetch_student_forms(section_id)
-    if student_forms is None:
-        return None, forms_error
-
-    if not student_forms:
-        return student_profile, None
-
-    delete_error = delete_student_forms(section_id)
-    if delete_error is not None:
-        return None, delete_error
-
-    valid_student_ids = extract_valid_student_ids(student_profile)
-    students_missing_reputation = extract_students_missing_reputation(student_profile)
-
-    for form in student_forms:
-        if not isinstance(form, dict):
-            continue
-        student_id = parse_student_id(form.get("student_id"))
-        if student_id is None or student_id not in valid_student_ids:
-            continue
-
-        ensure_error = ensure_reputation_exists(
-            student_id,
-            known_missing=student_id in students_missing_reputation,
+def orchestrate_form_deletion(section_id: str) -> Optional[str]:
+    """Delete all student forms for the section.
+    
+    Returns error message if deletion fails, None on success.
+    404 (no forms found) is treated as success.
+    """
+    try:
+        response = http_delete(STUDENT_FORM_URL, {"section_id": section_id})
+    except requests.RequestException:
+        logger.exception(
+            "failed to call student-form service (DELETE)",
+            extra={"section_id": section_id, "url": STUDENT_FORM_URL},
         )
-        if ensure_error is not None:
-            return None, ensure_error
+        publish_downstream_error(
+            "student-form",
+            "STUDENT_FORM_DELETE_UNREACHABLE",
+            "failed to delete student forms",
+            request_context={"section_id": section_id, "operation": "delete-student-forms"},
+        )
+        return "failed to delete student forms"
 
-        submitted = form.get("submitted") is True
-        delta = 2 if submitted else -5
-        update_error = apply_reputation_delta(student_id, delta)
-        if update_error is not None:
-            return None, update_error
+    # 404 means no forms to delete; this is not an error
+    if response.status_code == 404:
+        logger.info(
+            "no student forms to delete for section",
+            extra={"section_id": section_id},
+        )
+        return None
 
-    refreshed_profile, refresh_error = fetch_student_profile(section_id)
-    if refreshed_profile is None:
-        return None, refresh_error
+    payload = safe_json(response)
+    if response.status_code < 200 or response.status_code >= 300:
+        logger.error(
+            "student-form service DELETE returned non-2xx",
+            extra={
+                "section_id": section_id,
+                "status_code": response.status_code,
+                "payload": payload,
+            },
+        )
+        publish_downstream_error(
+            "student-form",
+            "STUDENT_FORM_DELETE_FAILED",
+            "failed to delete student forms",
+            request_context={"section_id": section_id, "operation": "delete-student-forms"},
+            http_status=response.status_code,
+            response_payload=payload,
+        )
+        return "failed to delete student forms"
 
-    return refreshed_profile, None
+    return None
 
 
 def build_team_post_payload(solver_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -606,6 +539,104 @@ def set_section_completed(section_id: str) -> Optional[str]:
     return None
 
 
+def fetch_form_submissions(section_id: str) -> tuple[Optional[Dict[int, bool]], Optional[str]]:
+    """Fetch form submission data (student_id -> submitted status).
+    
+    Returns a dict mapping student_id to submission status.
+    Returns empty dict if no forms exist (404) or on any fetch error.
+    """
+    try:
+        response = http_get(STUDENT_FORM_URL, {"section_id": section_id})
+    except requests.RequestException:
+        logger.exception(
+            "failed to call student-form service (GET)",
+            extra={"section_id": section_id, "url": STUDENT_FORM_URL},
+        )
+        publish_downstream_error(
+            "student-form",
+            "STUDENT_FORM_LOOKUP_UNREACHABLE",
+            "failed to fetch form submissions",
+            request_context={"section_id": section_id, "operation": "fetch-form-submissions"},
+        )
+        # Return empty submissions; team formation can proceed without form data
+        return {}, None
+
+    # 404 means no forms exist yet; proceed with empty submissions
+    if response.status_code == 404:
+        logger.info(
+            "no student forms found for section",
+            extra={"section_id": section_id},
+        )
+        return {}, None
+
+    payload = safe_json(response)
+    if response.status_code < 200 or response.status_code >= 300:
+        logger.error(
+            "student-form service GET returned non-2xx",
+            extra={
+                "section_id": section_id,
+                "status_code": response.status_code,
+                "payload": payload,
+            },
+        )
+        publish_downstream_error(
+            "student-form",
+            "STUDENT_FORM_LOOKUP_FAILED",
+            "failed to fetch form submissions",
+            request_context={"section_id": section_id, "operation": "fetch-form-submissions"},
+            http_status=response.status_code,
+            response_payload=payload,
+        )
+        # Return empty submissions; team formation can proceed without form data
+        return {}, None
+
+    rows = extract_data(payload)
+    if not isinstance(rows, list):
+        return {}, None
+    
+    submissions = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        student_id = parse_student_id(row.get("student_id"))
+        if student_id is not None:
+            submissions[student_id] = row.get("submitted") is True
+    
+    return submissions, None
+
+
+def apply_reputation_deltas_for_submissions(
+    student_profile: Dict[str, Any],
+    submissions: Dict[int, bool],
+) -> Optional[str]:
+    """Apply reputation deltas based on form submission status.
+    
+    Returns error message if any operation fails, None on success.
+    """
+    valid_student_ids = extract_valid_student_ids(student_profile)
+    students_missing_reputation = extract_students_missing_reputation(student_profile)
+    
+    for student_id, submitted in submissions.items():
+        if student_id not in valid_student_ids:
+            continue
+
+        # Ensure reputation exists first
+        ensure_error = ensure_reputation_exists(
+            student_id,
+            known_missing=student_id in students_missing_reputation,
+        )
+        if ensure_error is not None:
+            return ensure_error
+
+        # Apply delta based on submission status
+        delta = 2 if submitted else -5
+        update_error = apply_reputation_delta(student_id, delta)
+        if update_error is not None:
+            return update_error
+
+    return None
+
+
 register_swagger(app, 'team-formation-service')
 
 @app.route("/health", methods=["GET"])
@@ -627,21 +658,29 @@ def get_team_formation():
 
     debug = is_debug_mode()
 
-    student_profile, student_profile_error = fetch_student_profile(section_id)
-    if student_profile is None:
-        return jsonify({"code": 502, "message": student_profile_error}), 502
+    # Fetch form submissions before deletion so we have the submission data for later
+    # If no forms exist (404), this returns an empty dict and proceeds normally
+    submissions, _ = fetch_form_submissions(section_id)
 
-    formation_config, formation_config_error = fetch_formation_config(section_id)
-    if formation_config is None:
-        return jsonify({"code": 502, "message": formation_config_error}), 502
+    # Run fetch_student_profile, fetch_formation_config, and orchestrate_form_deletion in parallel
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        future_profile = executor.submit(fetch_student_profile, section_id)
+        future_config = executor.submit(fetch_formation_config, section_id)
+        future_form_delete = executor.submit(orchestrate_form_deletion, section_id)
 
-    student_profile, form_orchestration_error = orchestrate_form_submissions_and_reputation(
-        section_id,
-        student_profile,
-    )
-    if student_profile is None:
-        return jsonify({"code": 502, "message": form_orchestration_error}), 502
+        student_profile, student_profile_error = future_profile.result()
+        if student_profile is None:
+            return jsonify({"code": 502, "message": student_profile_error}), 502
 
+        formation_config, formation_config_error = future_config.result()
+        if formation_config is None:
+            return jsonify({"code": 502, "message": formation_config_error}), 502
+
+        form_delete_error = future_form_delete.result()
+        if form_delete_error is not None:
+            return jsonify({"code": 502, "message": form_delete_error}), 502
+
+    # Run solver with original student profile (reputation deltas do not affect this solver)
     solver_result = solve_teams(
         formation_config=formation_config,
         student_profile=student_profile,
@@ -649,7 +688,9 @@ def get_team_formation():
     )
 
     response_data = filter_solver_result_for_api(solver_result, debug=debug)
-    if is_solver_success_status(solver_result.get("status")):
+    has_solver_error = not is_solver_success_status(solver_result.get("status"))
+
+    if not has_solver_error:
         payload = build_team_post_payload(solver_result)
         try:
             team_response = http_post(TEAM_URL, payload)
@@ -664,11 +705,31 @@ def get_team_formation():
             team_payload = safe_json(team_response)
             return jsonify(team_payload), team_response.status_code
 
+        team_payload = safe_json(team_response)
+        
+        # Only update section stage if no errors have been published
         section_error = set_section_completed(section_id)
         if section_error is not None:
-            return jsonify({"code": 502, "message": section_error}), 502
+            # Return teams anyway, but log the section update failure
+            logger.error(
+                "failed to update section stage after successful team formation",
+                extra={"section_id": section_id, "error": section_error},
+            )
+            return jsonify(team_payload), team_response.status_code
 
-        team_payload = safe_json(team_response)
+        # Apply reputation deltas after successful solver and team persistence
+        # This ensures they don't affect the current team formation
+        reputation_error = apply_reputation_deltas_for_submissions(
+            student_profile,
+            submissions,
+        )
+        if reputation_error is not None:
+            logger.error(
+                "failed to apply reputation deltas after team formation",
+                extra={"section_id": section_id, "error": reputation_error},
+            )
+            # Don't fail the response; teams were already successfully formed
+
         return jsonify(team_payload), team_response.status_code
 
     if debug:

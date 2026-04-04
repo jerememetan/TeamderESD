@@ -241,12 +241,10 @@ services:
       CRITERIA_URL: "http://criteria-service:3004/criteria"
       TOPIC_URL: "http://topic-service:3003/topic"
       SKILL_URL: "http://skill-service:3002/skill"
-      SECTION_URL: "http://section-service:3018/section"
     depends_on:
       - criteria-service
       - topic-service
       - skill-service
-      - section-service
 
   student-profile-service:
     build:
@@ -306,7 +304,6 @@ services:
       - student-competence-service
       - student-topic-preference-service
       - student-form-service
-
   team-formation-service:
     build:
       context: ./composite-services/team-formation
@@ -436,7 +433,6 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
       SWAP_REQUEST_URL: "http://swap-request-service:3011/swap-request"
       SWAP_CONSTRAINTS_URL: "http://swap-constraints-service:3012/swap-constraints"
-      COURSE_SERVICE_URL: "http://course-service:3017/api/courses"
       TEAM_URL: "http://team-service:3007/team"
       TEAM_SWAP_OPTIMIZE_URL: "http://team-swap-service:3013/team-swap/optimize"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
@@ -450,12 +446,44 @@ services:
     depends_on:
       - swap-request-service
       - swap-constraints-service
-      - course-service
       - team-service
       - team-swap-service
       - enrollment-service
       - rabbitmq
 
+ # GraphQL
+  student-form-gateway-service:
+    build:
+      context: ./graphql/student-form-gateway
+    container_name: teamder-student-form-gateway-service
+    ports:
+      - "4007:4007"
+    environment:
+      PORT: 4007
+      REQUEST_TIMEOUT: 8
+      ENABLE_GRAPHIQL: "true"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
+      OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
+      STUDENT_BULK_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/students/bulk-info"
+      STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
+      FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
+      ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
+      SECTION_URL: "http://section-service:3018/section"
+      COURSE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course"
+    depends_on:
+      - student-form-service
+      - formation-config-service
+      - enrollment-service
+      - section-service
+ 
+# Documentation 
   docs-index-service:
     build:
       context: ./docs/swagger-index
@@ -465,6 +493,7 @@ services:
     environment:
       PORT: 4010
 
+# Kong
   kong-gateway:
     image: kong:3.8
     container_name: teamder-kong-gateway
