@@ -46,17 +46,6 @@ function MyTeam() {
     );
   }, [activeStudent, isLoadingStudents]);
 
-  useEffect(() => {
-    if (teamAssignments.length === 0) {
-      setSelectedTeamId(null);
-      return;
-    }
-
-    setSelectedTeamId(
-      (currentSelectedTeamId) => currentSelectedTeamId ?? teamAssignments[0].id,
-    );
-  }, [teamAssignments]);
-
   const selectedTeam = useMemo(
     () =>
       teamAssignments.find((team) => team.id === selectedTeamId) ||

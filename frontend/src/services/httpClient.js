@@ -5,7 +5,7 @@ function createCacheKey(method, url, cacheKey) {
   return cacheKey ?? `${method.toUpperCase()}:${url}`;
 }
 
-function readCachedValue(key, ttlMs) {
+function readCachedValue(key) {
   const cachedEntry = responseCache.get(key);
   if (!cachedEntry) {
     return null;
@@ -57,7 +57,7 @@ export async function fetchJson(url, options = {}) {
   const cacheable = cache && normalizedMethod === 'GET';
 
   if (cacheable) {
-    const cachedValue = readCachedValue(key, ttlMs);
+    const cachedValue = readCachedValue(key);
     if (cachedValue !== null) {
       return cachedValue;
     }
