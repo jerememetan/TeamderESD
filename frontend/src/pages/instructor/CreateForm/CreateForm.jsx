@@ -387,8 +387,8 @@ function CreateForm() {
         return;
       }
 
-      const result = await sendFormLinks({ section_id: groupId });
-      const data = result || {};
+      const result = await sendFormLinks({"section_id": groupId});
+      const data = result?.data || {};
       setSaveMessage(
         `Criteria saved and forms dispatched. Generated ${data.summary?.total_students ?? 0} link(s); notification success: ${data.summary?.success_count ?? 0}, failure: ${data.summary?.failure_count ?? 0}.`,
       );
