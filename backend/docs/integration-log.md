@@ -214,3 +214,71 @@ Move instructor-facing swap request shaping out of the atomic swap-request servi
 ### Compatibility
 - Existing `GET /swap-orchestrator/cycles/:cycle_id/requests` remains unchanged.
 - Atomic `swap-request` endpoints remain storage-focused and unchanged.
+
+## 2026-04-05 :: Step 7 :: Backend dependency hardening baseline (Phase 5 support track)
+
+### Goal
+Establish a stable backend contract baseline for page-by-page frontend recovery, and explicitly mark risky dependencies that should be deferred unless required.
+
+### Scope
+- Documentation-only support track (no service behavior changes).
+- Frontend pages stabilized in earlier phases are mapped to concrete backend endpoints and envelopes.
+- Kong gateway usage is reaffirmed as the browser entrypoint.
+
+### New artifact
+- `backend/docs/frontend-contract-baseline.md`
+
+### Baseline decisions
+- Stable baseline services for frontend cleanup:
+	- `enrollment`, `section`, `team`, `formation-config`, `student-profile`, `team-formation`, `analytics`, `peer-evaluation`
+- Deferred/high-risk dependencies:
+	- `swap-orchestrator` (validate processed contract before broad adoption)
+	- `student-form` pipeline (known schema mismatch issue remains open)
+
+### Contract coverage summary
+- Instructor Dashboard: `GET /dashboard`
+- CreateForm notifications: `POST /formation-notifications`
+- Error Logs: `GET /errors`, `DELETE /errors/{id}`
+- Completion Status: course/section/students + submitted/unsubmitted student-form endpoints
+- Student Peer Evaluation: peer-eval round/submission/submit + team + students
+- Instructor Analytics: courses/section/team/enrollment/students
+- Instructor Courses: courses/section + batched enrollment/team + team-formation trigger
+
+### Operational rule
+- Browser/frontend requests should route through Kong (`http://localhost:8000`) during stabilization unless a service is explicitly exempted.
+
+### Why this matters
+- Reduces integration churn by documenting known-good dependencies.
+- Prevents component-level schema drift by forcing adapter/hook normalization first.
+- Supports safer rollback with page-scoped migrations and explicit contracts.
+
+## 2026-04-05 :: Step 8 :: Phase 6 verification gate run
+
+### Goal
+Run verification checks for stabilized pages and Kong-backed contracts before continuing migrations.
+
+### Checks executed
+- Frontend `npm run lint` -> pass
+- Frontend `npm run build` -> pass
+- Frontend dev startup smoke (`npm run dev`) -> pass
+- Kong contract probes for stabilized dependencies:
+	- `GET /peer-eval/rounds...` -> pass (200)
+	- `GET /errors`, `GET /courses`, `GET /section`, `GET /team`, `GET /enrollment` -> pass
+	- `GET /student-form/submitted`, `GET /student-form/unsubmitted` -> pass
+	- `GET /dashboard/health` -> pass
+
+### Gateway alignment updates performed
+- Added Kong route for `/peer-eval` -> `peer-evaluation-service:3020`
+- Updated frontend peer-eval default URL to Kong gateway (`http://localhost:8000/peer-eval`)
+- Updated backend README endpoint inventory to include peer-evaluation service
+
+### Blocker found
+- `GET /dashboard` returns 502 (both via Kong and directly on `:4003`), while `/dashboard/health` is 200.
+- Interpretation: service process is alive, but data-path dependency in the endpoint flow is failing.
+
+### Gate status
+- **Partial pass**
+- Per stabilization rule, dashboard page verification remains blocked until this endpoint is fixed or explicitly deferred.
+
+### Artifact
+- Detailed report: `backend/docs/phase6-verification-2026-04-05.md`

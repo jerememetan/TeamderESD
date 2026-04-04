@@ -1,7 +1,7 @@
 import { fetchJson } from './httpClient';
 
 const PEER_EVAL_URL =
-  import.meta.env.VITE_PEER_EVAL_URL ?? 'http://localhost:3020/peer-eval';
+  import.meta.env.VITE_PEER_EVAL_URL ?? 'http://localhost:8000/peer-eval';
 
 const DASHBOARD_URL =
   import.meta.env.VITE_DASHBOARD_URL ?? 'http://localhost:8000/dashboard';
