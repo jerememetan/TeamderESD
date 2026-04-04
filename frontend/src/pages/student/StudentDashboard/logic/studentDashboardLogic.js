@@ -1,7 +1,10 @@
-import { fetchStudentAssignments } from "../../../services/studentAssignmentService";
-import { fetchStudentForms } from "../../../services/studentFormService";
-import { fetchTeamsBySections } from "../../../services/teamService";
-import { getActivePeerEvaluationRoundsBySections, getPendingPeerEvaluations } from "../../../services/peerEvaluationService";
+import { fetchStudentAssignments } from "../../../../services/studentAssignmentService";
+import { fetchStudentForms } from "../../../../services/studentFormService";
+import { fetchTeamsBySections } from "../../../../services/teamService";
+import {
+  getActivePeerEvaluationRoundsBySections,
+  getPendingPeerEvaluations,
+} from "../../../../services/peerEvaluationService";
 
 function getFriendlyErrorMessage(error, fallbackMessage) {
   return error?.message || fallbackMessage;
@@ -19,35 +22,55 @@ export async function loadAssignmentsForStudent(
   setAssignmentError("");
 
   try {
-    const backendAssignments = await fetchStudentAssignments({ studentProfile });
+    const backendAssignments = await fetchStudentAssignments({
+      studentProfile,
+    });
 
     setTeamAssignments(backendAssignments);
     setAssignmentSource("backend");
 
     if (!backendAssignments.length) {
-      setAssignmentError("The backend did not return any team assignments for this student.");
+      setAssignmentError(
+        "The backend did not return any team assignments for this student.",
+      );
       setPendingPeerRounds([]);
       return;
     }
 
-    await loadPendingPeerEvals(studentProfile, backendAssignments, setPendingPeerRounds);
+    await loadPendingPeerEvals(
+      studentProfile,
+      backendAssignments,
+      setPendingPeerRounds,
+    );
   } catch (error) {
     setTeamAssignments([]);
     setAssignmentSource("error");
-    setAssignmentError(getFriendlyErrorMessage(error, "Unable to connect to the backend team service."));
+    setAssignmentError(
+      getFriendlyErrorMessage(
+        error,
+        "Unable to connect to the backend team service.",
+      ),
+    );
     setPendingPeerRounds([]);
   } finally {
     setIsLoadingAssignments(false);
   }
 }
 
-export async function loadFormsForStudent(studentProfile, teamAssignments, setAvailableForms, setFormError) {
+export async function loadFormsForStudent(
+  studentProfile,
+  teamAssignments,
+  setAvailableForms,
+  setFormError,
+) {
   setFormError("");
 
   try {
     const backendStudentId = Number(studentProfile?.backendStudentId);
     if (!Number.isFinite(backendStudentId)) {
-      throw new Error("Unable to resolve a backend student id for the selected student.");
+      throw new Error(
+        "Unable to resolve a backend student id for the selected student.",
+      );
     }
 
     const availableForms = teamAssignments
@@ -69,19 +92,28 @@ export async function loadFormsForStudent(studentProfile, teamAssignments, setAv
     setAvailableForms(availableForms);
   } catch (error) {
     setAvailableForms([]);
-    setFormError(getFriendlyErrorMessage(error, "Unable to load available forms for this student."));
+    setFormError(
+      getFriendlyErrorMessage(
+        error,
+        "Unable to load available forms for this student.",
+      ),
+    );
   }
 }
 
 export async function loadDashboardSummary(studentProfile) {
   const backendStudentId = Number(studentProfile?.backendStudentId);
   if (!Number.isFinite(backendStudentId)) {
-    throw new Error("Unable to resolve a backend student id for the selected student.");
+    throw new Error(
+      "Unable to resolve a backend student id for the selected student.",
+    );
   }
 
   const forms = await fetchStudentForms({ studentId: backendStudentId });
   const unsubmittedForms = forms.filter((form) => !form.submitted);
-  const uniqueSectionIds = Array.from(new Set(unsubmittedForms.map((form) => form.sectionId).filter(Boolean)));
+  const uniqueSectionIds = Array.from(
+    new Set(unsubmittedForms.map((form) => form.sectionId).filter(Boolean)),
+  );
 
   if (!uniqueSectionIds.length) {
     return {
@@ -99,9 +131,13 @@ export async function loadDashboardSummary(studentProfile) {
   ]);
 
   const teamCount = uniqueSectionIds.reduce((count, sectionId) => {
-    const sectionTeams = Array.isArray(teamsBySection[sectionId]) ? teamsBySection[sectionId] : [];
+    const sectionTeams = Array.isArray(teamsBySection[sectionId])
+      ? teamsBySection[sectionId]
+      : [];
     const hasMembership = sectionTeams.some((team) =>
-      (team?.students ?? []).some((student) => Number(student?.student_id) === backendStudentId),
+      (team?.students ?? []).some(
+        (student) => Number(student?.student_id) === backendStudentId,
+      ),
     );
 
     return hasMembership ? count + 1 : count;
@@ -120,7 +156,11 @@ export async function loadDashboardSummary(studentProfile) {
   };
 }
 
-async function loadPendingPeerEvals(studentProfile, teams, setPendingPeerRounds) {
+async function loadPendingPeerEvals(
+  studentProfile,
+  teams,
+  setPendingPeerRounds,
+) {
   try {
     const backendStudentId = Number(studentProfile?.backendStudentId);
     if (!Number.isFinite(backendStudentId)) {

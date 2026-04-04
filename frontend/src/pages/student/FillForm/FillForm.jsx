@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import ModuleBlock from "../../components/schematic/ModuleBlock";
-import SystemTag from "../../components/schematic/SystemTag";
-import { Button } from "../../components/ui/button";
+import ModuleBlock from "../../../components/schematic/ModuleBlock";
+import SystemTag from "../../../components/schematic/SystemTag";
+import { Button } from "../../../components/ui/button";
 import {
   fetchFormationConfig,
   resolveFormationFieldVisibility,
-} from "../../services/formationConfigService";
-import { fetchEnrollmentsBySectionId } from "../../services/enrollmentService";
-import { fetchAllCourses } from "../../services/courseService";
-import { fetchAllSections } from "../../services/sectionService";
-import { fetchStudentForms } from "../../services/studentFormService";
-import { submitStudentForm } from "../../services/studentFormSubmissionService";
-import { fetchAllStudents, buildStudentMapByBackendId } from "../../services/studentService";
-import { useStudentSession } from "../../services/studentSession";
+} from "../../../services/formationConfigService";
+import { fetchEnrollmentsBySectionId } from "../../../services/enrollmentService";
+import { fetchAllCourses } from "../../../services/courseService";
+import { fetchAllSections } from "../../../services/sectionService";
+import { fetchStudentForms } from "../../../services/studentFormService";
+import { submitStudentForm } from "../../../services/studentFormSubmissionService";
+import { fetchAllStudents, buildStudentMapByBackendId } from "../../../services/studentService";
+import { useStudentSession } from "../../../services/studentSession";
 import styles from "./FillForm.module.css";
 
 const SKILL_SCORE_LABELS = {

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { AlertTriangle, FileText, Users } from "lucide-react";
-import ModuleBlock from "../../components/schematic/ModuleBlock";
-import SystemTag from "../../components/schematic/SystemTag";
-import motionStyles from "../../components/schematic/motion.module.css";
-import StudentSwitcher from "../../components/student/StudentSwitcher";
-import { useStudentSession } from "../../services/studentSession";
+import ModuleBlock from "../../../components/schematic/ModuleBlock";
+import SystemTag from "../../../components/schematic/SystemTag";
+import motionStyles from "../../../components/schematic/motion.module.css";
+import StudentSwitcher from "../../../components/student/StudentSwitcher";
+import { useStudentSession } from "../../../services/studentSession";
 import { loadDashboardSummary } from "./logic/studentDashboardLogic";
 import styles from "./StudentDashboard.module.css";
 
@@ -24,17 +24,20 @@ function StudentDashBoard() {
   const [teamCount, setTeamCount] = useState(0);
   const [peerEvalCount, setPeerEvalCount] = useState(0);
   const [nextPeerRound, setNextPeerRound] = useState(null);
-  const [availableForms, setAvailableForms] = useState([]);
+  const [availableForms, setAvailableForms] = useState(2);
   const [summaryError, setSummaryError] = useState("");
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
+  const [currentStudent, setCurrentStudent] = useState(activeStudent);
 
   useEffect(() => {
+    console.log(1);
     if (!activeStudent) {
       setTeamCount(0);
       setPeerEvalCount(0);
       setNextPeerRound(null);
       setAvailableForms([]);
       setIsLoadingSummary(isLoadingStudents);
+      console.log("No active students");
       return;
     }
 
@@ -43,13 +46,14 @@ function StudentDashBoard() {
     async function loadSummary() {
       setIsLoadingSummary(true);
       setSummaryError("");
+      console.log(3);
 
       try {
+        console.log("ACTIVE STUDENT", activeStudent);
         const summary = await loadDashboardSummary(activeStudent);
         if (ignore) {
           return;
         }
-
         setTeamCount(summary.teamCount);
         setPeerEvalCount(summary.peerEvalCount);
         setNextPeerRound(summary.nextPeerRound);
@@ -63,7 +67,10 @@ function StudentDashBoard() {
         setPeerEvalCount(0);
         setNextPeerRound(null);
         setAvailableForms([]);
-        setSummaryError(error?.message || "Unable to load dashboard metrics from the backend.");
+        setSummaryError(
+          error?.message ||
+            "Unable to load dashboard metrics from the backend.",
+        );
       } finally {
         if (!ignore) {
           setIsLoadingSummary(false);
@@ -78,18 +85,22 @@ function StudentDashBoard() {
     };
   }, [activeStudent, isLoadingStudents]);
 
-  const resolvedRouteStudentId = routeStudentId || activeStudentRouteId || "backend-unavailable";
+  const resolvedRouteStudentId =
+    routeStudentId || activeStudentRouteId || "backend-unavailable";
   const studentBasePath = `/student/${resolvedRouteStudentId}`;
-  const resolvedStudentName = activeStudent?.name || `Student ${resolvedRouteStudentId}`;
+  const resolvedStudentName =
+    activeStudent?.name || `Student ${resolvedRouteStudentId}`;
   const availableFormList = availableForms;
   const formActionTo = `${studentBasePath}/form`;
   const formActionText =
     isLoadingSummary || isLoadingStudents
       ? "Loading your available section forms."
       : availableFormList.length > 1
-      ? "View your available forms"
+        ? "View your available forms"
         : "No forms assigned to you.";
-  const feedbackMessage = [studentLoadError, summaryError].filter(Boolean).join(" ");
+  const feedbackMessage = [studentLoadError, summaryError]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -99,16 +110,16 @@ function StudentDashBoard() {
       >
         <div>
           <h2 className={styles.title}>Student Dashboard</h2>
-          <p className={styles.subtitle}>
-            Welcome back, {resolvedStudentName}
-          </p>
+          <p className={styles.subtitle}>Welcome back, {resolvedStudentName}</p>
         </div>
         <div className={styles.heroMeta}>
           {availableStudents.length ? (
             <StudentSwitcher
               activeStudentId={activeStudentId}
               availableStudents={availableStudents}
-              onChange={(nextStudentId) => navigate(`/student/${nextStudentId}`)}
+              onChange={(nextStudentId) =>
+                navigate(`/student/${nextStudentId}`)
+              }
             />
           ) : (
             <p className={styles.sourceNote}>Loading students...</p>
@@ -127,17 +138,26 @@ function StudentDashBoard() {
         {[
           {
             title: "My Teams",
-            metric: isLoadingSummary || isLoadingStudents ? "--" : String(teamCount).padStart(2, "0"),
+            metric:
+              isLoadingSummary || isLoadingStudents
+                ? "--"
+                : String(teamCount).padStart(2, "0"),
             accent: "blue",
           },
           {
             title: "Available Forms",
-            metric: isLoadingSummary || isLoadingStudents ? "--" : String(availableFormList.length).padStart(2, "0"),
+            metric:
+              isLoadingSummary || isLoadingStudents
+                ? "--"
+                : String(availableFormList.length).padStart(2, "0"),
             accent: "green",
           },
           {
             title: "Peer Evaluations",
-            metric: isLoadingSummary || isLoadingStudents ? "--" : String(peerEvalCount).padStart(2, "0"),
+            metric:
+              isLoadingSummary || isLoadingStudents
+                ? "--"
+                : String(peerEvalCount).padStart(2, "0"),
             accent: "orange",
           },
         ].map((item, index) => (

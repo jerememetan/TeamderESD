@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import ModuleBlock from "../../components/schematic/ModuleBlock";
-import SystemTag from "../../components/schematic/SystemTag";
-import motionStyles from "../../components/schematic/motion.module.css";
-import StudentSwitcher from "../../components/student/StudentSwitcher";
-import { useStudentSession } from "../../services/studentSession";
+import ModuleBlock from "../../../components/schematic/ModuleBlock";
+import SystemTag from "../../../components/schematic/SystemTag";
+import motionStyles from "../../../components/schematic/motion.module.css";
+import StudentSwitcher from "../../../components/student/StudentSwitcher";
+import { useStudentSession } from "../../../services/studentSession";
 import {
   getPeerEvaluationRound,
   getPeerEvaluationSubmission,
   submitPeerEvaluation,
-} from "../../services/peerEvaluationService";
-import { fetchTeamsBySection } from "../../services/teamService";
-import { fetchAllStudents, buildStudentMapByBackendId } from "../../services/studentService";
+} from "../../../services/peerEvaluationService";
+import { fetchTeamsBySection } from "../../../services/teamService";
+import { fetchAllStudents, buildStudentMapByBackendId } from "../../../services/studentService";
 import styles from "./PeerEvaluationForm.module.css";
-import { Button } from "../../components/ui/button";
+import { Button } from "../../../components/ui/button";
 
 function PeerEvaluationForm() {
   const { roundId, studentId: routeStudentId } = useParams();

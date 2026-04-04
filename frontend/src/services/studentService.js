@@ -57,6 +57,11 @@ export async function fetchAllStudents() {
   return extractStudents(payload);
 }
 
+export async function fetchStudentById(id){
+  const payload = await fetchJson(STUDENT_URL + "/" + id);
+  return payload.data || null;
+}
+
 export function buildStudentMapByBackendId(students = []) {
   return new Map(
     (Array.isArray(students) ? students : [])
