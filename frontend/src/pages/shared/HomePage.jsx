@@ -2,6 +2,9 @@ import { Link } from 'react-router'
 import ModuleBlock from '../../components/schematic/ModuleBlock'
 import SystemTag from '../../components/schematic/SystemTag'
 import styles from './HomePage.module.css'
+import { getPreferredStudentRouteId } from '../../services/studentSession'
+
+const preferredStudentRouteId = getPreferredStudentRouteId()
 
 function HomePage() {
   return (
@@ -15,7 +18,7 @@ function HomePage() {
           </p>
           <div className={styles.actions}>
             <Link className={styles.secondaryAction} to="/instructor">Instructor View</Link>
-            <Link className={styles.secondaryAction} to="/student">Student View</Link>
+            <Link className={styles.secondaryAction} to={`/student/${preferredStudentRouteId}`}>Student View</Link>
           </div>
         </div>
 

@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import {
@@ -21,129 +20,35 @@ import {
 import GroupChip from "../../../components/schematic/GroupChip";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
-import { getBackendSectionId } from "../../../data/backendIds";
-import { mockCourses, mockTeams } from "../../../data/mockData";
-import { fetchStudentProfile } from "../../../services/studentProfileService";
+import {
+  buildSiblingGroupSummaryData,
+} from "../../../adapters/analyticsAdapter";
+import { useAnalyticsPage } from "./logic/useAnalyticsPage";
 import styles from "./Analytics.module.css";
-import { fetchCourseByCode } from "../../../services/courseService";
-import { getSectionById } from "../../../services/sectionService";
-import { fetchTeamsBySection } from "../../../services/teamService";
 
 function Analytics() {
   const { courseId, groupId } = useParams();
-  const [backendStudents, setBackendStudents] = useState([]);
-  const [isLoadingRoster, setIsLoadingRoster] = useState(true);
-  const [rosterError, setRosterError] = useState("");
+  const {
+    selectedCourse,
+    selectedGroup,
+    groupTeams,
+    backendStudents,
+    isLoadingRoster,
+    rosterError,
+  } = useAnalyticsPage(courseId, groupId);
 
-  const [selectedCourse,setSelectedCourse] = useState(null);
-  const [selectedGroup,setSelectedGroup] = useState(null);
-  const [groupTeams,setGroupTeams ]= useState([]);
-  console.log(groupTeams);
-  const selectedCourseGroups = selectedCourse?.groups ?? [];
-  const backendSectionId = getBackendSectionId(groupId || "");
-  
-  useEffect(()=> {
-    async function loadTeams() {
-      try{
-        if (!groupId) {
-          setGroupTeams([]);
-          return;
-        }
-        const pulledteams = await fetchTeamsBySection(groupId);
-        setGroupTeams(pulledteams || []);
-      } catch(error){
-        console.log("load teams failed", error);
-        setGroupTeams([]);
-      }
-      
-    }
-    loadTeams();
-    console.log("GROUP TEAMS",groupTeams);
-  }, [groupId])
+  const siblingGroupSummaryData = [
+    buildSiblingGroupSummaryData(
+      selectedCourse?.code + " " +selectedGroup?.code,
+      backendStudents.length,
+      groupTeams.length,
+    ),
+  ];
 
-  useEffect(() =>{
-    async function loadCourse(){
-      if (!groupId){
-        setIsLoadingRoster(false);
-        setRosterError("Missing group ID");
-        return;
-      }
-      setIsLoadingRoster(true);
-      setRosterError("");
-      try {
-        const course = await fetchCourseByCode(courseId);
-        setSelectedCourse(course);
-      } catch(error){
-        console.log("course fetching failed",error);
-
-      }
-    }
-    loadCourse();
-  } ,[courseId, groupId, setSelectedCourse])
-    useEffect(() =>{
-    async function loadGroup(){
-      if (!groupId){
-        setIsLoadingRoster(false);
-        setRosterError("Missing group ID");
-        return;
-      }
-      setIsLoadingRoster(true);
-      setRosterError("");
-      try {
-        const group = await getSectionById(groupId);
-        setSelectedGroup(group);
-      } catch(error){
-        console.log("course fetching failed",error);
-
-      }
-    }
-    loadGroup();
-  }, [groupId, setSelectedGroup])
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadRoster() {
-      console.log("1");
-      setIsLoadingRoster(true);
-      setRosterError("");
-      try {
-        const students = await fetchStudentProfile(groupId);
-        if (!isMounted) {
-          return;
-        }
-        console.log("STUDENTS",students);
-        setBackendStudents(students);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-        setRosterError(error.message);
-        setBackendStudents([]);
-      } finally {
-        if (isMounted) {
-          setIsLoadingRoster(false);
-        }
-      }
-    }
-
-    loadRoster();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [groupId]);
-
-  const siblingGroupSummaryData = selectedCourseGroups.map((group) => ({
-    name: group.code,
-    students: group.studentsCount,
-    teams: group.teamsCount,
-  }));
-
-  const teamScoresData = groupTeams.map((team) => ({
-    name: team.name,
-    score: team.formationScore,
-  }));
-
+  // TODO(api-backend): Provide per-team diversity metrics for this section.
+  // Endpoint candidate: GET /analytics?section_id={groupId} or GET /team/{team_id}/metrics
+  // Expected object per team: { team_id, team_name, skill_level_score, background_score, work_style_score } - This can be changed to whatever you want
+  // Keep this static fallback until analytics-service contract is finalized.
   const diversityData = [
     {
       metric: "Skill Level",
@@ -165,6 +70,16 @@ function Analytics() {
     },
   ];
 
+  // TODO(api-backend): Provide section-level quality metrics for radar chart.
+  // Endpoint candidate: GET /analytics/section/{groupId}/quality
+  // Expected object: {
+  //   skill_balance: number,
+  //   team_cohesion: number,
+  //   diversity: number,
+  //   communication: number,
+  //   leadership: number
+  // } - Same thing, these are just suggested fields, but can be adjusted
+  // Transform backend keys into [{ metric, value }] for RadarChart.
   const radarData = [
     { metric: "Skill Balance", value: 85 },
     { metric: "Team Cohesion", value: 78 },
@@ -173,15 +88,13 @@ function Analytics() {
     { metric: "Leadership", value: 90 },
   ];
 
-
-
   if (!selectedCourse || !selectedGroup) {
     return <div className={styles.notFound}>Course group not found</div>;
   }
 
   const totalStudents = backendStudents.length || selectedGroup.studentsCount;
   const averageTeamScore =
-    groupTeams.reduce((sum, team) => sum + team.formationScore, 0) /
+    groupTeams.reduce((sum, team) => sum + team.score, 0) /
     (groupTeams.length || 1);
   const averageStudentsPerTeam = totalStudents / (groupTeams.length || 1);
   const rosterSourceTone = rosterError
@@ -199,16 +112,17 @@ function Analytics() {
       <section className={styles.hero}>
         <div>
           <h2 className={styles.title}>
-            {selectedGroup.code} Analytics Page - {selectedCourse.code} G{selectedGroup.section_number}
+            {selectedGroup.code} Analytics Page - {selectedCourse.code} G
+            {selectedGroup.sectionNumber}
           </h2>
           <p className={styles.subtitle}>
-            <b>Course Name</b> : {selectedCourse.name} 
+            <b>Course Name</b> : {selectedCourse.name}
           </p>
         </div>
         <div className={styles.heroTags}>
           <GroupChip
             code={selectedGroup.code}
-            meta={`${totalStudents} students � ${groupTeams.length} teams`}
+            meta={`${totalStudents} students | ${groupTeams.length} teams`}
             tone="green"
           />
           <SystemTag tone={rosterSourceTone}>
@@ -223,7 +137,8 @@ function Analytics() {
 
       {rosterError ? (
         <p className={styles.rosterError}>
-          Student-profile load failed: {rosterError}
+          Atomic roster load failed: {rosterError}.{" "}
+          <Link to="/instructor/error-logs">Go to Error Logs</Link>
         </p>
       ) : null}
 
@@ -250,7 +165,7 @@ function Analytics() {
           metric={String(totalStudents).padStart(2, "0")}
           metricLabel={
             backendStudents.length
-              ? "Pulled from student-profile"
+              ? "Pulled from enrollment + student-service"
               : "Using frontend fallback count"
           }
           accent="orange"
@@ -283,7 +198,7 @@ function Analytics() {
           </div>
         </ModuleBlock>
 
-        <ModuleBlock
+        {/* <ModuleBlock
           componentId="MOD-A5"
           eyebrow="Team Index"
           title={`Formation Scores :: ${selectedGroup.code}`}
@@ -308,7 +223,7 @@ function Analytics() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </ModuleBlock>
+        </ModuleBlock> */}
 
         <ModuleBlock
           componentId="MOD-A6"
@@ -366,11 +281,7 @@ function Analytics() {
             </ResponsiveContainer>
           </div>
         </ModuleBlock>
-
-
       </section>
-
-
     </div>
   );
 }

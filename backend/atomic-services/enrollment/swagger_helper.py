@@ -162,6 +162,12 @@ def _build_openapi_spec(app: Flask, metadata: ServiceDocMetadata) -> Dict[str, A
             if params:
                 operation["parameters"] = params
 
+            # Allow endpoint-specific parameter annotations (query/header/cookie).
+            view_func = app.view_functions.get(rule.endpoint)
+            extra_parameters = getattr(view_func, "_openapi_parameters", None) if view_func is not None else None
+            if isinstance(extra_parameters, list) and extra_parameters:
+                operation.setdefault("parameters", []).extend(extra_parameters)
+
             if method in {"POST", "PUT", "PATCH"}:
                 operation["requestBody"] = {
                     "required": False,
@@ -173,7 +179,6 @@ def _build_openapi_spec(app: Flask, metadata: ServiceDocMetadata) -> Dict[str, A
                 }
 
             # If the view function has marshmallow schema annotations, convert them
-            view_func = app.view_functions.get(rule.endpoint)
             if view_func is not None and MarshmallowSchema is not None:
                 # response schema (marshmallow.Schema instance)
                 resp_schema = getattr(view_func, "_openapi_response_schema", None)
@@ -193,6 +198,11 @@ def _build_openapi_spec(app: Flask, metadata: ServiceDocMetadata) -> Dict[str, A
                         }
                     except Exception:
                         pass
+
+                # Allow explicit OpenAPI responses override for complex contracts (e.g. oneOf).
+                explicit_responses = getattr(view_func, "_openapi_responses", None)
+                if isinstance(explicit_responses, dict) and explicit_responses:
+                    operation["responses"] = explicit_responses
 
                 # request schema (for POST/PUT/PATCH)
                 req_schema = getattr(view_func, "_openapi_request_schema", None)

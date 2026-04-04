@@ -1,19 +1,13 @@
 name: Snyk scan for student-service
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Build student-service Docker image
+      - name: No student-service build (wrappers removed)
         run: |
-          docker build -f backend/atomic-services/student/Dockerfile -t jeremetan/student-service backend/atomic-services/student
-      - name: Run Snyk to check Docker image for vulnerabilities
-        uses: snyk/actions/docker@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          image: jeremetan/student-service
+          echo "student-service wrapper removed; skipping image build and Snyk scan"

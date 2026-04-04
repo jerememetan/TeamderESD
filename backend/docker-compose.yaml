@@ -1,28 +1,8 @@
 services:
-
   # Atomic
 
-  student-service:
-    build:
-      context: ./atomic-services/student
-    container_name: teamder-student-service
-    environment:
-      ENABLE_SWAGGER: "true"
-      PORT: 3001
-      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student
-    ports:
-      - "3001:3001"
-
-  course-service:
-    build:
-      context: ./atomic-services/course
-    container_name: teamder-course-service
-    environment:
-      ENABLE_SWAGGER: "true"
-      PORT: 3017
-      OUTSYSTEMS_BASE_URL: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course
-    ports:
-      - "3017:3017"
+  # Note: `student-service` and `course-service` wrappers removed from this compose
+  # They are replaced by routing through the Kong gateway to the OutSystems APIs.
 
   section-service:
     build:
@@ -45,7 +25,6 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3002:3002"
-
 
   error-service:
     build: ./atomic-services/error
@@ -116,7 +95,7 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3006:3006"
-  
+
   team-service:
     build:
       context: ./atomic-services/team
@@ -137,7 +116,7 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
     ports:
       - "3008:3008"
-  
+
   student-topic-preference-service:
     build: ./atomic-services/student-topic-preference
     container_name: teamder-student-topic-preference-service
@@ -241,7 +220,6 @@ services:
       rabbitmq-setup:
         condition: service_healthy
 
-      
   # Composite
 
   formation-config-service:
@@ -289,7 +267,7 @@ services:
       OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
-      STUDENT_FORM_SUBMISSION_URL: "http://student-form-service:3015/student-form/submission"
+      STUDENT_FORM_SUBMISSION_URL: "http://student-form-submission-service:4006/student-form-submission/submit"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
       TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
       COMPETENCE_URL: "http://student-competence-service:3008/competence"
@@ -300,6 +278,34 @@ services:
       - student-topic-preference-service
       - reputation-service
       - student-competence-service
+
+  student-form-submission-service:
+    build:
+      context: ./composite-services/student-form-submission
+    container_name: teamder-student-form-submission-service
+    ports:
+      - "4006:4006"
+    environment:
+      ENABLE_SWAGGER: "true"
+      PORT: 4006
+      REQUEST_TIMEOUT: 8
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
+      FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
+      COMPETENCE_URL: "http://student-competence-service:3008/competence"
+      TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
+      STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
+    depends_on:
+      - student-form-data-service
+      - student-competence-service
+      - student-topic-preference-service
+      - student-form-service
 
   team-formation-service:
     build:
@@ -368,9 +374,9 @@ services:
       SKILL_URL: "http://skill-service:3002/skill"
       TOPIC_URL: "http://topic-service:3003/topic"
       ANALYTICS_URL: "http://analytics-service:3014/analytics"
-      PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"          
-      NOTIFICATION_URL: "http://notification-service:3016/notification"        
-      REPUTATION_URL: "http://reputation-service:3006/reputation" 
+      PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
+      NOTIFICATION_URL: "http://notification-service:3016/notification"
+      REPUTATION_URL: "http://reputation-service:3006/reputation"
       REQUEST_TIMEOUT: 8
       PORT: 4003
     depends_on:
@@ -381,7 +387,7 @@ services:
       - skill-service
       - topic-service
       - analytics-service
-      - peer-evaluation-service 
+      - peer-evaluation-service
 
   formation-notification-service:
     build:
@@ -401,7 +407,7 @@ services:
       ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
-      STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
+      STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
       SECTION_URL: "http://section-service:3018/section"
       FORM_LINK_URL_TEMPLATE: "http://localhost:5173/student/{student_id}/form/{form_id}"
       FORM_LINK_SUBJECT: "Action Required: Complete Your Teamder Student Form"
@@ -416,7 +422,6 @@ services:
       - enrollment-service
       - section-service
       - student-form-service
-      - student-service
       - rabbitmq
 
   swap-orchestrator-service:
@@ -435,8 +440,8 @@ services:
       TEAM_URL: "http://team-service:3007/team"
       TEAM_SWAP_OPTIMIZE_URL: "http://team-swap-service:3013/team-swap/optimize"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
-      STUDENT_SERVICE_URL: "http://student-service:3001/api/students"
-      STUDENT_BULK_URL: "http://student-service:3001/api/students/bulk-info"
+      STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
+      STUDENT_BULK_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/students/bulk-info"
       REQUEST_TIMEOUT: 10
       RABBIT_HOST: rabbitmq
       RABBIT_PORT: 5672
@@ -449,7 +454,6 @@ services:
       - team-service
       - team-swap-service
       - enrollment-service
-      - student-service
       - rabbitmq
 
   docs-index-service:
@@ -540,11 +544,3 @@ services:
 
 volumes:
   rabbitmq_data:
-
-
-
-
-
-
-
-

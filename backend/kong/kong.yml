@@ -155,6 +155,14 @@ services:
           - /analytics
         strip_path: false
 
+  - name: peer-evaluation-service
+    url: http://peer-evaluation-service:3020
+    routes:
+      - name: peer-evaluation-service-route
+        paths:
+          - /peer-eval
+        strip_path: false
+
   - name: student-form-service
     url: http://student-form-service:3015
     routes:
@@ -217,6 +225,14 @@ services:
       - name: formation-notification-service-route
         paths:
           - /formation-notifications
+        strip_path: false
+
+  - name: student-form-submission-service
+    url: http://student-form-submission-service:4006
+    routes:
+      - name: student-form-submission-service-route
+        paths:
+          - /student-form-submission
         strip_path: false
 
   - name: swap-orchestrator-service

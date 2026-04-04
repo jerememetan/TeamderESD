@@ -19,6 +19,15 @@
   font-weight: 800;
 }
 
+.statsLoading {
+  margin: 8px 0 0;
+  color: var(--td-color-text-muted);
+  font-family: var(--td-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .courseDash {
   color: var(--td-color-text-muted);
 }

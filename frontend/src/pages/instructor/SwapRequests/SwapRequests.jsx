@@ -88,14 +88,14 @@ function SwapRequests() {
                 request.status === "pending" ? (
                   <>
                     <Button
-                      onClick={() => handleApprove(request.id)}
+                      onClick={() => handleApprove(request.id, setRequestList)}
                       variant="success"
                       size="sm"
                     >
                       <CheckCircle className={chrome.buttonIcon} /> Approve
                     </Button>
                     <Button
-                      onClick={() => handleReject(request.id)}
+                      onClick={() => handleReject(request.id, setRequestList)}
                       variant="warning"
                       size="sm"
                     >

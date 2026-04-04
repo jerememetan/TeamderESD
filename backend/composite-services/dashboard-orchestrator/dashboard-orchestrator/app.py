@@ -49,7 +49,6 @@ COURSES_URL = os.getenv("COURSES_URL", "https://personal-0wtj3pne.outsystemsclou
 SECTIONS_URL = os.getenv("SECTION_URL", "http://section-service:3018/section")
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://enrollment-service:3005/enrollment")
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 8))
-COURSE_SERVICE_INTERNAL = os.getenv("COURSE_SERVICE_INTERNAL", "http://course-service:3017/api/courses")
 PEER_EVAL_URL = os.getenv("PEER_EVAL_URL", "http://localhost:3020/peer-eval")
 NOTIFICATION_URL = os.getenv("NOTIFICATION_URL", "http://localhost:3016/notification")
 
@@ -84,17 +83,10 @@ def get_dashboard():
     # If no section_id provided, return a global dashboard summary
     if not section_id:
         # Fetch courses, sections, and enrollments and compute totals
-        # Try the configured COURSES_URL (prefer OutSystems). If it fails
-        # or returns unparsable data, fall back to the internal course-service
-        # proxy which itself proxies OutSystems.
+        # Fetch courses directly from OutSystems.
         courses_data, err = _fetch(COURSES_URL, label="courses service")
         if err or not courses_data:
-            # Attempt internal proxy as a fallback
-            fallback_data, fallback_err = _fetch(COURSE_SERVICE_INTERNAL, label="course-service proxy")
-            if fallback_err or not fallback_data:
-                # return original error if present, else fallback error
-                return jsonify({"code": 502, "message": err or fallback_err}), 502
-            courses_data = fallback_data
+            return jsonify({"code": 502, "message": err or "failed to fetch courses"}), 502
 
         sections_data, err = _fetch(SECTIONS_URL, label="sections service")
         if err:

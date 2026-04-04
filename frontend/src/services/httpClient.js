@@ -5,7 +5,7 @@ function createCacheKey(method, url, cacheKey) {
   return cacheKey ?? `${method.toUpperCase()}:${url}`;
 }
 
-function readCachedValue(key, ttlMs) {
+function readCachedValue(key) {
   const cachedEntry = responseCache.get(key);
   if (!cachedEntry) {
     return null;
@@ -43,7 +43,7 @@ function toErrorMessage(payload, response) {
 
 export async function fetchJson(url, options = {}) {
   const {
-    method = 'GET',
+    method = "GET",
     headers,
     body,
     cache = true,
@@ -54,10 +54,10 @@ export async function fetchJson(url, options = {}) {
 
   const normalizedMethod = method.toUpperCase();
   const key = createCacheKey(normalizedMethod, url, cacheKey);
-  const cacheable = cache && normalizedMethod === 'GET';
+  const cacheable = cache && normalizedMethod === "GET";
 
   if (cacheable) {
-    const cachedValue = readCachedValue(key, ttlMs);
+    const cachedValue = readCachedValue(key);
     if (cachedValue !== null) {
       return cachedValue;
     }
@@ -104,7 +104,7 @@ export async function fetchJson(url, options = {}) {
   }
 }
 
-export function invalidateFetchCache(prefix = '') {
+export function invalidateFetchCache(prefix = "") {
   if (!prefix) {
     responseCache.clear();
     inflightRequests.clear();

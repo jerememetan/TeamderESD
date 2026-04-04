@@ -16,11 +16,13 @@ class CriteriaSchema(Schema):
 
 
 class TopicSchema(Schema):
+    topic_id = fields.UUID(required=False)
     topic_label = fields.Str(required=True)
     section_id = fields.UUID(required=False)
 
 
 class SkillSchema(Schema):
+    skill_id = fields.UUID(required=False)
     skill_label = fields.Str(required=True)
     skill_importance = fields.Float(required=False)
     section_id = fields.UUID(required=False)
