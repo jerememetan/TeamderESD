@@ -80,14 +80,15 @@ export async function loadDashboardSummary(studentProfile) {
   }
 
   const forms = await fetchStudentForms({ studentId: backendStudentId });
-  const uniqueSectionIds = Array.from(new Set(forms.map((form) => form.sectionId).filter(Boolean)));
+  const unsubmittedForms = forms.filter((form) => !form.submitted);
+  const uniqueSectionIds = Array.from(new Set(unsubmittedForms.map((form) => form.sectionId).filter(Boolean)));
 
   if (!uniqueSectionIds.length) {
     return {
       teamCount: 0,
-      formCount: forms.length,
+      formCount: unsubmittedForms.length,
       peerEvalCount: 0,
-      availableForms: forms,
+      availableForms: unsubmittedForms,
       nextPeerRound: null,
     };
   }
@@ -112,9 +113,9 @@ export async function loadDashboardSummary(studentProfile) {
 
   return {
     teamCount,
-    formCount: forms.length,
+    formCount: unsubmittedForms.length,
     peerEvalCount: activeRounds.length,
-    availableForms: forms,
+    availableForms: unsubmittedForms,
     nextPeerRound: activeRounds[0] || null,
   };
 }

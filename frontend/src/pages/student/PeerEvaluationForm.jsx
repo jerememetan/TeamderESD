@@ -12,7 +12,7 @@ import {
   submitPeerEvaluation,
 } from "../../services/peerEvaluationService";
 import { fetchTeamsBySection } from "../../services/teamService";
-import { fetchStudentProfile } from "../../services/studentProfileService";
+import { fetchAllStudents, buildStudentMapByBackendId } from "../../services/studentService";
 import styles from "./PeerEvaluationForm.module.css";
 import { Button } from "../../components/ui/button";
 
@@ -30,7 +30,7 @@ function PeerEvaluationForm() {
 
   const [round, setRound] = useState(null);
   const [teams, setTeams] = useState([]);
-  const [studentProfiles, setStudentProfiles] = useState([]);
+  const [studentsByBackendId, setStudentsByBackendId] = useState(new Map());
   const [existingSubmission, setExistingSubmission] = useState(null);
   const [responses, setResponses] = useState({});
   const [isLoading, setIsLoading] = useState(true);
@@ -65,14 +65,14 @@ function PeerEvaluationForm() {
         if (!isMounted) return;
         setTeams(sectionTeams);
 
-        let profiles = [];
+        let students = [];
         try {
-          profiles = await fetchStudentProfile(fetchedRound.sectionId);
+          students = await fetchAllStudents();
         } catch (err) {
-          console.error("Failed to fetch student profiles:", err);
+          console.error("Failed to fetch students:", err);
         }
         if (!isMounted) return;
-        setStudentProfiles(profiles);
+        setStudentsByBackendId(buildStudentMapByBackendId(students));
 
         if (currentBackendId) {
           const submission = await getPeerEvaluationSubmission(
@@ -92,14 +92,6 @@ function PeerEvaluationForm() {
     return () => { isMounted = false; };
   }, [roundId, currentBackendId]);
 
-  const profileLookup = useMemo(() => {
-    const map = new Map();
-    for (const s of studentProfiles) {
-      map.set(s.student_id, s.profile || s);
-    }
-    return map;
-  }, [studentProfiles]);
-
   const myTeam = useMemo(() => {
     if (!currentBackendId) return null;
     return teams.find((team) =>
@@ -110,15 +102,15 @@ function PeerEvaluationForm() {
   const memberList = useMemo(() => {
     if (!myTeam) return [];
     return (myTeam.students || []).map((s) => {
-      const profile = profileLookup.get(s.student_id);
+      const studentRecord = studentsByBackendId.get(Number(s.student_id));
       return {
         id: String(s.student_id),
-        name: profile?.name || `Student ${s.student_id}`,
-        email: profile?.email || "No email",
+        name: String(studentRecord?.name || "").trim() || `Student ${s.student_id}`,
+        email: String(studentRecord?.email || "").trim() || "No email",
         studentId: `ID-${s.student_id}`,
       };
     });
-  }, [myTeam, profileLookup]);
+  }, [myTeam, studentsByBackendId]);
 
   const teammates = useMemo(
     () => memberList.filter((m) => m.id !== String(currentBackendId)),

@@ -23,7 +23,8 @@ import {
   getPeerEvaluationSummary,
   startPeerEvaluationRound,
 } from "../../../services/peerEvaluationService";
-import { fetchStudentProfile } from "../../../services/studentProfileService";
+import { fetchEnrollmentsBySectionId } from "../../../services/enrollmentService";
+import { fetchAllStudents, buildSectionRoster } from "../../../services/studentService";
 import { generateTeamsForSection } from "../../../services/teamFormationService";
 import { fetchTeamsBySection } from "../../../services/teamService";
 import {
@@ -113,9 +114,12 @@ function Teams() {
       setRosterError("");
 
       try {
-        const students = await fetchStudentProfile(backendSectionId);
+        const [enrollments, students] = await Promise.all([
+          fetchEnrollmentsBySectionId(backendSectionId),
+          fetchAllStudents(),
+        ]);
         if (isMounted) {
-          setBackendStudents(students);
+          setBackendStudents(buildSectionRoster(enrollments, students));
         }
       } catch (error) {
         if (isMounted) {
@@ -443,7 +447,7 @@ function Teams() {
           eyebrow="Section Roster"
           title={`${selectedCourse.code} G${selectedGroup.section_number}`}
           metric={backendStudents.length}
-          metricLabel="Students from student-profile"
+          metricLabel="Students from enrollment + student-service"
           className={motionStyles.staggerItem}
           style={{ "--td-stagger-delay": "0ms" }}
         >
@@ -466,7 +470,7 @@ function Teams() {
           </div>
           {rosterError ? (
             <p className={styles.rosterError}>
-              Student-profile load failed: {rosterError}
+              Atomic roster load failed: {rosterError}
             </p>
           ) : null}
         </ModuleBlock>

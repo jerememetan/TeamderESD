@@ -1,6 +1,6 @@
 import { fetchAllCourses } from './courseService';
 import { fetchAllSections } from './sectionService';
-import { fetchStudentProfile } from './studentProfileService';
+import { fetchAllStudents, buildStudentMapByBackendId } from './studentService';
 import { fetchTeamsBySection } from './teamService';
 
 function normalizeCourse(course, index) {
@@ -30,6 +30,8 @@ export async function fetchStudentAssignments({ studentProfile }) {
     fetchAllCourses(),
     fetchAllSections(),
   ]);
+  const studentDirectory = await fetchAllStudents();
+  const studentsByBackendId = buildStudentMapByBackendId(studentDirectory);
 
   const courses = Array.isArray(courseRecords) ? courseRecords.map(normalizeCourse) : [];
   const sections = Array.isArray(sectionRecords) ? sectionRecords.map(normalizeSection).filter((section) => Boolean(section.id)) : [];
@@ -37,12 +39,9 @@ export async function fetchStudentAssignments({ studentProfile }) {
 
   const sectionResults = await Promise.allSettled(
     sections.map(async (section) => {
-      const [students, teams] = await Promise.all([
-        fetchStudentProfile(section.id),
-        fetchTeamsBySection(section.id),
-      ]);
+      const teams = await fetchTeamsBySection(section.id);
 
-      return { section, students, teams };
+      return { section, teams };
     }),
   );
 
@@ -60,8 +59,7 @@ export async function fetchStudentAssignments({ studentProfile }) {
       continue;
     }
 
-    const { section, students, teams } = result.value;
-    const rosterById = new Map((students ?? []).map((student) => [Number(student.student_id), student]));
+    const { section, teams } = result.value;
     const matchingTeam = teams.find((team) =>
       (team.students ?? []).some((student) => Number(student.student_id) === backendStudentId),
     );
@@ -74,13 +72,13 @@ export async function fetchStudentAssignments({ studentProfile }) {
 
     const members = (matchingTeam.students ?? []).map((student) => {
       const studentBackendId = Number(student.student_id);
-      const rosterEntry = rosterById.get(studentBackendId);
+      const rosterEntry = studentsByBackendId.get(studentBackendId);
       const isCurrentStudent = studentBackendId === backendStudentId;
 
       return {
         id: String(studentBackendId),
-        name: rosterEntry?.profile?.name || `Student ${studentBackendId}`,
-        email: rosterEntry?.profile?.email || 'No email available',
+        name: String(rosterEntry?.name || '').trim() || `Student ${studentBackendId}`,
+        email: String(rosterEntry?.email || '').trim() || 'No email available',
         studentId: `ID-${studentBackendId}`,
         confirmationStatus: isCurrentStudent ? 'pending' : 'confirmed',
       };

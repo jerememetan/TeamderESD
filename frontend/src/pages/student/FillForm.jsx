@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../components/schematic/ModuleBlock";
 import SystemTag from "../../components/schematic/SystemTag";
@@ -9,10 +9,12 @@ import {
   resolveFormationFieldVisibility,
 } from "../../services/formationConfigService";
 import { fetchEnrollmentsBySectionId } from "../../services/enrollmentService";
+import { fetchAllCourses } from "../../services/courseService";
+import { fetchAllSections } from "../../services/sectionService";
+import { fetchStudentForms } from "../../services/studentFormService";
 import { submitStudentForm } from "../../services/studentFormSubmissionService";
-import { fetchStudentProfile } from "../../services/studentProfileService";
+import { fetchAllStudents, buildStudentMapByBackendId } from "../../services/studentService";
 import { useStudentSession } from "../../services/studentSession";
-import { loadAssignmentsForStudent } from "./logic/studentDashboardLogic";
 import styles from "./FillForm.module.css";
 
 const SKILL_SCORE_LABELS = {
@@ -54,7 +56,6 @@ const DEFAULT_FIELD_VISIBILITY = {
 function FillForm() {
   const { formId, studentId: routeStudentId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const {
     activeStudent,
     activeStudentRouteId,
@@ -62,9 +63,9 @@ function FillForm() {
     studentLoadError,
   } = useStudentSession(routeStudentId);
 
-  const [teamAssignments, setTeamAssignments] = useState([]);
-  const [assignmentError, setAssignmentError] = useState("");
-  const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
+  const [availableForms, setAvailableForms] = useState([]);
+  const [formsError, setFormsError] = useState("");
+  const [isLoadingForms, setIsLoadingForms] = useState(true);
   const [isLoadingConfig, setIsLoadingConfig] = useState(false);
   const [isLoadingBuddyOptions, setIsLoadingBuddyOptions] = useState(false);
   const [formLoadError, setFormLoadError] = useState("");
@@ -79,52 +80,110 @@ function FillForm() {
 
   useEffect(() => {
     if (isLoadingStudents || !activeStudent) {
+      setAvailableForms([]);
+      setIsLoadingForms(isLoadingStudents);
       return;
     }
 
-    loadAssignmentsForStudent(
-      activeStudent,
-      setTeamAssignments,
-      () => {},
-      () => {},
-      setAssignmentError,
-      setIsLoadingAssignments,
-    );
+    let ignore = false;
+
+    async function loadForms() {
+      setIsLoadingForms(true);
+      setFormsError("");
+
+      try {
+        const backendStudentId = Number(activeStudent.backendStudentId);
+        if (!Number.isFinite(backendStudentId)) {
+          throw new Error("Unable to resolve a backend student id for the selected student.");
+        }
+
+        const [forms, sections, courses] = await Promise.all([
+          fetchStudentForms({ studentId: backendStudentId }),
+          fetchAllSections(),
+          fetchAllCourses(),
+        ]);
+        if (ignore) {
+          return;
+        }
+
+        const sectionById = new Map(
+          (Array.isArray(sections) ? sections : []).map((section) => [
+            String(section?.id ?? ""),
+            section,
+          ]),
+        );
+
+        const courseById = new Map(
+          (Array.isArray(courses) ? courses : []).map((course) => [
+            String(course?.id ?? course?.course_id ?? ""),
+            {
+              code: String(course?.code ?? course?.course_code ?? "").trim(),
+              name: String(course?.name ?? course?.course_name ?? "").trim(),
+            },
+          ]),
+        );
+
+        setAvailableForms(
+          forms.map((form, index) => ({
+            id: String(form.id),
+            sectionId: String(form.sectionId || "").trim(),
+            submitted: Boolean(form.submitted),
+            title: (() => {
+              const sectionRecord = sectionById.get(String(form.sectionId));
+              const sectionNumber = Number(sectionRecord?.section_number);
+              const courseId = String(sectionRecord?.course_id ?? "");
+              const course = courseById.get(courseId);
+              const courseCode = String(course?.code || "").trim();
+
+              if (courseCode && Number.isFinite(sectionNumber)) {
+                return `${courseCode} G${sectionNumber}`;
+              }
+
+              if (courseCode) {
+                return courseCode;
+              }
+
+              return Number.isFinite(sectionNumber)
+                ? `Section ${sectionNumber}`
+                : `Form ${index + 1}`;
+            })(),
+            description: (() => {
+              const sectionRecord = sectionById.get(String(form.sectionId));
+              const courseId = String(sectionRecord?.course_id ?? "");
+              const course = courseById.get(courseId);
+              return String(course?.name || "").trim() || "Course form";
+            })(),
+          })),
+        );
+      } catch (error) {
+        if (ignore) {
+          return;
+        }
+        setAvailableForms([]);
+        setFormsError(error?.message || "Unable to load forms for this student.");
+      } finally {
+        if (!ignore) {
+          setIsLoadingForms(false);
+        }
+      }
+    }
+
+    loadForms();
+
+    return () => {
+      ignore = true;
+    };
   }, [activeStudent, isLoadingStudents]);
 
-  const scopedFormIds = location.state?.availableFormIds;
-  const availableForms = useMemo(
-    () =>
-      teamAssignments
-        .filter((assignment) => Boolean(assignment?.sectionId))
-        .map((assignment) => ({
-          id: String(assignment.sectionId),
-          sectionId: assignment.sectionId,
-          title: `${assignment.courseCode || assignment.courseId || "Course"} - ${assignment.courseName || "Section"}`,
-          description: "Open form entry",
-          assignment,
-        })),
-    [teamAssignments],
+  const availableFormList = useMemo(
+    () => availableForms.filter((form) => !form.submitted),
+    [availableForms],
   );
-
-  const availableFormList = useMemo(() => {
-    const formPool = Array.isArray(scopedFormIds) && scopedFormIds.length
-      ? availableForms.filter((form) => scopedFormIds.includes(form.id))
-      : availableForms;
-    return formPool;
-  }, [availableForms, scopedFormIds]);
-  const resolvedForm = formId ? availableFormList.find((form) => form.id === formId) : availableFormList[0];
-  const resolvedAssignment = resolvedForm
-    ? teamAssignments.find((assignment) => String(assignment.sectionId) === String(resolvedForm.sectionId)) || null
-    : null;
-  const chooserMode = !formId && availableFormList.length > 1;
+  const resolvedForm = formId ? availableForms.find((form) => form.id === formId) : null;
+  const chooserMode = !formId;
   const studentBasePath = `/student/${activeStudentRouteId}`;
 
-  const resolvedAssignmentLabel = resolvedAssignment
-    ? `${resolvedAssignment.courseCode || resolvedAssignment.courseId} :: ${resolvedAssignment.groupCode || resolvedAssignment.groupId}`
-    : resolvedForm
-      ? "Selected section"
-      : "Backend form";
+  const resolvedAssignmentLabel = resolvedForm?.title || "Course form";
 
   const sectionSkills = Array.isArray(formationConfig?.skills) ? formationConfig.skills : [];
   const sectionTopics = Array.isArray(formationConfig?.topics) ? formationConfig.topics : [];
@@ -134,10 +193,24 @@ function FillForm() {
   const shouldCollectBuddy = fieldVisibility.buddyEnabled;
 
   useEffect(() => {
+    if (!formId || isLoadingForms || !resolvedForm?.submitted) {
+      return;
+    }
+
+    const redirectHandle = window.setTimeout(() => {
+      navigate(studentBasePath);
+    }, 2500);
+
+    return () => {
+      window.clearTimeout(redirectHandle);
+    };
+  }, [formId, isLoadingForms, navigate, resolvedForm?.submitted, studentBasePath]);
+
+  useEffect(() => {
     let isMounted = true;
 
     async function loadSectionFormationConfig() {
-      if (!resolvedForm || !activeStudent) {
+      if (!resolvedForm || !activeStudent || resolvedForm.submitted) {
         setFormationConfig(null);
         setFieldVisibility(DEFAULT_FIELD_VISIBILITY);
         setBuddyOptions([]);
@@ -160,7 +233,17 @@ function FillForm() {
       setBuddyOptions([]);
 
       try {
-        const configResponse = await fetchFormationConfig(sectionId);
+        const matchingForms = await fetchStudentForms({
+          studentId: activeStudentId,
+          sectionId,
+        });
+        const effectiveSectionId = matchingForms[0]?.sectionId || sectionId;
+
+        if (!effectiveSectionId) {
+          throw new Error("Unable to resolve a valid section for this student form.");
+        }
+
+        const configResponse = await fetchFormationConfig(effectiveSectionId);
         if (!isMounted) {
           return;
         }
@@ -194,8 +277,8 @@ function FillForm() {
 
         setIsLoadingBuddyOptions(true);
         const [enrollments, students] = await Promise.all([
-          fetchEnrollmentsBySectionId(sectionId),
-          fetchStudentProfile(sectionId),
+          fetchEnrollmentsBySectionId(effectiveSectionId),
+          fetchAllStudents(),
         ]);
 
         if (!isMounted) {
@@ -210,20 +293,15 @@ function FillForm() {
           ),
         );
 
-        const studentNameById = new Map(
-          (Array.isArray(students) ? students : []).map((student) => {
-            const studentId = Number(student?.student_id);
-            const displayName =
-              String(student?.profile?.name || student?.name || "").trim() || "Unnamed student";
-            return [studentId, displayName];
-          }),
-        );
+        const studentsByBackendId = buildStudentMapByBackendId(students);
 
         setBuddyOptions(
           rosterIds
             .map((studentId) => ({
               value: String(studentId),
-              label: studentNameById.get(studentId) || "Unnamed student",
+              label:
+                String(studentsByBackendId.get(studentId)?.name || "").trim() ||
+                `Student ${studentId}`,
             }))
             .sort((left, right) => left.label.localeCompare(right.label)),
         );
@@ -272,30 +350,55 @@ function FillForm() {
     );
   }
 
-  if (assignmentError || formLoadError) {
+  if (formsError || formLoadError) {
     return (
       <div className={styles.page}>
         <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
-        <p className={styles.notFound}>{assignmentError || formLoadError}</p>
+        <p className={styles.notFound}>{formsError || formLoadError}</p>
       </div>
     );
   }
 
-  if (!formId && !resolvedForm && !isLoadingAssignments) {
+  if (!formId && isLoadingForms) {
     return (
       <div className={styles.page}>
         <Link to={studentBasePath} className={styles.backLink}>
           <ArrowLeft className={styles.backIcon} /> Return to student console
         </Link>
-        <p className={styles.notFound}>No form entries are available for this student.</p>
+        <ModuleBlock componentId="MOD-FLOAD" eyebrow="Loading" title="Loading forms">
+          <p>Fetching your available forms from student-form service...</p>
+        </ModuleBlock>
+      </div>
+    );
+  }
+
+  if (!formId && !availableFormList.length && !isLoadingForms) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <p className={styles.notFound}>No unsubmitted form entries are available for this student.</p>
+      </div>
+    );
+  }
+
+  if (formId && isLoadingForms) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <ModuleBlock componentId="MOD-FLOAD-DETAIL" eyebrow="Loading" title="Loading form">
+          <p>Resolving this form record for the selected student...</p>
+        </ModuleBlock>
       </div>
     );
   }
 
   const availableFormCount = availableFormList.length;
-  const availableFormIds = availableFormList.map((form) => form.id);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -304,6 +407,11 @@ function FillForm() {
     try {
       if (!resolvedForm || !activeStudent) {
         throw new Error("Unable to resolve form context for submission.");
+      }
+
+      const resolvedSectionId = String(resolvedForm.sectionId || "").trim();
+      if (!resolvedSectionId) {
+        throw new Error("Unable to resolve section_id for this form submission.");
       }
 
       const normalizedSkills = shouldCollectSkills
@@ -343,7 +451,7 @@ function FillForm() {
       }
 
       const payload = {
-        section_id: resolvedForm.sectionId,
+        section_id: resolvedSectionId,
         student_id: activeStudent.backendStudentId,
         ...(shouldCollectBuddy && buddyRequestStudentId ? { buddy_id: Number(buddyRequestStudentId) } : {}),
         ...(shouldCollectMbti && mbti.trim() ? { mbti: mbti.trim() } : {}),
@@ -386,26 +494,44 @@ function FillForm() {
         </section>
         <div className={styles.chooserGrid}>
           {availableFormList.map((form, index) => {
-            const assignment = teamAssignments.find((item) => item.sectionId === form.sectionId);
             return (
               <Link
                 key={form.id}
                 to={`/student/${activeStudentRouteId}/form/${form.id}`}
-                state={{ availableFormIds }}
                 className={styles.chooserCard}
               >
                 <ModuleBlock
                   componentId={`MOD-FSEL-${index + 1}`}
-                  eyebrow={assignment?.groupCode || "Section"}
-                  title={assignment ? `${assignment.courseCode} - ${assignment.courseName}` : form.title}
+                  eyebrow="Course"
+                  title={form.title}
                 >
-                  <p className={styles.chooserMeta}>{assignment?.groupLabel || "Assigned section"}</p>
-                  <p className={styles.subtitle}>{form.description}</p>
+                  <p className={styles.chooserMeta}>{form.description}</p>
+                  <p className={styles.subtitle}>Open form entry</p>
                 </ModuleBlock>
               </Link>
             );
           })}
         </div>
+      </div>
+    );
+  }
+
+  if (resolvedForm?.submitted) {
+    return (
+      <div className={styles.page}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+        <ModuleBlock componentId="MOD-FSUB" eyebrow="Submitted" title="Form already submitted">
+          <p className={styles.subtitle}>
+            This form has already been submitted. Redirecting you back to your dashboard...
+          </p>
+          <div className={styles.actionRow}>
+            <Button type="button" onClick={() => navigate(studentBasePath)}>
+              Return to dashboard
+            </Button>
+          </div>
+        </ModuleBlock>
       </div>
     );
   }
@@ -572,14 +698,14 @@ function FillForm() {
           </ModuleBlock>
         ) : null}
 
-        {isLoadingAssignments ? (
-          <ModuleBlock componentId="MOD-LOAD" eyebrow="Loading" title="Loading assignments">
-            <p>Resolving available sections for this student...</p>
+        {isLoadingForms ? (
+          <ModuleBlock componentId="MOD-LOAD" eyebrow="Loading" title="Loading forms">
+            <p>Fetching forms for the selected student...</p>
           </ModuleBlock>
         ) : null}
 
         <div className={styles.actionRow}>
-          <Button type="submit" disabled={isLoadingAssignments || isLoadingConfig || isLoadingBuddyOptions}>
+          <Button type="submit" disabled={isLoadingForms || isLoadingConfig || isLoadingBuddyOptions}>
             Submit form
           </Button>
           <Button type="button" onClick={() => navigate(studentBasePath)} variant="outline">

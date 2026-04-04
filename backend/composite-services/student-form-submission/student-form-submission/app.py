@@ -55,6 +55,7 @@ REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "8"))
 FORM_DATA_URL = os.getenv("FORM_DATA_URL", "http://localhost:3010/form-data")
 COMPETENCE_URL = os.getenv("COMPETENCE_URL", "http://localhost:3008/competence")
 TOPIC_PREFERENCE_URL = os.getenv("TOPIC_PREFERENCE_URL", "http://localhost:3009/topic-preference")
+STUDENT_FORM_URL = os.getenv("STUDENT_FORM_URL", "http://localhost:3015/student-form")
 
 submit_schema = SubmitRequestSchema()
 
@@ -214,6 +215,31 @@ def submit_form():
                 request_context={"section_id": section_id, "student_id": student_id, "operation": "submit-topic-preference"},
             )
         writes["topic_preference"] = _safe_json(topic_pref_resp)
+
+    student_form_payload = _normalize_json_value(
+        {
+            "section_id": section_id,
+            "student_id": student_id,
+        }
+    )
+    try:
+        student_form_resp = _call_json("PUT", STUDENT_FORM_URL, payload=student_form_payload)
+    except requests.RequestException:
+        return _downstream_error(
+            "student-form",
+            None,
+            "Failed to mark student form as submitted",
+            request_context={"section_id": section_id, "student_id": student_id, "operation": "mark-submitted"},
+        )
+
+    if student_form_resp.status_code not in (200, 201):
+        return _downstream_error(
+            "student-form",
+            student_form_resp,
+            "Failed to mark student form as submitted",
+            request_context={"section_id": section_id, "student_id": student_id, "operation": "mark-submitted"},
+        )
+    writes["student_form"] = _safe_json(student_form_resp)
 
     result = {
         "section_id": section_id,

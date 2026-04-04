@@ -321,10 +321,12 @@ services:
       FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
       COMPETENCE_URL: "http://student-competence-service:3008/competence"
       TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
+      STUDENT_FORM_URL: "http://student-form-service:3015/student-form"
     depends_on:
       - student-form-data-service
       - student-competence-service
       - student-topic-preference-service
+      - student-form-service
 
   team-formation-service:
     build:

@@ -13,6 +13,7 @@ from swagger_helper import register_swagger
 from flask import Flask, request, jsonify
 import requests
 import os
+from uuid import UUID
 from schemas import FormationRequestSchema, FormationResponseSchema, FormationGetResponseSchema
 
 _p = Path(__file__).resolve()
@@ -238,6 +239,10 @@ def aggregate_get():
     section_id = request.args.get("section_id")
     if not section_id:
         return jsonify({"error": "Missing section_id in query params"}), 400
+    try:
+        UUID(str(section_id))
+    except (ValueError, TypeError):
+        return jsonify({"error": "section_id must be a valid UUID"}), 400
 
     try:
         crit_resp = requests.get(CRITERIA_URL, params={"section_id": section_id})
