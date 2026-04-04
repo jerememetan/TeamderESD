@@ -2,7 +2,7 @@ from marshmallow import Schema, fields, validate
 
 
 class SwapConstraintCreateSchema(Schema):
-    course_id = fields.UUID(required=True)
+    course_id = fields.Integer(required=True)
     module_id = fields.UUID(required=True)
     class_id = fields.UUID(required=True)
     gpa_variance_level = fields.String(required=False, load_default="standard", validate=validate.OneOf(["strict", "standard", "none"]))
@@ -14,7 +14,7 @@ class SwapConstraintCreateSchema(Schema):
 
 class SwapConstraintResponseSchema(Schema):
     constraint_id = fields.UUID()
-    course_id = fields.UUID()
+    course_id = fields.Integer()
     module_id = fields.UUID()
     class_id = fields.UUID()
     gpa_variance_level = fields.Method("get_gpa_variance_level")

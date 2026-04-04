@@ -103,7 +103,7 @@ class SwapCycle(db.Model):
 
     cycle_id = db.Column(db.Uuid, primary_key=True, default=uuid.uuid4)
     section_id = db.Column(db.Uuid, nullable=False, index=True)
-    course_id = db.Column(db.Uuid, nullable=False, index=True)
+    course_id = db.Column(db.Integer, nullable=False, index=True)
     module_id = db.Column(db.Uuid, nullable=False, index=True)
     class_id = db.Column(db.Uuid, nullable=False, index=True)
     constraint_id = db.Column(db.Uuid, nullable=True)
@@ -265,6 +265,13 @@ def _normalize_uuid(raw_value, field_name):
         raise ValueError(f"{field_name} must be a valid UUID")
 
 
+def _normalize_int(raw_value, field_name):
+    parsed = _int_or_none(raw_value)
+    if parsed is None:
+        raise ValueError(f"{field_name} must be a valid integer")
+    return parsed
+
+
 def _parse_datetime(raw_value, field_name):
     if raw_value is None:
         raise ValueError(f"{field_name} is required")
@@ -301,7 +308,7 @@ def _serialize_cycle(cycle):
     return {
         "cycle_id": str(cycle.cycle_id),
         "section_id": str(cycle.section_id),
-        "course_id": str(cycle.course_id),
+        "course_id": cycle.course_id,
         "module_id": str(cycle.module_id),
         "class_id": str(cycle.class_id),
         "constraint_id": str(cycle.constraint_id) if cycle.constraint_id else None,
@@ -525,7 +532,7 @@ def _publish_cycle_window_event(cycle, event_type, routing_key):
             "event_type": event_type,
             "cycle_id": str(cycle.cycle_id),
             "section_id": str(cycle.section_id),
-            "course_id": str(cycle.course_id),
+            "course_id": cycle.course_id,
             "module_id": str(cycle.module_id),
             "class_id": str(cycle.class_id),
             "open_at": _as_iso(cycle.open_at),
@@ -549,7 +556,7 @@ def _publish_cycle_window_event(cycle, event_type, routing_key):
             "event_type": event_type,
             "cycle_id": str(cycle.cycle_id),
             "section_id": str(cycle.section_id),
-            "course_id": str(cycle.course_id),
+            "course_id": cycle.course_id,
             "module_id": str(cycle.module_id),
             "class_id": str(cycle.class_id),
             "open_at": _as_iso(cycle.open_at),
@@ -570,7 +577,7 @@ def _publish_cycle_window_event(cycle, event_type, routing_key):
             "event_type": event_type,
             "cycle_id": str(cycle.cycle_id),
             "section_id": str(cycle.section_id),
-            "course_id": str(cycle.course_id),
+            "course_id": cycle.course_id,
             "module_id": str(cycle.module_id),
             "class_id": str(cycle.class_id),
             "open_at": _as_iso(cycle.open_at),
@@ -605,7 +612,7 @@ def _publish_request_result_event(cycle, request_result, new_team_by_student, st
         "event_type": event_type,
         "cycle_id": str(cycle.cycle_id),
         "section_id": str(cycle.section_id),
-        "course_id": str(cycle.course_id),
+        "course_id": cycle.course_id,
         "module_id": str(cycle.module_id),
         "class_id": str(cycle.class_id),
         "swap_request_id": str(request_result.get("swap_request_id")),
@@ -638,7 +645,7 @@ def _publish_rejection_event(cycle, swap_request_id, student_id, reason=None):
         "event_type": "SwapRejected",
         "cycle_id": str(cycle.cycle_id),
         "section_id": str(cycle.section_id),
-        "course_id": str(cycle.course_id),
+        "course_id": cycle.course_id,
         "module_id": str(cycle.module_id),
         "class_id": str(cycle.class_id),
         "swap_request_id": str(swap_request_id),
@@ -697,7 +704,7 @@ def _fetch_constraint_row_for_scope(course_id, module_id, class_id):
         SWAP_CONSTRAINTS_URL,
         label="swap-constraints service",
         params={
-            "course_id": str(course_id),
+            "course_id": course_id,
             "module_id": str(module_id),
             "class_id": str(class_id),
         },
@@ -752,7 +759,7 @@ def _constraints_match(existing, desired):
 
 def _create_or_get_constraints(course_id, module_id, class_id, constraints):
     desired_payload = {
-        "course_id": str(course_id),
+        "course_id": course_id,
         "module_id": str(module_id),
         "class_id": str(class_id),
         "gpa_variance_level": _normalize_variance_level(constraints.get("gpa_variance_level")),
@@ -945,7 +952,7 @@ def _course_row_name(row):
 
 
 def _resolve_course_name(course_id):
-    if not course_id:
+    if course_id is None:
         return "Course"
 
     course_id_text = str(course_id)
@@ -1040,7 +1047,7 @@ def _to_processed_request(
 
     return {
         "id": request_id,
-        "courseId": str(cycle.course_id),
+        "courseId": cycle.course_id,
         "courseName": course_name,
         "studentId": student_id_text,
         "studentName": student_name,
@@ -1349,7 +1356,7 @@ def _generate_proposal_for_cycle(cycle):
     if approved_requests:
         optimize_payload = {
             "section_id": str(cycle.section_id),
-            "course_id": str(cycle.course_id),
+            "course_id": cycle.course_id,
             "module_id": str(cycle.module_id),
             "class_id": str(cycle.class_id),
             "teams": optimizer_teams,
@@ -1387,7 +1394,7 @@ def _generate_proposal_for_cycle(cycle):
     proposal_payload = {
         "cycle_id": str(cycle.cycle_id),
         "section_id": str(cycle.section_id),
-        "course_id": str(cycle.course_id),
+        "course_id": cycle.course_id,
         "module_id": str(cycle.module_id),
         "class_id": str(cycle.class_id),
         "generated_at": _as_iso(_utc_now()),
@@ -1459,7 +1466,7 @@ def create_cycle():
 
     try:
         section_id = _normalize_uuid(payload.get("section_id"), "section_id")
-        course_id = _normalize_uuid(payload.get("course_id"), "course_id")
+        course_id = _normalize_int(payload.get("course_id"), "course_id")
         module_id = _normalize_uuid(payload.get("module_id"), "module_id")
         class_id = _normalize_uuid(payload.get("class_id"), "class_id")
         open_at = _parse_datetime(payload.get("open_at"), "open_at")
@@ -1543,6 +1550,7 @@ def create_cycle():
 @app.route("/swap-orchestrator/cycles", methods=["GET"])
 def list_cycles():
     section_id = request.args.get("section_id")
+    course_id = request.args.get("course_id")
     query = SwapCycle.query.order_by(SwapCycle.created_at.desc())
 
     if section_id:
@@ -1551,6 +1559,15 @@ def list_cycles():
         except ValueError as error:
             return jsonify({"code": 400, "message": str(error)}), 400
         query = query.filter_by(section_id=section_uuid)
+
+    if course_id is not None:
+        course_id_text = str(course_id).strip()
+        if not course_id_text:
+            return jsonify({"code": 400, "message": "course_id cannot be empty"}), 400
+        course_id_value = _int_or_none(course_id_text)
+        if course_id_value is None:
+            return jsonify({"code": 400, "message": "course_id must be a valid integer"}), 400
+        query = query.filter_by(course_id=course_id_value)
 
     cycles = query.all()
     transitions = []

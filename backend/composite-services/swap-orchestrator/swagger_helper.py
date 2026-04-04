@@ -1,5 +1,6 @@
 ﻿import os
-from typing import Any, Dict, List
+from copy import deepcopy
+from typing import Any, Dict, List, Tuple
 
 from flask import Flask, Response
 from pydantic import BaseModel
@@ -48,6 +49,209 @@ def _path_parameters(rule: str) -> List[Dict[str, Any]]:
     return params
 
 
+_OPERATION_HINTS: Dict[Tuple[str, str], Dict[str, Any]] = {
+    (
+        "get",
+        "/swap-orchestrator/cycles",
+    ): {
+        "summary": "List swap cycles",
+        "description": "Returns swap cycles with optional section and course filters.",
+        "parameters": [
+            {
+                "name": "section_id",
+                "in": "query",
+                "required": False,
+                "description": "Filter by section UUID.",
+                "schema": {"type": "string", "format": "uuid"},
+            },
+            {
+                "name": "course_id",
+                "in": "query",
+                "required": False,
+                "description": "Filter by integer course identifier.",
+                "schema": {"type": "integer"},
+                "example": 12345,
+            },
+        ],
+        "responses": {
+            "200": {"description": "Cycles returned"},
+            "400": {"description": "Invalid query parameter value"},
+        },
+    },
+    (
+        "post",
+        "/swap-orchestrator/cycles",
+    ): {
+        "summary": "Create swap cycle",
+        "description": "Creates a swap cycle and initializes or reuses swap constraints.",
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "required": [
+                            "section_id",
+                            "course_id",
+                            "module_id",
+                            "class_id",
+                            "open_at",
+                            "close_at",
+                        ],
+                        "properties": {
+                            "section_id": {"type": "string", "format": "uuid"},
+                            "course_id": {"type": "integer", "example": 12345},
+                            "module_id": {"type": "string", "format": "uuid"},
+                            "class_id": {"type": "string", "format": "uuid"},
+                            "open_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": "2026-04-05T03:00:00Z",
+                            },
+                            "close_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": "2026-04-06T03:00:00Z",
+                            },
+                            "created_by": {"type": "string"},
+                            "constraints": {
+                                "type": "object",
+                                "properties": {
+                                    "gpa_variance_level": {
+                                        "type": "string",
+                                        "enum": ["strict", "standard", "none"],
+                                    },
+                                    "class_avg_gpa": {"type": "number"},
+                                    "require_year_diversity": {"type": "boolean"},
+                                    "max_skill_imbalance": {"type": "number"},
+                                    "swap_window_days": {"type": "integer"},
+                                },
+                            },
+                        },
+                    }
+                }
+            },
+        },
+        "responses": {
+            "201": {"description": "Cycle created"},
+            "400": {"description": "Validation error"},
+            "409": {"description": "Conflict from upstream constraints"},
+            "502": {"description": "Upstream service error"},
+        },
+    },
+    (
+        "post",
+        "/swap-orchestrator/cycles/{cycle_id}/requests",
+    ): {
+        "summary": "Submit swap request",
+        "description": "Creates a swap request and maps it to a cycle.",
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["student_id", "current_team", "reason"],
+                        "properties": {
+                            "student_id": {"type": "integer"},
+                            "current_team": {"type": "string", "format": "uuid"},
+                            "reason": {"type": "string"},
+                        },
+                    }
+                }
+            },
+        },
+        "responses": {
+            "201": {"description": "Swap request submitted"},
+            "400": {"description": "Validation error"},
+            "404": {"description": "Cycle not found"},
+            "409": {"description": "Cycle state conflict"},
+        },
+    },
+    (
+        "get",
+        "/swap-orchestrator/cycles/{cycle_id}/requests/processed",
+    ): {
+        "summary": "List processed cycle requests",
+        "description": "Returns frontend-oriented swap request rows for a cycle.",
+        "parameters": [
+            {
+                "name": "status",
+                "in": "query",
+                "required": False,
+                "description": "Optional lowercase status filter.",
+                "schema": {
+                    "type": "string",
+                    "enum": ["pending", "approved", "rejected", "executed", "failed"],
+                },
+            }
+        ],
+    },
+    (
+        "patch",
+        "/swap-orchestrator/cycles/{cycle_id}/requests/{swap_request_id}/decision",
+    ): {
+        "summary": "Decide swap request",
+        "description": "Approves or rejects a mapped swap request.",
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["decision"],
+                        "properties": {
+                            "decision": {
+                                "type": "string",
+                                "enum": ["APPROVED", "REJECTED"],
+                            }
+                        },
+                    }
+                }
+            },
+        },
+    },
+    (
+        "get",
+        "/swap-orchestrator/student-team",
+    ): {
+        "summary": "Get student team",
+        "description": "Returns a student's current team assignment for a section.",
+        "parameters": [
+            {
+                "name": "section_id",
+                "in": "query",
+                "required": True,
+                "schema": {"type": "string", "format": "uuid"},
+            },
+            {
+                "name": "student_id",
+                "in": "query",
+                "required": True,
+                "schema": {"type": "integer"},
+            },
+        ],
+    },
+}
+
+
+def _merge_parameters(
+    path_parameters: List[Dict[str, Any]],
+    hint_parameters: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    merged: List[Dict[str, Any]] = []
+    seen = set()
+
+    for param in path_parameters + hint_parameters:
+        key = (param.get("name"), param.get("in"))
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(param)
+
+    return merged
+
+
 def _build_openapi_spec(app: Flask, metadata: ServiceDocMetadata) -> Dict[str, Any]:
     paths: Dict[str, Dict[str, Any]] = {}
     tags = set()
@@ -72,9 +276,11 @@ def _build_openapi_spec(app: Flask, metadata: ServiceDocMetadata) -> Dict[str, A
             paths[openapi_path] = {}
 
         for method in methods:
+            operation_hints = deepcopy(_OPERATION_HINTS.get((method.lower(), openapi_path), {}))
             operation = {
                 "summary": f"{method} {openapi_path}",
-                "description": f"Auto-generated contract for `{rule.endpoint}`.",
+                "description": f"Auto-generated contract for {rule.endpoint}.",
+                "operationId": rule.endpoint,
                 "tags": [tag],
                 "responses": {
                     "200": {"description": "Successful response"},
@@ -83,8 +289,25 @@ def _build_openapi_spec(app: Flask, metadata: ServiceDocMetadata) -> Dict[str, A
                 },
             }
 
-            if params:
-                operation["parameters"] = params
+            if "summary" in operation_hints:
+                operation["summary"] = operation_hints["summary"]
+            if "description" in operation_hints:
+                operation["description"] = operation_hints["description"]
+            if "operationId" in operation_hints:
+                operation["operationId"] = operation_hints["operationId"]
+            if "tags" in operation_hints:
+                operation["tags"] = operation_hints["tags"]
+
+            hint_responses = operation_hints.get("responses")
+            if isinstance(hint_responses, dict):
+                operation["responses"] = {**operation["responses"], **hint_responses}
+
+            hint_parameters = operation_hints.get("parameters")
+            if not isinstance(hint_parameters, list):
+                hint_parameters = []
+            merged_parameters = _merge_parameters(params, hint_parameters)
+            if merged_parameters:
+                operation["parameters"] = merged_parameters
 
             if method in {"POST", "PUT", "PATCH"}:
                 operation["requestBody"] = {
@@ -95,6 +318,9 @@ def _build_openapi_spec(app: Flask, metadata: ServiceDocMetadata) -> Dict[str, A
                         }
                     },
                 }
+
+            if "requestBody" in operation_hints:
+                operation["requestBody"] = operation_hints["requestBody"]
 
             paths[openapi_path][method.lower()] = operation
 

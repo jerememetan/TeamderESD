@@ -31,7 +31,7 @@ class SwapConstraintsSchema(Schema):
 
 class OptimizeRequestSchema(Schema):
     section_id = fields.UUID(required=True)
-    course_id = fields.UUID(required=True)
+    course_id = fields.Integer(required=True)
     module_id = fields.UUID(required=True)
     class_id = fields.UUID(required=True)
     teams = fields.List(fields.Nested(TeamSchema), required=True)
