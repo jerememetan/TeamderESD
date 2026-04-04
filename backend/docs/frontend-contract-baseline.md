@@ -39,6 +39,7 @@ Use only when a page explicitly requires them and contract is verified:
 - Endpoint: `GET /dashboard`
 - Expected envelope: `{ code, data }`
 - Required data keys: `totalCourses`, `totalGroups`, `totalStudents`, `pendingSwapRequests`
+- Resilience note: keep `GET /dashboard` as primary, but allow fallback aggregation from `courses`, `section`, `enrollment`, and `swap-request` when orchestrator endpoint fails.
 
 ### Instructor CreateForm (Publish Links)
 
@@ -106,6 +107,46 @@ Use only when a page explicitly requires them and contract is verified:
   - `GET /team?section_ids={id1,id2,...}`
   - `POST /team-formation` (section-based generation)
 - Contract note: page computes stage/actions from normalized group contract and backend stage.
+
+### Student Dashboard
+
+- Frontend files:
+  - `frontend/src/pages/student/StudentDashboard/logic/studentDashboardLogic.js`
+  - `frontend/src/pages/student/logic/studentAssignmentLogic.js`
+- Endpoints:
+  - `GET /student-form?student_id={id}`
+  - `GET /enrollment`
+  - `GET /team?section_ids={id1,id2,...}`
+  - `GET /peer-eval/rounds?section_id={id}&status=active`
+- Contract note: backend student identity must resolve to numeric `backendStudentId` before assignment and summary calculations.
+
+### Student My Team
+
+- Frontend files:
+  - `frontend/src/pages/student/MyTeam/logic/useMyTeamPage.js`
+  - `frontend/src/pages/student/logic/studentAssignmentLogic.js`
+- Endpoints:
+  - `GET /team?section_ids={id1,id2,...}`
+  - `GET /section`
+  - `GET /courses`
+  - `GET /students`
+  - `GET /peer-eval/rounds?section_id={id}&status=active`
+- Contract note: assignments should degrade to empty state with explicit error messaging when backend lookup fails.
+
+### Student Fill Form
+
+- Frontend files:
+  - `frontend/src/pages/student/FillForm/logic/useFillFormPage.js`
+  - `frontend/src/services/studentFormService.js`
+- Endpoints:
+  - `GET /student-form?student_id={id}`
+  - `GET /student-form?student_id={id}&section_id={id}`
+  - `GET /formation-config?section_id={id}`
+  - `GET /enrollment?section_id={id}`
+  - `GET /students`
+  - `GET /courses`
+  - `GET /section`
+- Contract note: field visibility is derived from `formation-config.criteria` weights and must stay in hook logic, not rendering components.
 
 ## Definition of Done Gate (Per Page)
 

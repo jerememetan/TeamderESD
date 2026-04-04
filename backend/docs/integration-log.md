@@ -312,11 +312,62 @@ Run verification checks for stabilized pages and Kong-backed contracts before co
   - `GET /dashboard/health` -> pass
 
 ### Gateway alignment updates performed
-
+- Added Kong route for peer evaluation path (`/peer-eval`) and aligned frontend peer-eval base URL to Kong.
+- Kept frontend/browser traffic on `http://localhost:8000` for verification checks.
 
 ### Blocker found
 
+- `GET /dashboard` returned 502 while `GET /dashboard/health` returned 200.
+- Frontend mitigation was added: dashboard keeps `/dashboard` as primary and falls back to atomic aggregation when it fails.
 
 ### Gate status
 
+- PASS WITH DEFERRED BACKEND ISSUE
+
 ### Artifact
+
+- `backend/docs/phase6-verification-2026-04-05.md`
+
+## 2026-04-05 :: Step 9 :: Phase 6 verification delta (student route track)
+
+### Goal
+
+Verify contracts used by recently refactored student pages (`StudentDashboard`, `MyTeam`, `FillForm`) and record a focused phase delta.
+
+### Scope
+
+- Frontend gate rerun: lint + build + dev smoke startup.
+- Kong contract probes for student-facing dependencies.
+
+### Checks executed
+
+- Frontend:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+  - `npm run dev` -> pass (auto-selected port 5175 because 5173/5174 were already in use)
+- Kong endpoints:
+  - `GET /students` -> 200
+  - `GET /courses` -> 200
+  - `GET /section` -> 200
+  - `GET /enrollment` -> 200
+  - `GET /enrollment?section_id={id}` -> 200
+  - `GET /team?section_id={id}` -> 200
+  - `GET /formation-config?section_id={id}` -> 200
+  - `GET /peer-eval/rounds?section_id={id}&status=active` -> 200
+  - `GET /student-form?student_id={id}` -> 200
+  - `GET /student-form/submitted?section_id={id}` -> 200
+  - `GET /student-form/unsubmitted?section_id={id}` -> 200
+
+### Blocker state
+
+- Unchanged from Step 8: `GET /dashboard` still returns 502 while health is 200.
+- Student route track is not blocked by this because student pages do not require `GET /dashboard`.
+
+### Gate status
+
+- PASS (student route verification)
+- DEFERRED (dashboard orchestrator endpoint)
+
+### Artifact
+
+- `backend/docs/phase6-verification-2026-04-05.md` (updated with student-route delta)

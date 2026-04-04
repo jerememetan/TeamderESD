@@ -84,3 +84,32 @@ Per plan rule, this is explicitly deferred because user-facing dashboard behavio
 1. Keep dashboard orchestrator 502 tracked as backend debt.
 2. Continue remaining implementation phases while fallback remains active.
 3. Once orchestrator is fixed, keep fallback as resilience or simplify and re-run Phase 6 checks.
+
+## Verification Delta (2026-04-05, Student Route Track)
+
+Focused re-verification was run after student-page hook extraction (`StudentDashboard`, `MyTeam`, `FillForm`).
+
+### Frontend Delta Checks
+
+- `npm run lint` -> PASS
+- `npm run build` -> PASS
+- `npm run dev` -> PASS (Vite started on `http://localhost:5175` because 5173/5174 were in use)
+
+### Kong Contract Delta Checks
+
+- `GET /students` -> 200
+- `GET /courses` -> 200
+- `GET /section` -> 200
+- `GET /enrollment` -> 200
+- `GET /enrollment?section_id=ffd20cc3-581a-409c-a8f7-ce00385427ed` -> 200
+- `GET /team?section_id=ffd20cc3-581a-409c-a8f7-ce00385427ed` -> 200
+- `GET /formation-config?section_id=ffd20cc3-581a-409c-a8f7-ce00385427ed` -> 200
+- `GET /peer-eval/rounds?section_id=ffd20cc3-581a-409c-a8f7-ce00385427ed&status=active` -> 200
+- `GET /student-form?student_id=1` -> 200
+- `GET /student-form/submitted?section_id=ffd20cc3-581a-409c-a8f7-ce00385427ed` -> 200
+- `GET /student-form/unsubmitted?section_id=ffd20cc3-581a-409c-a8f7-ce00385427ed` -> 200
+
+### Delta Decision
+
+- Student route track: PASS
+- Dashboard orchestrator (`GET /dashboard` 502): remains deferred backend debt
