@@ -17,10 +17,14 @@ class SwapConstraintResponseSchema(Schema):
     course_id = fields.UUID()
     module_id = fields.UUID()
     class_id = fields.UUID()
-    gpa_variance_level = fields.String()
+    gpa_variance_level = fields.Method("get_gpa_variance_level")
     class_avg_gpa = fields.Float()
     require_year_diversity = fields.Boolean()
     max_skill_imbalance = fields.Float()
     swap_window_days = fields.Integer()
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
+
+    def get_gpa_variance_level(self, obj):
+        value = getattr(obj, "gpa_variance_level", None)
+        return getattr(value, "value", value)

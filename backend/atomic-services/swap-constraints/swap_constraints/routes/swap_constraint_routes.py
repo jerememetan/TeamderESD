@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
 from ..app import db
-from ..models.swap_constraint_model import SwapConstraint
+from ..models.swap_constraint_model import GPAVarianceLevel, SwapConstraint
 from ..schemas.swap_constraint_schema import SwapConstraintCreateSchema, SwapConstraintResponseSchema
 
 
@@ -42,12 +42,13 @@ def get_swap_constraint_by_id(constraint_id):
 def create_swap_constraint():
     payload = request.get_json() or {}
     data = create_schema.load(payload)
+    gpa_variance_level = GPAVarianceLevel(data["gpa_variance_level"])
 
     row = SwapConstraint(
         course_id=data["course_id"],
         module_id=data["module_id"],
         class_id=data["class_id"],
-        gpa_variance_level=data["gpa_variance_level"],
+        gpa_variance_level=gpa_variance_level,
         class_avg_gpa=data["class_avg_gpa"],
         require_year_diversity=data["require_year_diversity"],
         max_skill_imbalance=data["max_skill_imbalance"],
