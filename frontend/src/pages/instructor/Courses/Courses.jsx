@@ -9,104 +9,20 @@ import chrome from "../../../styles/instructorChrome.module.css";
 import styles from "./Courses.module.css";
 import { STAGE_CONFIG } from "./logic/stageConfig";
 import { getGroupActions } from "./logic/getGroupActions";
-import { fetchCoursesBase, hydrateCoursesStats } from "./service/courseService";
-import { useEffect, useState } from "react";
-import { generateTeamsForSection } from "../../../services/teamFormationService";
 import { getEffectiveGroupStage } from "../logic/formationFlow";
+import { useCoursesPage } from "./logic/useCoursesPage";
 
 function Courses() {
-  // currently taking from mockCourses
-  // currently still taking from mockForms
-  const [courseList, setCourseList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [loadError, setLoadError] = useState("");
-  const [endingSectionId, setEndingSectionId] = useState(null);
-  const [formingSectionIds, setFormingSectionIds] = useState(new Set());
+  const {
+    courseList,
+    loading,
+    statsLoading,
+    loadError,
+    endingSectionId,
+    formingSectionIds,
+    handleEndCollection,
+  } = useCoursesPage();
   const formMap = mockForms;
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadCourses() {
-      try {
-        setLoadError("");
-        const { courses, sectionIds } = await fetchCoursesBase();
-        if (!isMounted) {
-          return;
-        }
-
-        setCourseList(courses);
-        setLoading(false);
-        setStatsLoading(true);
-
-        const hydratedCourses = await hydrateCoursesStats(courses, sectionIds);
-        if (!isMounted) {
-          return;
-        }
-
-        setCourseList(hydratedCourses);
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-        setCourseList([]);
-        setLoading(false);
-        setLoadError(
-          "Unable to load instructor courses. Open Error Logs to inspect downstream failures.",
-        );
-      } finally {
-        if (isMounted) {
-          setStatsLoading(false);
-        }
-      }
-    }
-
-    loadCourses();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  async function refreshCoursesAfterAction() {
-    try {
-      const { courses, sectionIds } = await fetchCoursesBase();
-      const hydratedCourses = await hydrateCoursesStats(courses, sectionIds);
-      setCourseList(hydratedCourses);
-    } catch {
-      setLoadError(
-        "Unable to refresh course data after action. Open Error Logs to inspect downstream failures.",
-      );
-    }
-  }
-
-  async function handleEndCollection(_courseCode, group) {
-    const sectionId = group?.id;
-    if (!sectionId || endingSectionId) {
-      return;
-    }
-
-    setEndingSectionId(sectionId);
-    setFormingSectionIds((current) => new Set(current).add(sectionId));
-    setLoadError("");
-
-    try {
-      await generateTeamsForSection(sectionId);
-      await refreshCoursesAfterAction();
-    } catch (error) {
-      setLoadError(
-        `Unable to end form collection for ${group.code}. ${error?.message || "Unknown error"}`,
-      );
-    } finally {
-      setEndingSectionId(null);
-      setFormingSectionIds((current) => {
-        const next = new Set(current);
-        next.delete(sectionId);
-        return next;
-      });
-    }
-  }
 
   if (loading) {
     return (
@@ -132,11 +48,14 @@ function Courses() {
         <div>
           <h2 className={chrome.title}>Manage my courses</h2>
           {statsLoading ? (
-            <p className={styles.statsLoading}>Updating student and team counts...</p>
+            <p className={styles.statsLoading}>
+              Updating student and team counts...
+            </p>
           ) : null}
           {loadError ? (
             <p className={styles.statsLoading}>
-              {loadError} <Link to="/instructor/error-logs">Go to Error Logs</Link>
+              {loadError}{" "}
+              <Link to="/instructor/error-logs">Go to Error Logs</Link>
             </p>
           ) : null}
         </div>
@@ -170,24 +89,26 @@ function Courses() {
             >
               <p className={styles.courseSummary}>
                 {String(course.groups.length).padStart(2, "0")} Groups |{" "}
-                {totalStudents === null ? "Loading students..." : `${totalStudents} students`}
+                {totalStudents === null
+                  ? "Loading students..."
+                  : `${totalStudents} students`}
               </p>
 
               {/* This is for per courseGroup Data */}
               <div className={styles.groupGrid}>
                 {course.groups.map((group, groupIndex) => {
                   const existingForm = formMap[group.id];
-                  const effectiveStage = getEffectiveGroupStage(group, formingSectionIds);
-                  const actions = getGroupActions(
-                    course.code,
+                  const effectiveStage = getEffectiveGroupStage(
                     group,
-                    {
-                      onEndCollection: handleEndCollection,
-                      isEndingCollection: endingSectionId === group.id,
-                      formingSectionIds,
-                    },
+                    formingSectionIds,
                   );
-                  const stage = STAGE_CONFIG[effectiveStage] || STAGE_CONFIG.setup;
+                  const actions = getGroupActions(course.code, group, {
+                    onEndCollection: handleEndCollection,
+                    isEndingCollection: endingSectionId === group.id,
+                    formingSectionIds,
+                  });
+                  const stage =
+                    STAGE_CONFIG[effectiveStage] || STAGE_CONFIG.setup;
                   const completionText = existingForm
                     ? `${existingForm.responseCount} / ${existingForm.totalStudents} submitted`
                     : "No form published";
@@ -207,7 +128,8 @@ function Courses() {
                           <p className={styles.groupStats}>
                             {group.studentsCount === null
                               ? "Loading students..."
-                              : `${group.studentsCount} students`} |{" "}
+                              : `${group.studentsCount} students`}{" "}
+                            |{" "}
                             {group.teamsCount === null
                               ? "Loading teams..."
                               : `${group.teamsCount} teams`}
@@ -238,7 +160,11 @@ function Courses() {
                             key={action.label}
                             asChild={action.kind !== "button"}
                             variant={action.variant}
-                            onClick={action.kind === "button" ? action.onClick : undefined}
+                            onClick={
+                              action.kind === "button"
+                                ? action.onClick
+                                : undefined
+                            }
                             disabled={action.disabled}
                           >
                             {action.kind === "button" ? (
