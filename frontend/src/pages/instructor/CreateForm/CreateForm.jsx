@@ -605,22 +605,28 @@ function CreateForm() {
                   placeholder="Example: React"
                   className={styles.input}
                 />
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Skill importance</span>
+                <div className={styles.field}>
+                  <span className={styles.fieldLabel}>
+                    Skill importance ({Number(skill.skill_importance || 0).toFixed(2)})
+                  </span>
                   <input
-                    type="number"
-                    min="0"
+                    type="range"
+                    min="0.05"
                     max="1"
                     step="0.05"
-                    value={skill.skill_importance}
+                    value={Number(skill.skill_importance || 0)}
                     onChange={(event) =>
                       updateSkill(skill.id, {
                         skill_importance: Number(event.target.value),
                       })
                     }
-                    className={styles.input}
+                    className={styles.sliderInput}
                   />
-                </label>
+                  <div className={styles.sliderScale}>
+                    <span>0.05</span>
+                    <span>1</span>
+                  </div>
+                </div>
               </div>
             ))
           ) : (
