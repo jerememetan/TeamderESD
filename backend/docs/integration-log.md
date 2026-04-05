@@ -329,3 +329,52 @@ Complete the move away from cycle-era swap orchestration and remove the no-longe
 
 - CORS remains centralized at Kong and applies to swap-orchestrator routes through the global plugin.
 - Existing cycle-based documentation entries are historical and should be treated as superseded by the cycle-free routes above.
+
+## 2026-04-05 :: Step 10 :: Confirm-path hotfix + verification gate pass
+
+### Goal
+
+Resolve the Phase 6 blocker where `POST /swap-orchestrator/sections/{section_id}/confirm` returned `502` due upstream section-service failures.
+
+### Root cause
+
+- section-service rows contained stage value `confirmed`.
+- Python SQLAlchemy enum in section-service model did not include `confirmed`.
+- Any section row fetch by ID raised enum deserialization `LookupError`, surfaced as section-service `500`, then swap-orchestrator `502`.
+
+### Fix implemented
+
+- Updated section-service model enum to include `confirmed`:
+  - `backend/atomic-services/section/section/models/section_model.py`
+- Rebuilt and restarted `section-service`, `swap-orchestrator-service`, and `kong-gateway`.
+
+### Verification evidence
+
+- `GET /section/{section_id}` now returns `200` with stage `confirmed`.
+- `POST /swap-orchestrator/sections/{section_id}/confirm` now returns `200`.
+- Full scripted verification now passes lifecycle assertions:
+  - `backend/scripts/verify_swap_flow.ps1`
+  - submissions: `201`
+  - decisions: approve/reject `200`, rejected re-approve `409` (expected terminal behavior)
+  - confirm: `200`
+  - final statuses: approved -> `executed`, rejected -> `rejected`
+  - section stage after confirm: `confirmed`
+  - non-requested participants unchanged: `true`
+
+## 2026-04-06 :: Step 11 :: Frontend lint cleanup + docs status sync
+
+### Goal
+
+Close remaining frontend lint debt noted during swap migration and align planning docs with current state.
+
+### Work completed
+
+- Updated student fill-form hook dependency handling in:
+  - `frontend/src/pages/student/FillForm/logic/useFillFormPage.js`
+- Frontend diagnostics now report no active problems for the workspace.
+- Performed a targeted frontend/docs sweep for stale cycle-route usage in active swap pages/services; no active cycle-route references were found in current frontend swap service paths.
+
+### Documentation updates
+
+- Updated `backend/docs/plan.md` to mark Phase 7 cleanup as done.
+- Removed outdated note claiming unresolved frontend lint warnings.

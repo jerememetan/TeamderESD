@@ -36,8 +36,39 @@ export function useFillFormPage({
   const [topicRankings, setTopicRankings] = useState({});
   const [formSubmissionError, setFormSubmissionError] = useState("");
 
+  const activeBackendStudentId = Number(activeStudent?.backendStudentId);
+  const hasActiveBackendStudentId = Number.isFinite(activeBackendStudentId);
+
+  const availableFormList = useMemo(
+    () => availableForms.filter((form) => !form.submitted),
+    [availableForms],
+  );
+  const resolvedForm = formId
+    ? availableForms.find((form) => form.id === formId)
+    : null;
+  const resolvedFormId = resolvedForm?.id || "";
+  const resolvedFormSectionId = resolvedForm?.sectionId || "";
+  const resolvedFormSubmitted = Boolean(resolvedForm?.submitted);
+  const chooserMode = !formId;
+  const studentBasePath = `/student/${activeStudentRouteId}`;
+
+  const resolvedAssignmentLabel = resolvedForm?.title || "Course form";
+
+  const sectionSkills = Array.isArray(formationConfig?.skills)
+    ? formationConfig.skills
+    : [];
+  const sectionTopics = Array.isArray(formationConfig?.topics)
+    ? formationConfig.topics
+    : [];
+  const shouldCollectSkills =
+    fieldVisibility.skillEnabled && sectionSkills.length > 0;
+  const shouldCollectTopics =
+    fieldVisibility.topicEnabled && sectionTopics.length > 0;
+  const shouldCollectMbti = fieldVisibility.mbtiEnabled;
+  const shouldCollectBuddy = fieldVisibility.buddyEnabled;
+
   useEffect(() => {
-    if (isLoadingStudents || !activeStudent) {
+    if (isLoadingStudents || !hasActiveBackendStudentId) {
       setAvailableForms([]);
       setIsLoadingForms(isLoadingStudents);
       return;
@@ -50,15 +81,8 @@ export function useFillFormPage({
       setFormsError("");
 
       try {
-        const backendStudentId = Number(activeStudent.backendStudentId);
-        if (!Number.isFinite(backendStudentId)) {
-          throw new Error(
-            "Unable to resolve a backend student id for the selected student.",
-          );
-        }
-
         const forms = await fetchStudentFormAssignments({
-          studentId: backendStudentId,
+          studentId: activeBackendStudentId,
         });
         if (ignore) {
           return;
@@ -85,35 +109,10 @@ export function useFillFormPage({
     return () => {
       ignore = true;
     };
-  }, [activeStudent?.backendStudentId, isLoadingStudents]);
-
-  const availableFormList = useMemo(
-    () => availableForms.filter((form) => !form.submitted),
-    [availableForms],
-  );
-  const resolvedForm = formId
-    ? availableForms.find((form) => form.id === formId)
-    : null;
-  const chooserMode = !formId;
-  const studentBasePath = `/student/${activeStudentRouteId}`;
-
-  const resolvedAssignmentLabel = resolvedForm?.title || "Course form";
-
-  const sectionSkills = Array.isArray(formationConfig?.skills)
-    ? formationConfig.skills
-    : [];
-  const sectionTopics = Array.isArray(formationConfig?.topics)
-    ? formationConfig.topics
-    : [];
-  const shouldCollectSkills =
-    fieldVisibility.skillEnabled && sectionSkills.length > 0;
-  const shouldCollectTopics =
-    fieldVisibility.topicEnabled && sectionTopics.length > 0;
-  const shouldCollectMbti = fieldVisibility.mbtiEnabled;
-  const shouldCollectBuddy = fieldVisibility.buddyEnabled;
+  }, [activeBackendStudentId, hasActiveBackendStudentId, isLoadingStudents]);
 
   useEffect(() => {
-    if (!formId || isLoadingForms || !resolvedForm?.submitted) {
+    if (!formId || isLoadingForms || !resolvedFormSubmitted) {
       return;
     }
 
@@ -128,7 +127,7 @@ export function useFillFormPage({
     formId,
     isLoadingForms,
     navigate,
-    resolvedForm?.submitted,
+    resolvedFormSubmitted,
     studentBasePath,
   ]);
 
@@ -136,7 +135,11 @@ export function useFillFormPage({
     let isMounted = true;
 
     async function loadSectionFormationConfig() {
-      if (!resolvedForm || !activeStudent || resolvedForm.submitted) {
+      if (
+        !resolvedFormId ||
+        !hasActiveBackendStudentId ||
+        resolvedFormSubmitted
+      ) {
         setFormationConfig(null);
         setFieldVisibility(DEFAULT_FIELD_VISIBILITY);
         setBuddyOptions([]);
@@ -149,8 +152,7 @@ export function useFillFormPage({
         return;
       }
 
-      const sectionId = resolvedForm.sectionId;
-      const activeStudentId = Number(activeStudent.backendStudentId);
+      const sectionId = resolvedFormSectionId;
 
       setIsLoadingConfig(true);
       setIsLoadingBuddyOptions(true);
@@ -162,7 +164,7 @@ export function useFillFormPage({
 
       try {
         const pageData = await fetchStudentFormPage({
-          studentId: activeStudentId,
+          studentId: activeBackendStudentId,
           sectionId,
         });
 
@@ -207,7 +209,7 @@ export function useFillFormPage({
         setAvailableForms((currentForms) => {
           let hasChanged = false;
           const nextForms = currentForms.map((form) => {
-            if (form.id !== resolvedForm.id) {
+            if (form.id !== resolvedFormId) {
               return form;
             }
 
@@ -294,10 +296,11 @@ export function useFillFormPage({
       isMounted = false;
     };
   }, [
-    activeStudent?.backendStudentId,
-    resolvedForm?.id,
-    resolvedForm?.sectionId,
-    resolvedForm?.submitted,
+    activeBackendStudentId,
+    hasActiveBackendStudentId,
+    resolvedFormId,
+    resolvedFormSectionId,
+    resolvedFormSubmitted,
   ]);
 
   const availableFormCount = availableFormList.length;

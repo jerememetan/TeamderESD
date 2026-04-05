@@ -4,7 +4,7 @@ from sqlalchemy import Enum
 
 db = SQLAlchemy()
 
-stage_enum = Enum('setup', 'collecting', 'formed', "completed", name='stage_enum', schema='section')
+stage_enum = Enum('setup', 'collecting', 'formed', 'confirmed', "completed", name='stage_enum', schema='section')
 
 
 class Section(db.Model):
