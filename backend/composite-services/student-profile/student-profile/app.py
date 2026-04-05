@@ -188,6 +188,10 @@ def fetch_form_data(section_id, student_id):
     response = http_get(
         FORM_DATA_URL, params={"section_id": section_id, "student_id": student_id}
     )
+    if response.status_code == 404:
+        # No form submission yet for this student/section.
+        return None
+
     if response.status_code != 200:
         publish_downstream_error(
             "student-form-data",
@@ -206,8 +210,74 @@ def fetch_form_data(section_id, student_id):
     return {"buddy_id": data.get("buddy_id"), "mbti": data.get("mbti")}
 
 
+def initialize_reputation(student_id):
+    try:
+        response = http_post(REPUTATION_URL, payload={"student_id": student_id})
+    except requests.RequestException:
+        logger.exception(
+            "failed to call reputation service (POST)",
+            extra={"student_id": student_id, "url": REPUTATION_URL},
+        )
+        publish_downstream_error(
+            "reputation",
+            "REPUTATION_INIT_UNREACHABLE",
+            "failed to initialize reputation",
+            request_context={"student_id": student_id, "operation": "initialize-reputation"},
+        )
+        return None
+
+    payload = safe_json(response)
+    if response.status_code in (201, 409):
+        data = extract_data(payload)
+        if isinstance(data, dict):
+            if "score" in data:
+                return data.get("score")
+            if "reputation_score" in data:
+                return data.get("reputation_score")
+        return 50
+
+    publish_downstream_error(
+        "reputation",
+        "REPUTATION_INIT_FAILED",
+        "failed to initialize reputation",
+        request_context={"student_id": student_id, "operation": "initialize-reputation"},
+        http_status=response.status_code,
+        response_payload=payload,
+    )
+    return None
+
+
 def fetch_reputation(section_id, student_id):
-    response = http_get(f"{REPUTATION_URL}/{student_id}")
+    try:
+        response = http_get(f"{REPUTATION_URL}/{student_id}")
+    except requests.RequestException:
+        publish_downstream_error(
+            "reputation",
+            "REPUTATION_LOOKUP_UNREACHABLE",
+            "failed to fetch reputation",
+            request_context={"section_id": section_id, "student_id": student_id, "operation": "reputation"},
+        )
+        return None
+
+    if response.status_code == 404:
+        initialized_score = initialize_reputation(student_id)
+        if initialized_score is None:
+            return None
+        try:
+            response = http_get(f"{REPUTATION_URL}/{student_id}")
+        except requests.RequestException:
+            publish_downstream_error(
+                "reputation",
+                "REPUTATION_LOOKUP_UNREACHABLE",
+                "failed to fetch reputation",
+                request_context={
+                    "section_id": section_id,
+                    "student_id": student_id,
+                    "operation": "reputation-retry-after-init",
+                },
+            )
+            return initialized_score
+
     if response.status_code != 200:
         publish_downstream_error(
             "reputation",
@@ -247,8 +317,13 @@ def fetch_topic_preferences(section_id, student_id):
     if not isinstance(rows, list) or len(rows) == 0:
         return None
 
-    ranked = sorted(rows, key=lambda item: item.get("rank", 10**9))
-    return [item.get("topic_id") for item in ranked if item.get("topic_id") is not None]
+    normalized_rows = [row for row in rows if isinstance(row, dict)]
+    if not normalized_rows:
+        return None
+
+    ranked = sorted(normalized_rows, key=lambda item: item.get("rank", 10**9))
+    topic_ids = [item.get("topic_id") for item in ranked if item.get("topic_id") is not None]
+    return topic_ids or None
 
 
 def fetch_competences(section_id, student_id):
@@ -273,13 +348,17 @@ def fetch_competences(section_id, student_id):
     competences = []
     for row in rows:
         if isinstance(row, dict):
+            skill_id = row.get("skill_id")
+            skill_level = row.get("skill_level")
+            if skill_id is None or skill_level is None:
+                continue
             competences.append(
                 {
-                    "skill_id": row.get("skill_id"),
-                    "skill_level": row.get("skill_level"),
+                    "skill_id": skill_id,
+                    "skill_level": skill_level,
                 }
             )
-    return competences
+    return competences or None
 
 
 def collect_student_details(section_id, student_id):
