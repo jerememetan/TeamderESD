@@ -2,7 +2,6 @@
 pika
 python-dotenv
 marshmallow
-requests
 
 flask-openapi3
 pydantic

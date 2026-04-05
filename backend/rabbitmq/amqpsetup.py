@@ -8,22 +8,11 @@ from pika.exceptions import AMQPConnectionError
 EXCHANGE_NAME = "notification.topic"
 EXCHANGE_TYPE = "topic"
 
-SWAP_EXCHANGE_NAME = "swap_topic"
-SWAP_EXCHANGE_TYPE = "topic"
-
 EMAIL_QUEUE = "notification.email.queue"
 SMS_QUEUE = "notification.sms.queue"
-SWAP_NOTIFICATION_QUEUE = "swap.notification.bridge.queue"
 
 EMAIL_ROUTING_KEY = "notification.email"
 SMS_ROUTING_KEY = "notification.sms"
-SWAP_EVENT_ROUTING_KEYS = [
-    "SwapWindowScheduled",
-    "SwapWindowOpened",
-    "SwapRejected",
-    "SwapExecuted",
-    "SwapFailed",
-]
 
 
 def get_connection_parameters() -> pika.ConnectionParameters:
@@ -70,15 +59,9 @@ def setup_topology(channel: pika.adapters.blocking_connection.BlockingChannel) -
         exchange_type=EXCHANGE_TYPE,
         durable=True,
     )
-    channel.exchange_declare(
-        exchange=SWAP_EXCHANGE_NAME,
-        exchange_type=SWAP_EXCHANGE_TYPE,
-        durable=True,
-    )
 
     channel.queue_declare(queue=EMAIL_QUEUE, durable=True)
     channel.queue_declare(queue=SMS_QUEUE, durable=True)
-    channel.queue_declare(queue=SWAP_NOTIFICATION_QUEUE, durable=True)
 
     channel.queue_bind(
         queue=EMAIL_QUEUE,
@@ -90,12 +73,6 @@ def setup_topology(channel: pika.adapters.blocking_connection.BlockingChannel) -
         exchange=EXCHANGE_NAME,
         routing_key=SMS_ROUTING_KEY,
     )
-    for routing_key in SWAP_EVENT_ROUTING_KEYS:
-        channel.queue_bind(
-            queue=SWAP_NOTIFICATION_QUEUE,
-            exchange=SWAP_EXCHANGE_NAME,
-            routing_key=routing_key,
-        )
 
 
 def main() -> None:
@@ -107,11 +84,8 @@ def main() -> None:
 
     print("RabbitMQ topology setup completed successfully.")
     print(f"Exchange: {EXCHANGE_NAME}")
-    print(f"Swap Exchange: {SWAP_EXCHANGE_NAME}")
     print(f"Queues: {EMAIL_QUEUE}, {SMS_QUEUE}")
     print(f"Bindings: {EMAIL_ROUTING_KEY}, {SMS_ROUTING_KEY}")
-    print(f"Swap Queue: {SWAP_NOTIFICATION_QUEUE}")
-    print(f"Swap Bindings: {', '.join(SWAP_EVENT_ROUTING_KEYS)}")
 
 
 if __name__ == "__main__":
