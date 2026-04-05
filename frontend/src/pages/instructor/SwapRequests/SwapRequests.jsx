@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import { Button } from "../../../components/ui/button";
-import { backendSectionIds } from "../../../data/backendIds";
+import { fetchAllSections } from "../../../services/sectionService";
 import {
   decideSwapReviewRequest,
   fetchSwapReviewRequests,
@@ -14,9 +14,7 @@ import chrome from "../../../styles/instructorChrome.module.css";
 import styles from "./SwapRequests.module.css";
 
 function SwapRequests() {
-  const fallbackSectionId = backendSectionIds["1-g1"];
-  const sectionId =
-    import.meta.env.VITE_INSTRUCTOR_SWAP_SECTION_ID ?? fallbackSectionId;
+  const configuredSectionId = import.meta.env.VITE_INSTRUCTOR_SWAP_SECTION_ID;
 
   const [requestList, setRequestList] = useState([]);
   const [filter, setFilter] = useState("all");
@@ -28,28 +26,73 @@ function SwapRequests() {
     let isMounted = true;
 
     async function loadRequests() {
-      if (!sectionId) {
-        setErrorMessage(
-          "Missing section mapping. Set VITE_INSTRUCTOR_SWAP_SECTION_ID to a valid section UUID.",
-        );
-        setIsLoading(false);
-        return;
-      }
-
       setIsLoading(true);
       setErrorMessage("");
+
       try {
-        const data = await fetchSwapReviewRequests({ sectionId });
+        const sections = await fetchAllSections();
+        const sectionRows = Array.isArray(sections) ? sections : [];
+
+        const targetSections = configuredSectionId
+          ? sectionRows.filter(
+              (section) =>
+                String(section?.id || "") === String(configuredSectionId),
+            )
+          : sectionRows;
+
+        if (!targetSections.length) {
+          throw new Error(
+            configuredSectionId
+              ? "Configured section was not found. Check VITE_INSTRUCTOR_SWAP_SECTION_ID."
+              : "No sections found for swap request review.",
+          );
+        }
+
+        const settled = await Promise.allSettled(
+          targetSections.map(async (section) => {
+            const sectionId = String(section?.id || "");
+            const data = await fetchSwapReviewRequests({ sectionId });
+            const rows = Array.isArray(data?.requests) ? data.requests : [];
+            const resolvedSection = data?.section ?? {};
+
+            return rows.map((request) => ({
+              ...request,
+              sectionId: String(
+                request?.sectionId || resolvedSection?.id || sectionId,
+              ),
+              sectionNumber:
+                request?.sectionNumber ??
+                resolvedSection?.section_number ??
+                section?.section_number,
+              status: String(request?.status || "pending").toLowerCase(),
+            }));
+          }),
+        );
+
         if (!isMounted) {
           return;
         }
 
-        const rows = Array.isArray(data?.requests) ? data.requests : [];
-        const normalized = rows.map((request) => ({
-          ...request,
-          status: String(request?.status || "pending").toLowerCase(),
-        }));
+        const normalized = settled
+          .filter((result) => result.status === "fulfilled")
+          .flatMap((result) => result.value);
+
+        normalized.sort((a, b) => {
+          const left = Date.parse(a?.createdAt || "") || 0;
+          const right = Date.parse(b?.createdAt || "") || 0;
+          return right - left;
+        });
+
         setRequestList(normalized);
+
+        const failedCount = settled.filter(
+          (result) => result.status === "rejected",
+        ).length;
+        if (failedCount > 0) {
+          setErrorMessage(
+            `Loaded requests from ${settled.length - failedCount} section(s); ${failedCount} section(s) failed to load.`,
+          );
+        }
       } catch (error) {
         if (!isMounted) {
           return;
@@ -67,7 +110,7 @@ function SwapRequests() {
     return () => {
       isMounted = false;
     };
-  }, [sectionId]);
+  }, [configuredSectionId]);
 
   const filteredRequests = useMemo(
     () => filterRequests(requestList, filter),
@@ -111,7 +154,8 @@ function SwapRequests() {
           <p className={chrome.kicker}>[SWAP REQUESTS]</p>
           <h2 className={chrome.title}>Review swap requests</h2>
           <p className={chrome.subtitle}>
-            Approve or reject team change requests for your course groups.
+            Approve or reject team change requests across your available
+            sections.
           </p>
         </div>
         <SystemTag tone="neutral">
@@ -219,6 +263,12 @@ function SwapRequests() {
                 ) : null}
                 <p className={chrome.metaPill}>
                   Current team | {request.currentTeamName}
+                </p>
+                <p className={chrome.metaPill}>
+                  Section |{" "}
+                  {request.sectionNumber
+                    ? `G${request.sectionNumber}`
+                    : request.sectionId}
                 </p>
                 <p className={chrome.metaPill}>
                   Submitted | {new Date(request.createdAt).toLocaleDateString()}
