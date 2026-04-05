@@ -75,12 +75,12 @@ Delta formula: `round((avg_rating - 3.0) * 10)`
 - Rating 5.0 = max positive (delta +20)
 - Rating 1.0 = max negative (delta -20)
 
-## Dashboard Orchestrator Integration
+## Peer Eval Notification Composite Integration
 
-Two new orchestrator endpoints coordinate the full peer eval flow:
+Instructor orchestration now lives in the peer-eval-notification composite service:
 
-### POST /dashboard/peer-eval/initiate
-Instructor initiates a round. Orchestrator creates round, fetches teams/emails, sends notifications.
+### POST /peer-eval-notifications/initiate
+Creates a round through this atomic service, resolves roster emails, and publishes notification batch messages.
 
-### POST /dashboard/peer-eval/close
-Instructor closes a round. Orchestrator closes round, pushes reputation deltas to Reputation Service.
+### POST /peer-eval-notifications/close
+Closes a round through this atomic service and pushes reputation deltas to Reputation Service.

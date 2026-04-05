@@ -505,3 +505,77 @@ Content-Type: application/json
 - The service fetches enrolled students, creates per-student forms, builds form links, and publishes one RabbitMQ batch message (`FormLinksGeneratedBatch`) containing all valid student notifications for the section.
 - Notification payload includes a generic user-facing message and a form link.
 - The service returns per-student success/failure details for orchestration outcomes only.
+
+---
+
+# Peer Eval Notification Composite Service
+
+This service owns peer evaluation initiation and close orchestration flows for instructors.
+
+## Base URL
+
+- Default: `/peer-eval-notifications` (port: 4008)
+
+## POST /peer-eval-notifications/initiate
+
+Creates a peer evaluation round and publishes batch notification messages for students in the section.
+
+### Input JSON Body
+```json
+{
+  "section_id": "22222222-2222-2222-2222-222222222211",
+  "title": "Peer Evaluation - Week 10",
+  "due_at": "2026-04-20T23:59:59Z",
+  "eval_link": "http://localhost:5173/student/peer-evaluation/custom-link"
+}
+```
+
+### Success Response (201)
+```json
+{
+  "code": 201,
+  "data": {
+    "round": {
+      "round_id": "..."
+    },
+    "teams_count": 3,
+    "notification_results": {
+      "sent": 42,
+      "failed": 0,
+      "skipped": 1
+    }
+  }
+}
+```
+
+## POST /peer-eval-notifications/close
+
+Closes an active peer evaluation round and pushes computed deltas into the reputation service.
+
+### Input JSON Body
+```json
+{
+  "round_id": "b7da7d23-38b2-4d38-87f7-358ff1ca9f13"
+}
+```
+
+### Success Response (200)
+```json
+{
+  "code": 200,
+  "data": {
+    "round": {},
+    "reputation_deltas": [],
+    "reputation_update_results": {
+      "updated": 10,
+      "failed": 0
+    }
+  }
+}
+```
+
+## Behavior Notes
+
+- Uses shared RabbitMQ notification exchange publishing with a batch event (`PeerEvalInitiatedBatch`).
+- Uses shared error publisher conventions for downstream failures.
+- Keeps response envelopes compatible with existing instructor frontend flows.
