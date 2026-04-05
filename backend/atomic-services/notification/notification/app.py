@@ -26,6 +26,19 @@ from flask import Flask, jsonify, request
 from pika.exceptions import AMQPConnectionError
 from marshmallow import Schema, fields
 
+try:
+    from notification.swap_event_handlers import (
+        build_swap_notification_messages,
+        event_dedupe_key,
+        mark_swap_event_once,
+    )
+except ImportError:
+    from swap_event_handlers import (
+        build_swap_notification_messages,
+        event_dedupe_key,
+        mark_swap_event_once,
+    )
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -64,6 +77,26 @@ CONSUMER_CONNECT_RETRY_SECONDS = float(os.getenv("NOTIFICATION_CONSUMER_CONNECT_
 CONSUMER_PREFETCH_COUNT = int(os.getenv("NOTIFICATION_CONSUMER_PREFETCH", "5"))
 CONSUMER_ENABLED = os.getenv("NOTIFICATION_CONSUMER_ENABLED", "true").lower() == "true"
 
+SWAP_CONSUMER_ENABLED = os.getenv("NOTIFICATION_SWAP_CONSUMER_ENABLED", "false").lower() == "true"
+SWAP_EVENT_EXCHANGE = os.getenv("SWAP_EVENT_EXCHANGE", "swap_topic")
+SWAP_EVENT_EXCHANGE_TYPE = os.getenv("SWAP_EVENT_EXCHANGE_TYPE", "topic")
+SWAP_NOTIFICATION_QUEUE = os.getenv("SWAP_NOTIFICATION_QUEUE", "swap.notification.bridge.queue")
+SWAP_EVENT_ROUTING_KEYS = [
+    key.strip()
+    for key in os.getenv(
+        "SWAP_EVENT_ROUTING_KEYS",
+        "SwapWindowScheduled,SwapWindowOpened,SwapRejected,SwapExecuted,SwapFailed",
+    ).split(",")
+    if key.strip()
+]
+if not SWAP_EVENT_ROUTING_KEYS:
+    SWAP_EVENT_ROUTING_KEYS = ["SwapRejected", "SwapExecuted", "SwapFailed"]
+
+SWAP_CONSUMER_CONNECT_RETRY_SECONDS = float(
+    os.getenv("NOTIFICATION_SWAP_CONSUMER_CONNECT_RETRY_SECONDS", "3")
+)
+SWAP_CONSUMER_PREFETCH_COUNT = int(os.getenv("NOTIFICATION_SWAP_CONSUMER_PREFETCH", "5"))
+
 SMTP_HOST = os.getenv("GMAIL_SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("GMAIL_SMTP_PORT", "587"))
 SMTP_USER = os.getenv("GMAIL_SMTP_USER", "")
@@ -99,12 +132,29 @@ _metrics = {
     "retries": 0,
 }
 
+_swap_metrics_lock = threading.Lock()
+_swap_metrics = {
+    "consumed": 0,
+    "published": 0,
+    "publish_failures": 0,
+    "transform_failures": 0,
+    "invalid_payload": 0,
+    "unsupported_events": 0,
+    "skipped_no_email": 0,
+    "duplicates": 0,
+}
+
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _inc_metric(name: str, by: int = 1) -> None:
     with _metrics_lock:
         _metrics[name] = _metrics.get(name, 0) + by
+
+
+def _inc_swap_metric(name: str, by: int = 1) -> None:
+    with _swap_metrics_lock:
+        _swap_metrics[name] = _swap_metrics.get(name, 0) + by
 
 
 def _safe_json_loads(raw: bytes) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -566,6 +616,170 @@ def _start_consumer_thread_if_enabled(debug_enabled: bool = False) -> None:
     thread.start()
 
 
+def _handle_swap_event(ch, method, properties, body) -> None:
+    _inc_swap_metric("consumed")
+
+    parsed, parse_error = _safe_json_loads(body)
+    if parse_error:
+        logger.error("Rejecting invalid swap event JSON (tag=%s): %s", method.delivery_tag, parse_error)
+        _inc_swap_metric("invalid_payload")
+        _publish_error_event(
+            ch,
+            None,
+            "SWAP_INVALID_JSON",
+            parse_error,
+            {
+                "delivery_tag": method.delivery_tag,
+                "routing_key": method.routing_key,
+                "consumer": "swap",
+            },
+        )
+        ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
+        return
+
+    messages, transform_error, event_type, skipped_no_email = build_swap_notification_messages(parsed)
+    if skipped_no_email > 0:
+        _inc_swap_metric("skipped_no_email", skipped_no_email)
+
+    if transform_error:
+        if transform_error.startswith("unsupported event_type"):
+            _inc_swap_metric("unsupported_events")
+        elif not event_type:
+            _inc_swap_metric("invalid_payload")
+        _inc_swap_metric("transform_failures")
+
+        logger.error(
+            "Swap transform failed (tag=%s event_type=%s): %s",
+            method.delivery_tag,
+            event_type or "<missing>",
+            transform_error,
+        )
+        _publish_error_event(
+            ch,
+            parsed,
+            "SWAP_TRANSFORM_FAILED",
+            transform_error,
+            {
+                "delivery_tag": method.delivery_tag,
+                "routing_key": method.routing_key,
+                "event_type": event_type,
+                "consumer": "swap",
+            },
+        )
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        return
+
+    dedupe_key = event_dedupe_key(parsed, event_type)
+    if not mark_swap_event_once(dedupe_key):
+        _inc_swap_metric("duplicates")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        return
+
+    if not messages:
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        return
+
+    publish_failures: List[Dict[str, Any]] = []
+    for message in messages:
+        ok, publish_error = publish_message(message, routing_key=PUBLISH_ROUTING_KEY)
+        if not ok:
+            publish_failures.append(
+                {
+                    "to": message.get("to"),
+                    "error": publish_error,
+                    "event_type": event_type,
+                }
+            )
+
+    if publish_failures:
+        _inc_swap_metric("publish_failures", len(publish_failures))
+        _publish_error_event(
+            ch,
+            parsed,
+            "SWAP_NOTIFICATION_PUBLISH_FAILED",
+            "failed to publish one or more notification messages",
+            {
+                "delivery_tag": method.delivery_tag,
+                "routing_key": method.routing_key,
+                "event_type": event_type,
+                "attempted": len(messages),
+                "failed": len(publish_failures),
+                "consumer": "swap",
+            },
+        )
+    else:
+        _inc_swap_metric("published", len(messages))
+
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+
+def _swap_consume_loop() -> None:
+    logger.info(
+        "Starting swap event consumer exchange=%s queue=%s routing_keys=%s",
+        SWAP_EVENT_EXCHANGE,
+        SWAP_NOTIFICATION_QUEUE,
+        SWAP_EVENT_ROUTING_KEYS,
+    )
+
+    while True:
+        connection = None
+        try:
+            connection = pika.BlockingConnection(_build_connection_parameters())
+            channel = connection.channel()
+            channel.exchange_declare(
+                exchange=SWAP_EVENT_EXCHANGE,
+                exchange_type=SWAP_EVENT_EXCHANGE_TYPE,
+                durable=True,
+            )
+            channel.queue_declare(queue=SWAP_NOTIFICATION_QUEUE, durable=True)
+            for routing_key in SWAP_EVENT_ROUTING_KEYS:
+                channel.queue_bind(
+                    exchange=SWAP_EVENT_EXCHANGE,
+                    queue=SWAP_NOTIFICATION_QUEUE,
+                    routing_key=routing_key,
+                )
+
+            channel.basic_qos(prefetch_count=SWAP_CONSUMER_PREFETCH_COUNT)
+            channel.basic_consume(
+                queue=SWAP_NOTIFICATION_QUEUE,
+                on_message_callback=_handle_swap_event,
+                auto_ack=False,
+            )
+            logger.info("Swap event consumer ready and consuming queue=%s", SWAP_NOTIFICATION_QUEUE)
+            channel.start_consuming()
+
+        except AMQPConnectionError as exc:
+            logger.warning(
+                "AMQP connection error in swap consumer, reconnecting in %.1fs: %s",
+                SWAP_CONSUMER_CONNECT_RETRY_SECONDS,
+                exc,
+            )
+            time.sleep(SWAP_CONSUMER_CONNECT_RETRY_SECONDS)
+        except Exception as exc:
+            logger.exception(
+                "Unexpected swap consumer error, reconnecting in %.1fs: %s",
+                SWAP_CONSUMER_CONNECT_RETRY_SECONDS,
+                exc,
+            )
+            time.sleep(SWAP_CONSUMER_CONNECT_RETRY_SECONDS)
+        finally:
+            if connection and connection.is_open:
+                connection.close()
+
+
+def _start_swap_consumer_thread_if_enabled(debug_enabled: bool = False) -> None:
+    if not SWAP_CONSUMER_ENABLED:
+        logger.info("Swap consumer is disabled (NOTIFICATION_SWAP_CONSUMER_ENABLED=false)")
+        return
+
+    is_reloader_parent = os.getenv("WERKZEUG_RUN_MAIN") != "true" and debug_enabled
+    if is_reloader_parent:
+        return
+
+    thread = threading.Thread(target=_swap_consume_loop, daemon=True, name="swap-event-consumer")
+    thread.start()
+
+
 register_swagger(app, 'notification-service')
 
 
@@ -625,13 +839,17 @@ class HealthSchema(Schema):
     status = fields.String()
     service = fields.String()
     consumer = fields.Nested(HealthConsumerSchema)
+    swap_consumer = fields.Nested(HealthConsumerSchema)
     metrics = fields.Dict()
+    swap_metrics = fields.Dict()
 
 
 @app.route("/health", methods=["GET"])
 def health():
     with _metrics_lock:
         metrics = dict(_metrics)
+    with _swap_metrics_lock:
+        swap_metrics = dict(_swap_metrics)
 
     return (
         jsonify(
@@ -644,7 +862,14 @@ def health():
                     "routing_keys": CONSUMER_ROUTING_KEYS,
                     "prefetch": CONSUMER_PREFETCH_COUNT,
                 },
+                "swap_consumer": {
+                    "enabled": SWAP_CONSUMER_ENABLED,
+                    "queue": SWAP_NOTIFICATION_QUEUE,
+                    "routing_keys": SWAP_EVENT_ROUTING_KEYS,
+                    "prefetch": SWAP_CONSUMER_PREFETCH_COUNT,
+                },
                 "metrics": metrics,
+                "swap_metrics": swap_metrics,
             }
         ),
         200,
@@ -775,5 +1000,6 @@ publish_direct_email._openapi_response_schema = PublishDirectEmailResponseSchema
 if __name__ == "__main__":
     debug_enabled = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     _start_consumer_thread_if_enabled(debug_enabled=debug_enabled)
+    _start_swap_consumer_thread_if_enabled(debug_enabled=debug_enabled)
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3016")), debug=debug_enabled)
 
