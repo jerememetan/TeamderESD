@@ -260,7 +260,10 @@ def initiate_peer_eval():
 
     # Fallback: if no emails found from profiles, fetch directly from student service
     if not student_email_map:
-        STUDENT_SERVICE_URL = os.getenv("STUDENT_SERVICE_URL", "http://student-service:3001/api/students")
+        STUDENT_SERVICE_URL = os.getenv(
+            "STUDENT_SERVICE_URL",
+            "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student",
+        )
         all_student_ids = set()
         for team in teams:
             for student in team.get("students", []):

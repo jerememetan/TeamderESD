@@ -164,17 +164,6 @@ services:
       rabbitmq-setup:
         condition: service_healthy
 
-  swap-constraints-service:
-    build:
-      context: ./atomic-services/swap-constraints
-    container_name: teamder-swap-constraints-service
-    environment:
-      ENABLE_SWAGGER: "true"
-      PORT: 3012
-      SUPABASE_URL: ${SUPABASE_URL}
-    ports:
-      - "3012:3012"
-
   team-swap-service:
     build:
       context: ./atomic-services/team-swap
@@ -415,27 +404,21 @@ services:
       ENABLE_SWAGGER: "true"
       PORT: 4005
       SUPABASE_URL: ${SUPABASE_URL}
+      REQUEST_TIMEOUT: 10
       SWAP_REQUEST_URL: "http://swap-request-service:3011/swap-request"
-      SWAP_CONSTRAINTS_URL: "http://swap-constraints-service:3012/swap-constraints"
+      COURSE_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course"
+      SECTION_URL: "http://section-service:3018/section"
       TEAM_URL: "http://team-service:3007/team"
-      TEAM_SWAP_OPTIMIZE_URL: "http://team-swap-service:3013/team-swap/optimize"
-      ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
+      TEAM_SWAP_EXECUTE_URL: "http://team-swap-service:3013/team-swap/execute"
       STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
       STUDENT_BULK_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/students/bulk-info"
-      REQUEST_TIMEOUT: 10
-      RABBIT_HOST: rabbitmq
-      RABBIT_PORT: 5672
-      SWAP_EVENT_EXCHANGE: swap_topic
-      SWAP_EVENT_EXCHANGE_TYPE: topic
     depends_on:
       - swap-request-service
-      - swap-constraints-service
+      - section-service
       - team-service
       - team-swap-service
-      - enrollment-service
-      - rabbitmq
 
- # GraphQL
+  # GraphQL
   student-form-gateway-service:
     build:
       context: ./graphql/student-form-gateway
@@ -466,8 +449,8 @@ services:
       - formation-config-service
       - enrollment-service
       - section-service
- 
-# Documentation 
+
+  # Documentation
   docs-index-service:
     build:
       context: ./docs/swagger-index
@@ -477,7 +460,7 @@ services:
     environment:
       PORT: 4010
 
-# Kong
+  # Kong
   kong-gateway:
     image: kong:3.8
     container_name: teamder-kong-gateway
