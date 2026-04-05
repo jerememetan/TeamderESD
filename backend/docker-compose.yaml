@@ -335,16 +335,6 @@ services:
       - reputation-service
       - team-service
 
-  analytics-service:
-    build:
-      context: ./atomic-services/analytics
-    container_name: teamder-analytics-service
-    environment:
-      ENABLE_SWAGGER: "true"
-      PORT: 3014
-    ports:
-      - "3014:3014"
-
   peer-evaluation-service:
     build:
       context: ./atomic-services/peer-evaluation
@@ -367,10 +357,7 @@ services:
       TEAM_URL: "http://team-service:3007/team"
       STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
       STUDENT_FORM_SUBMISSIONS_URL: "http://student-form-service:3015/student-form/submissions"
-      CRITERIA_URL: "http://criteria-service:3004/criteria"
-      SKILL_URL: "http://skill-service:3002/skill"
-      TOPIC_URL: "http://topic-service:3003/topic"
-      ANALYTICS_URL: "http://analytics-service:3014/analytics"
+      FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
       PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
       NOTIFICATION_URL: "http://notification-service:3016/notification"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
@@ -380,10 +367,7 @@ services:
       - team-service
       - student-profile-service
       - student-form-service
-      - criteria-service
-      - skill-service
-      - topic-service
-      - analytics-service
+      - formation-config-service
       - peer-evaluation-service
 
   formation-notification-service:

@@ -254,12 +254,10 @@ def aggregate_get():
         UUID(str(section_id))
     except (ValueError, TypeError):
         return jsonify({"error": "section_id must be a valid UUID"}), 400
-
-    # Fetch criteria, topics, and skills in parallel to reduce latency
+    # Fetch criteria first, then only call topic/skill services if their weights are non-zero.
+    EPSILON = 1e-6
     with ThreadPoolExecutor(max_workers=3) as executor:
         fut_crit = executor.submit(requests.get, CRITERIA_URL, params={"section_id": section_id})
-        fut_topic = executor.submit(requests.get, TOPIC_URL, params={"section_id": section_id})
-        fut_skill = executor.submit(requests.get, SKILL_URL, params={"section_id": section_id})
 
         try:
             crit_resp = fut_crit.result()
@@ -286,52 +284,70 @@ def aggregate_get():
         elif crit_resp.status_code >= 500:
             return downstream_error("criteria", crit_resp, "Failed to fetch criteria")
 
-        try:
-            topic_resp = fut_topic.result()
-        except requests.RequestException:
-            publish_error_event(
-                source_service=SERVICE_NAME,
-                downstream_service="topic",
-                error_code="TOPIC_FETCH_UNREACHABLE",
-                error_message="Unable to reach topic service",
-                http_status=502,
-                request_context={"section_id": section_id, "operation": "read-topics"},
-            )
-            return jsonify({"error": "Unable to reach topic service"}), 502
+        # Decide whether to fetch topics/skills based on weights present in criteria.
+        if crit_data is not None:
+            topic_weight = float(crit_data.get("topic_weight", 0.0) or 0.0)
+            skill_weight = float(crit_data.get("skill_weight", 0.0) or 0.0)
+            need_topics = abs(topic_weight) > EPSILON
+            need_skills = abs(skill_weight) > EPSILON
+        else:
+            # No criteria present: preserve previous behavior and fetch both.
+            need_topics = True
+            need_skills = True
+
+        fut_topic = executor.submit(requests.get, TOPIC_URL, params={"section_id": section_id}) if need_topics else None
+        fut_skill = executor.submit(requests.get, SKILL_URL, params={"section_id": section_id}) if need_skills else None
 
         topics = []
-        if topic_resp.status_code == 200:
-            topic_json = safe_json(topic_resp)
-            for t in topic_json.get("data", []):
-                topics.append(
-                    {
+        if need_topics:
+            try:
+                topic_resp = fut_topic.result()
+            except requests.RequestException:
+                publish_error_event(
+                    source_service=SERVICE_NAME,
+                    downstream_service="topic",
+                    error_code="TOPIC_FETCH_UNREACHABLE",
+                    error_message="Unable to reach topic service",
+                    http_status=502,
+                    request_context={"section_id": section_id, "operation": "read-topics"},
+                )
+                return jsonify({"error": "Unable to reach topic service"}), 502
+
+            if topic_resp.status_code == 200:
+                topic_json = safe_json(topic_resp)
+                for t in topic_json.get("data", []):
+                    topics.append({
                         "topic_id": t.get("topic_id"),
                         "topic_label": t.get("topic_label"),
-                    }
-                )
-
-        try:
-            skill_resp = fut_skill.result()
-        except requests.RequestException:
-            publish_error_event(
-                source_service=SERVICE_NAME,
-                downstream_service="skill",
-                error_code="SKILL_FETCH_UNREACHABLE",
-                error_message="Unable to reach skill service",
-                http_status=502,
-                request_context={"section_id": section_id, "operation": "read-skills"},
-            )
-            return jsonify({"error": "Unable to reach skill service"}), 502
+                    })
+            elif topic_resp.status_code >= 500:
+                return downstream_error("topic", topic_resp, "Failed to fetch topics")
 
         skills = []
-        if skill_resp.status_code == 200:
-            skill_json = safe_json(skill_resp)
-            for s in skill_json.get("data", []):
-                skills.append({
-                    "skill_id": s.get("skill_id"),
-                    "skill_label": s.get("skill_label"),
-                    "skill_importance": s.get("skill_importance")
-                })
+        if need_skills:
+            try:
+                skill_resp = fut_skill.result()
+            except requests.RequestException:
+                publish_error_event(
+                    source_service=SERVICE_NAME,
+                    downstream_service="skill",
+                    error_code="SKILL_FETCH_UNREACHABLE",
+                    error_message="Unable to reach skill service",
+                    http_status=502,
+                    request_context={"section_id": section_id, "operation": "read-skills"},
+                )
+                return jsonify({"error": "Unable to reach skill service"}), 502
+
+            if skill_resp.status_code == 200:
+                skill_json = safe_json(skill_resp)
+                for s in skill_json.get("data", []):
+                    skills.append({
+                        "skill_id": s.get("skill_id"),
+                        "skill_label": s.get("skill_label"),
+                        "skill_importance": s.get("skill_importance")
+                    })
+            elif skill_resp.status_code >= 500:
+                return downstream_error("skill", skill_resp, "Failed to fetch skills")
 
     result = {
         "course_id": course_id,
