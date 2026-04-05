@@ -78,13 +78,18 @@ export async function loadDashboardSummary(studentProfile) {
     new Set(unsubmittedForms.map((form) => form.sectionId).filter(Boolean)),
   );
 
-  // if we have enrollment info for this backend student, restrict to those sections
+  // Prefer enrollment-derived sections for team and peer-eval lookups.
+  // Student form rows can be stale/incomplete and should not drive section scope.
   const enrolledSectionSet = enrollmentMap.get(backendStudentId) || null;
-  const filteredSectionIds = enrolledSectionSet
-    ? uniqueSectionIds.filter((id) => enrolledSectionSet.has(String(id)))
-    : uniqueSectionIds;
+  const enrolledSectionIds = enrolledSectionSet
+    ? Array.from(enrolledSectionSet)
+    : [];
 
-  if (!uniqueSectionIds.length) {
+  // Fall back to form-derived sections only when enrollment map has no rows.
+  const filteredSectionIds =
+    enrolledSectionIds.length > 0 ? enrolledSectionIds : uniqueSectionIds;
+
+  if (!filteredSectionIds.length) {
     return {
       teamCount: 0,
       formCount: unsubmittedForms.length,
