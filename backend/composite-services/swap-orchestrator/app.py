@@ -75,6 +75,9 @@ TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team").rstrip("/")
 TEAM_SWAP_OPTIMIZE_URL = os.getenv(
     "TEAM_SWAP_OPTIMIZE_URL", "http://localhost:3013/team-swap/optimize"
 ).rstrip("/")
+TEAM_SWAP_EXECUTE_URL = os.getenv(
+    "TEAM_SWAP_EXECUTE_URL", "http://localhost:3013/team-swap/execute"
+).rstrip("/")
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://localhost:3005/enrollment").rstrip("/")
 STUDENT_SERVICE_URL = os.getenv(
     "STUDENT_SERVICE_URL",
@@ -1309,88 +1312,39 @@ def _generate_proposal_for_cycle(cycle):
                 }
             )
 
-    constraint_row, error = _fetch_constraint_row_for_scope(
-        cycle.course_id,
-        cycle.module_id,
-        cycle.class_id,
-    )
-    if error:
-        return None, error
-
-    optimizer_constraints, error = _normalize_constraints_for_optimizer(constraint_row)
-    if error:
-        return None, error
-
     teams_context, error = _fetch_section_teams(cycle.section_id)
     if error:
         return None, error
 
-    optimizer_teams = teams_context["optimizer_teams"]
     current_roster_payload = teams_context["team_post_payload"]
-    student_ids = teams_context["student_ids"]
-
-    if not optimizer_teams:
-        return None, {"status": 400, "message": "no teams found for section"}
-
-    student_rows_by_id, error = _fetch_student_rows(student_ids)
-    if error:
-        return None, error
-
-    optimizer_students, error = _build_optimizer_students(
-        student_rows_by_id=student_rows_by_id,
-        student_ids=student_ids,
-        optimizer_constraints=optimizer_constraints,
-    )
-    if error:
-        return None, error
-
-    variance_level = _normalize_variance_level(optimizer_constraints.get("gpa_variance_level"))
-    class_avg_gpa = _float_or_none(optimizer_constraints.get("class_avg_gpa"))
-    if variance_level in {"strict", "standard"} and (class_avg_gpa is None or class_avg_gpa <= 0):
-        gpas = [student.get("gpa") for student in optimizer_students if student.get("gpa") is not None]
-        if not gpas:
-            return None, {
-                "status": 400,
-                "message": "unable to compute class average GPA from student-service data",
-            }
-        optimizer_constraints["class_avg_gpa"] = round(sum(gpas) / len(gpas), 4)
 
     if approved_requests:
-        optimize_payload = {
+        execute_payload = {
             "section_id": str(cycle.section_id),
             "course_id": cycle.course_id,
-            "module_id": str(cycle.module_id),
-            "class_id": str(cycle.class_id),
-            "teams": optimizer_teams,
-            "students": optimizer_students,
-            "approved_swap_requests": approved_requests,
-            "swap_constraints": optimizer_constraints,
+            "approved_request_ids": [item["swap_request_id"] for item in approved_requests],
         }
 
-        optimize_response, error = _http_json(
+        execute_response, error = _http_json(
             "POST",
-            TEAM_SWAP_OPTIMIZE_URL,
-            label="team-swap optimize",
-            payload=optimize_payload,
+            TEAM_SWAP_EXECUTE_URL,
+            label="team-swap execute",
+            payload=execute_payload,
         )
         if error:
             return None, error
 
-        team_swap_data = _extract_data(optimize_response)
+        team_swap_data = _extract_data(execute_response)
         if not isinstance(team_swap_data, dict):
             return None, {
                 "status": 502,
-                "message": "team-swap optimize response missing data",
+                "message": "team-swap execute response missing data",
             }
     else:
         team_swap_data = {
             "new_team_roster": current_roster_payload,
             "per_request_result": [],
-            "selected_pairs": [],
-            "solver_objective": 0.0,
             "num_executed": 0,
-            "constraints_satisfied": True,
-            "constraint_violation_reason": None,
         }
 
     proposal_payload = {
@@ -1402,7 +1356,7 @@ def _generate_proposal_for_cycle(cycle):
         "generated_at": _as_iso(_utc_now()),
         "approved_request_ids": [item["swap_request_id"] for item in approved_requests],
         "request_status_snapshot": request_status_snapshot,
-        "constraints_used": optimizer_constraints,
+        "constraints_used": None,
         "team_swap_result": team_swap_data,
     }
 
@@ -1461,7 +1415,7 @@ def health():
     return jsonify({"status": "ok", "service": "swap-orchestrator-service"}), 200
 
 
-
+# im guessing this is for cycl
 @app.route("/swap-orchestrator/cycles", methods=["POST"])
 def create_cycle():
     payload = request.get_json() or {}
@@ -2153,15 +2107,19 @@ def confirm_proposal(cycle_id):
                 "section_id": str(cycle.section_id),
                 "teams": new_team_roster.get("teams"),
             }
-            team_response, team_error = _http_json(
-                "POST",
-                TEAM_URL,
-                label="team service update",
-                payload=roster_update_payload,
-            )
-            if team_error:
-                return jsonify({"code": team_error.get("status", 502), "message": team_error.get("message")}), team_error.get("status", 502)
-            roster_response_data = _extract_data(team_response)
+            existing_update = team_swap_result.get("team_update_response") if isinstance(team_swap_result, dict) else None
+            if isinstance(existing_update, dict):
+                roster_response_data = existing_update
+            else:
+                team_response, team_error = _http_json(
+                    "POST",
+                    TEAM_URL,
+                    label="team service update",
+                    payload=roster_update_payload,
+                )
+                if team_error:
+                    return jsonify({"code": team_error.get("status", 502), "message": team_error.get("message")}), team_error.get("status", 502)
+                roster_response_data = _extract_data(team_response)
 
     student_ids_to_notify = []
     for request_result in request_results:
