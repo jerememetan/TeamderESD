@@ -25,7 +25,6 @@ Atomic services
 - swap-request-service: http://localhost:3011 - /swap-request
 - swap-constraints-service: http://localhost:3012 - /swap-constraints
 - team-swap-service: http://localhost:3013 - /team-swap
-- analytics-service: http://localhost:3014 - /analytics
 - peer-evaluation-service: http://localhost:3020 - /peer-eval
 - student-form-service: http://localhost:3015 - /student-form
 - notification-service: http://localhost:3016 - /health, /notification/send-form-link, /notification/publish-email

@@ -5,6 +5,7 @@ export interface CourseGroup {
   studentsCount: number;
   teamsCount: number;
   formStatus: 'draft' | 'active' | 'closed';
+  stage?: 'setup' | 'collecting' | 'forming' | 'formed' | 'completed';
 }
 
 export interface Course {

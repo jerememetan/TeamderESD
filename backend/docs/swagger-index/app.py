@@ -20,7 +20,6 @@ SERVICES = [
     ("swap-request-service", "http://localhost:3011"),
     ("swap-constraints-service", "http://localhost:3012"),
     ("team-swap-service", "http://localhost:3013"),
-    ("analytics-service", "http://localhost:3014"),
     ("student-form-service", "http://localhost:3015"),
     ("notification-service", "http://localhost:3016"),
     ("course-service", "http://localhost:8000/courses"),

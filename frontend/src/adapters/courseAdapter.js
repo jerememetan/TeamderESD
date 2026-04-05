@@ -39,10 +39,7 @@ export function normalizeCourseList(courses = []) {
             teamsCount: toNullableNumber(
               group?.teamsCount ?? group?.teams_count,
             ),
-            lifecycleStage: toNonEmptyString(
-              group?.lifecycleStage ?? group?.stage,
-              "setup",
-            ).toLowerCase(),
+            stage: toNonEmptyString(group?.stage, "setup").toLowerCase(),
             formSummary: group?.formSummary ?? null,
           };
         })

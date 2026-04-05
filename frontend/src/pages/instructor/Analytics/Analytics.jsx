@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import {
@@ -5,8 +6,6 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
-  Line,
-  LineChart,
   PolarAngleAxis,
   PolarGrid,
   PolarRadiusAxis,
@@ -21,10 +20,36 @@ import GroupChip from "../../../components/schematic/GroupChip";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import {
+  buildScenario2TeamDrilldown,
   buildSiblingGroupSummaryData,
+  buildScenario2BuddyFulfillmentData,
+  buildScenario2DiversityData,
+  buildScenario2KpiSummary,
+  buildScenario2RadarData,
+  buildScenario2TeamLegend,
+  buildScenario2TeamQualityData,
 } from "../../../adapters/analyticsAdapter";
+import { Button } from "../../../components/ui/button";
 import { useAnalyticsPage } from "./logic/useAnalyticsPage";
 import styles from "./Analytics.module.css";
+
+const QUALITY_METRICS = [
+  { key: "Buddy Satisfaction", color: "#0047AB" },
+  { key: "GPA Mean (to 100)", color: "#2ECC71" },
+  { key: "Reputation Mean", color: "#FF6B00" },
+];
+
+function formatDelta(value, unit = "") {
+  const numeric = Number(value || 0);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(unit === "%" ? 1 : 2)}${unit}`;
+}
+
+function deltaToneClass(value, stylesRef) {
+  if (value > 0) return stylesRef.deltaPositive;
+  if (value < 0) return stylesRef.deltaNegative;
+  return stylesRef.deltaNeutral;
+}
 
 function Analytics() {
   const { courseId, groupId } = useParams();
@@ -33,69 +58,65 @@ function Analytics() {
     selectedGroup,
     groupTeams,
     backendStudents,
+    sectionAnalytics,
+    teamAnalytics,
     isLoadingRoster,
     rosterError,
   } = useAnalyticsPage(courseId, groupId);
 
   const siblingGroupSummaryData = [
     buildSiblingGroupSummaryData(
-      selectedCourse?.code + " " +selectedGroup?.code,
+      selectedCourse?.code + " " + selectedGroup?.code,
       backendStudents.length,
       groupTeams.length,
     ),
   ];
 
-  // TODO(api-backend): Provide per-team diversity metrics for this section.
-  // Endpoint candidate: GET /analytics?section_id={groupId} or GET /team/{team_id}/metrics
-  // Expected object per team: { team_id, team_name, skill_level_score, background_score, work_style_score } - This can be changed to whatever you want
-  // Keep this static fallback until analytics-service contract is finalized.
-  const diversityData = [
-    {
-      metric: "Skill Level",
-      "Team Alpha": 85,
-      "Team Beta": 82,
-      "Team Gamma": 93,
-    },
-    {
-      metric: "Background",
-      "Team Alpha": 78,
-      "Team Beta": 89,
-      "Team Gamma": 87,
-    },
-    {
-      metric: "Work Style",
-      "Team Alpha": 91,
-      "Team Beta": 84,
-      "Team Gamma": 95,
-    },
-  ];
+  const diversityData = buildScenario2DiversityData(teamAnalytics);
+  const radarData = buildScenario2RadarData(sectionAnalytics || {});
+  const diversitySeries = buildScenario2TeamLegend(teamAnalytics);
+  const teamQualityData = buildScenario2TeamQualityData(teamAnalytics);
+  const buddyFulfillmentData =
+    buildScenario2BuddyFulfillmentData(teamAnalytics);
+  const kpis = buildScenario2KpiSummary(sectionAnalytics || {}, teamAnalytics);
+  const [enabledMetrics, setEnabledMetrics] = useState(
+    QUALITY_METRICS.map((metric) => metric.key),
+  );
+  const [selectedTeamLabel, setSelectedTeamLabel] = useState("");
 
-  // TODO(api-backend): Provide section-level quality metrics for radar chart.
-  // Endpoint candidate: GET /analytics/section/{groupId}/quality
-  // Expected object: {
-  //   skill_balance: number,
-  //   team_cohesion: number,
-  //   diversity: number,
-  //   communication: number,
-  //   leadership: number
-  // } - Same thing, these are just suggested fields, but can be adjusted
-  // Transform backend keys into [{ metric, value }] for RadarChart.
-  const radarData = [
-    { metric: "Skill Balance", value: 85 },
-    { metric: "Team Cohesion", value: 78 },
-    { metric: "Diversity", value: 88 },
-    { metric: "Communication", value: 82 },
-    { metric: "Leadership", value: 90 },
-  ];
+  const resolvedSelectedTeam =
+    selectedTeamLabel || teamQualityData?.[0]?.team || "";
+
+  const selectedTeam = useMemo(() => {
+    return buildScenario2TeamDrilldown(
+      teamAnalytics,
+      resolvedSelectedTeam,
+      sectionAnalytics || {},
+    );
+  }, [teamAnalytics, resolvedSelectedTeam, sectionAnalytics]);
+
+  const activeMetrics = QUALITY_METRICS.filter((metric) =>
+    enabledMetrics.includes(metric.key),
+  );
+
+  function toggleMetric(metricKey) {
+    setEnabledMetrics((current) => {
+      if (current.includes(metricKey)) {
+        const next = current.filter((item) => item !== metricKey);
+        return next.length ? next : current;
+      }
+
+      return [...current, metricKey];
+    });
+  }
 
   if (!selectedCourse || !selectedGroup) {
-    return <div className={styles.notFound}>Course group not found</div>;
+    return (
+      <div className={styles.notFound}>Loading Course.... Please Wait</div>
+    );
   }
 
   const totalStudents = backendStudents.length || selectedGroup.studentsCount;
-  const averageTeamScore =
-    groupTeams.reduce((sum, team) => sum + team.score, 0) /
-    (groupTeams.length || 1);
   const averageStudentsPerTeam = totalStudents / (groupTeams.length || 1);
   const rosterSourceTone = rosterError
     ? "alert"
@@ -145,24 +166,24 @@ function Analytics() {
       <section className={styles.statsGrid}>
         <ModuleBlock
           componentId="MOD-A1"
-          eyebrow="Score"
-          title="Average Team Score"
-          metric={averageTeamScore.toFixed(1)}
-          metricLabel="Formation balance"
+          eyebrow="Buddy Match"
+          title="Overall Satisfaction"
+          metric={`${kpis.buddyRate.toFixed(1)}%`}
+          metricLabel={`${kpis.buddySatisfied}/${kpis.buddyRequests} requests satisfied`}
         />
         <ModuleBlock
           componentId="MOD-A2"
-          eyebrow="Capacity"
-          title="Total Teams"
-          metric={String(groupTeams.length).padStart(2, "0")}
+          eyebrow="Academic"
+          title="Average Team GPA"
+          metric={kpis.avgGpaMean.toFixed(2)}
           metricLabel={`${averageStudentsPerTeam.toFixed(1)} students per team`}
           accent="green"
         />
         <ModuleBlock
           componentId="MOD-A3"
-          eyebrow="Roster"
-          title="Live Section Students"
-          metric={String(totalStudents).padStart(2, "0")}
+          eyebrow="Reputation"
+          title="Average Team Reputation"
+          metric={kpis.avgReputationMean.toFixed(1)}
           metricLabel={
             backendStudents.length
               ? "Pulled from enrollment + student-service"
@@ -179,37 +200,53 @@ function Analytics() {
           title="Course Group Breakdown"
           className={styles.chartModule}
         >
-          <div className={styles.chartWrap}>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={siblingGroupSummaryData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
-                <XAxis
-                  dataKey="name"
-                  stroke="#51606F"
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="students" fill="#0047AB" />
-                <Bar dataKey="teams" fill="#2ECC71" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className={styles.insightList}>
+            <div className={styles.insightRow}>
+              <p className={styles.insightText}>
+                <b>Group:</b> {siblingGroupSummaryData[0]?.name || "N/A"}
+              </p>
+            </div>
+            <div className={styles.insightRow}>
+              <p className={styles.insightText}>
+                <b>Students:</b> {siblingGroupSummaryData[0]?.students ?? 0}
+              </p>
+            </div>
+            <div className={styles.insightRow}>
+              <p className={styles.insightText}>
+                <b>Teams:</b> {siblingGroupSummaryData[0]?.teams ?? 0}
+              </p>
+            </div>
           </div>
         </ModuleBlock>
 
-        {/* <ModuleBlock
+        <ModuleBlock
           componentId="MOD-A5"
-          eyebrow="Team Index"
-          title={`Formation Scores :: ${selectedGroup.code}`}
+          eyebrow="Team Quality"
+          title={`Team Composite Quality :: ${selectedGroup.code}`}
           className={styles.chartModule}
         >
+          <div className={styles.metricToggleRow}>
+            {QUALITY_METRICS.map((metric) => {
+              const active = enabledMetrics.includes(metric.key);
+              return (
+                <Button
+                  key={metric.key}
+                  variant={active ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleMetric(metric.key)}
+                  className={active ? styles.metricToggleActive : ""}
+                >
+                  {metric.key}
+                </Button>
+              );
+            })}
+          </div>
           <div className={styles.chartWrap}>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={teamScoresData}>
+              <BarChart data={teamQualityData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
                 <XAxis
-                  dataKey="name"
+                  dataKey="team"
                   stroke="#51606F"
                   tick={{ fontSize: 12 }}
                 />
@@ -219,11 +256,23 @@ function Analytics() {
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip />
-                <Bar dataKey="score" fill="#0047AB" />
+                <Legend />
+                {activeMetrics.map((metric) => (
+                  <Bar
+                    key={metric.key}
+                    dataKey={metric.key}
+                    fill={metric.color}
+                    onClick={(entry) => {
+                      if (entry?.team) {
+                        setSelectedTeamLabel(entry.team);
+                      }
+                    }}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </ModuleBlock> */}
+        </ModuleBlock>
 
         <ModuleBlock
           componentId="MOD-A6"
@@ -274,9 +323,135 @@ function Analytics() {
                 />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="Team Alpha" fill="#0047AB" />
-                <Bar dataKey="Team Beta" fill="#2ECC71" />
-                <Bar dataKey="Team Gamma" fill="#FF6B00" />
+                {diversitySeries.length ? (
+                  diversitySeries.map((seriesName, index) => {
+                    const palette = [
+                      "#0047AB",
+                      "#2ECC71",
+                      "#FF6B00",
+                      "#1F7A8C",
+                      "#D7263D",
+                    ];
+                    return (
+                      <Bar
+                        key={seriesName}
+                        dataKey={seriesName}
+                        fill={palette[index % palette.length]}
+                      />
+                    );
+                  })
+                ) : (
+                  <Bar dataKey="No Team Data" fill="#9AA5B1" />
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ModuleBlock>
+        
+        <ModuleBlock
+          componentId="MOD-A9"
+          eyebrow="Team Drilldown"
+          title={`Selected Team Detail :: ${selectedTeam?.team || "N/A"}`}
+          className={`${styles.chartModule} ${styles.fullSpan}`}
+        >
+          {selectedTeam ? (
+            <div className={styles.drilldownWrap}>
+              <div className={styles.kpiRow}>
+                <div className={styles.kpiCard}>
+                  <p className={styles.kpiLabel}>Buddy Satisfaction</p>
+                  <p className={styles.kpiValue}>
+                    {selectedTeam.buddyRate.toFixed(1)}%
+                  </p>
+                  <p
+                    className={`${styles.kpiDelta} ${deltaToneClass(selectedTeam.deltas.buddyRate, styles)}`}
+                  >
+                    {formatDelta(selectedTeam.deltas.buddyRate, "%")} vs section
+                  </p>
+                </div>
+                <div className={styles.kpiCard}>
+                  <p className={styles.kpiLabel}>GPA Mean</p>
+                  <p className={styles.kpiValue}>
+                    {selectedTeam.gpaMean.toFixed(2)}
+                  </p>
+                  <p
+                    className={`${styles.kpiDelta} ${deltaToneClass(selectedTeam.deltas.gpaMean, styles)}`}
+                  >
+                    {formatDelta(selectedTeam.deltas.gpaMean)} vs section
+                  </p>
+                </div>
+                <div className={styles.kpiCard}>
+                  <p className={styles.kpiLabel}>Reputation Mean</p>
+                  <p className={styles.kpiValue}>
+                    {selectedTeam.reputationMean.toFixed(1)}
+                  </p>
+                  <p
+                    className={`${styles.kpiDelta} ${deltaToneClass(selectedTeam.deltas.reputationMean, styles)}`}
+                  >
+                    {formatDelta(selectedTeam.deltas.reputationMean)} vs section
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.distributionGrid}>
+                <div className={styles.distributionCard}>
+                  <p className={styles.distTitle}>Gender Distribution</p>
+                  {selectedTeam.genderDistribution.map((item) => (
+                    <p key={`gender-${item.label}`} className={styles.distItem}>
+                      {item.label}: {item.count}
+                    </p>
+                  ))}
+                </div>
+                <div className={styles.distributionCard}>
+                  <p className={styles.distTitle}>School Distribution</p>
+                  {selectedTeam.schoolDistribution.map((item) => (
+                    <p key={`school-${item.label}`} className={styles.distItem}>
+                      School {item.label}: {item.count}
+                    </p>
+                  ))}
+                </div>
+                <div className={styles.distributionCard}>
+                  <p className={styles.distTitle}>Top MBTI Types</p>
+                  {selectedTeam.mbtiDistribution.slice(0, 6).map((item) => (
+                    <p key={`mbti-${item.label}`} className={styles.distItem}>
+                      {item.label}: {item.count}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              <p className={styles.buddyFootnote}>
+                Buddy requests: {selectedTeam.buddyRequests} total,{" "}
+                {selectedTeam.buddySatisfied} satisfied,{" "}
+                {selectedTeam.buddyUnsatisfied} unsatisfied.
+              </p>
+            </div>
+          ) : (
+            <p className={styles.subtitle}>
+              No team analytics found for drill-down.
+            </p>
+          )}
+        </ModuleBlock>
+                <ModuleBlock
+          componentId="MOD-A8"
+          eyebrow="Buddy Requests"
+          title="Request Fulfillment by Team"
+          className={`${styles.chartModule} ${styles.fullSpan}`}
+        >
+          <div className={styles.chartWrap}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={buddyFulfillmentData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
+                <XAxis
+                  dataKey="team"
+                  stroke="#51606F"
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="requests" fill="#1F7A8C" />
+                <Bar dataKey="satisfied" fill="#2ECC71" />
+                <Bar dataKey="unsatisfied" fill="#D7263D" />
               </BarChart>
             </ResponsiveContainer>
           </div>

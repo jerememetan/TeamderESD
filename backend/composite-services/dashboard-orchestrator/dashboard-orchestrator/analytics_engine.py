@@ -5,11 +5,10 @@ Pure functions that take team + student data and return metrics.
 No I/O, no Flask, no external calls — just maths.
 """
 
-import numpy as np
 from collections import Counter
 
+import numpy as np
 
-# ── helpers ──────────────────────────────────────────────────────────
 
 def _safe_std(values):
     """Standard deviation, 0.0 for length <= 1."""
@@ -26,31 +25,29 @@ def _distribution(items):
 def _balance_score(distributions):
     """
     Given a list of Counter-style dicts (one per team), compute how
-    evenly a categorical variable is spread.  Returns 0‒1 where 1 = perfect.
+    evenly a categorical variable is spread. Returns 0-1 where 1 = perfect.
     Uses coefficient of variation of category proportions across teams.
     """
     if not distributions:
         return 1.0
+
     all_keys = set()
-    for d in distributions:
-        all_keys.update(d.keys())
+    for distribution in distributions:
+        all_keys.update(distribution.keys())
     if not all_keys:
         return 1.0
 
     proportion_stds = []
     for key in all_keys:
         proportions = []
-        for d in distributions:
-            total = sum(d.values()) or 1
-            proportions.append(d.get(key, 0) / total)
+        for distribution in distributions:
+            total = sum(distribution.values()) or 1
+            proportions.append(distribution.get(key, 0) / total)
         proportion_stds.append(_safe_std(proportions))
 
     avg_std = float(np.mean(proportion_stds)) if proportion_stds else 0.0
-    # invert: lower std = better balance
     return round(max(0.0, 1.0 - avg_std * 2), 4)
 
-
-# ── per-team metrics ─────────────────────────────────────────────────
 
 def compute_team_metrics(team, student_lookup, skill_definitions):
     """
@@ -59,19 +56,18 @@ def compute_team_metrics(team, student_lookup, skill_definitions):
     Parameters
     ----------
     team : dict with team_id, team_number, students[{student_id}]
-    student_lookup : dict  student_id -> profile dict
+    student_lookup : dict student_id -> profile dict
     skill_definitions : list of {skill_id, skill_label, skill_importance}
 
     Returns dict of metrics.
     """
-    student_ids = [s["student_id"] for s in team.get("students", [])]
-    profiles = [student_lookup[sid] for sid in student_ids if sid in student_lookup]
+    student_ids = [student["student_id"] for student in team.get("students", [])]
+    profiles = [student_lookup[student_id] for student_id in student_ids if student_id in student_lookup]
 
     if not profiles:
         return _empty_team_metrics(team)
 
-    # ── GPA ──
-    gpas = [p["gpa"] for p in profiles if p.get("gpa") is not None]
+    gpas = [profile["gpa"] for profile in profiles if profile.get("gpa") is not None]
     gpa_metrics = {
         "mean": round(float(np.mean(gpas)), 4) if gpas else None,
         "min": round(float(min(gpas)), 4) if gpas else None,
@@ -79,24 +75,23 @@ def compute_team_metrics(team, student_lookup, skill_definitions):
         "std": round(_safe_std(gpas), 4) if gpas else None,
     }
 
-    # ── Year distribution ──
-    years = [p["year"] for p in profiles if p.get("year") is not None]
+    years = [profile["year"] for profile in profiles if profile.get("year") is not None]
     year_dist = _distribution(years)
 
-    # ── School distribution ──
-    schools = [p.get("school") or p.get("school_id") for p in profiles if p.get("school") is not None or p.get("school_id") is not None]
+    schools = [
+        profile.get("school") or profile.get("school_id")
+        for profile in profiles
+        if profile.get("school") is not None or profile.get("school_id") is not None
+    ]
     school_dist = _distribution(schools)
 
-    # ── Gender distribution ──
-    genders = [p["gender"] for p in profiles if p.get("gender") is not None]
+    genders = [profile["gender"] for profile in profiles if profile.get("gender") is not None]
     gender_dist = _distribution(genders)
 
-    # ── MBTI distribution ──
-    mbtis = [p["mbti"] for p in profiles if p.get("mbti") is not None]
+    mbtis = [profile["mbti"] for profile in profiles if profile.get("mbti") is not None]
     mbti_dist = _distribution(mbtis)
 
-    # ── Reputation ──
-    reps = [p["reputation_score"] for p in profiles if p.get("reputation_score") is not None]
+    reps = [profile["reputation_score"] for profile in profiles if profile.get("reputation_score") is not None]
     reputation_metrics = {
         "mean": round(float(np.mean(reps)), 4) if reps else None,
         "min": int(min(reps)) if reps else None,
@@ -104,30 +99,29 @@ def compute_team_metrics(team, student_lookup, skill_definitions):
         "std": round(_safe_std(reps), 4) if reps else None,
     }
 
-    # ── Skill balance ──
-    skill_map = {sd["skill_id"]: sd for sd in skill_definitions} if skill_definitions else {}
     skill_balance = []
     for skill_def in (skill_definitions or []):
-        sid = skill_def["skill_id"]
+        skill_id = skill_def["skill_id"]
         levels = []
-        for p in profiles:
-            for c in p.get("competences") or []:
-                if c.get("skill_id") == sid:
-                    levels.append(c["skill_level"])
-        skill_balance.append({
-            "skill_id": sid,
-            "skill_label": skill_def.get("skill_label", sid),
-            "skill_importance": skill_def.get("skill_importance"),
-            "avg_level": round(float(np.mean(levels)), 4) if levels else None,
-            "min_level": int(min(levels)) if levels else None,
-            "max_level": int(max(levels)) if levels else None,
-            "coverage": len(levels),
-        })
+        for profile in profiles:
+            for competence in profile.get("competences") or []:
+                if competence.get("skill_id") == skill_id:
+                    levels.append(competence["skill_level"])
+        skill_balance.append(
+            {
+                "skill_id": skill_id,
+                "skill_label": skill_def.get("skill_label", skill_id),
+                "skill_importance": skill_def.get("skill_importance"),
+                "avg_level": round(float(np.mean(levels)), 4) if levels else None,
+                "min_level": int(min(levels)) if levels else None,
+                "max_level": int(max(levels)) if levels else None,
+                "coverage": len(levels),
+            }
+        )
 
-    # ── Topic preference alignment ──
     top_prefs = []
-    for p in profiles:
-        prefs = p.get("topic_preferences") or []
+    for profile in profiles:
+        prefs = profile.get("topic_preferences") or []
         if prefs:
             top_prefs.append(prefs[0])
     top_pref_dist = _distribution(top_prefs)
@@ -138,15 +132,14 @@ def compute_team_metrics(team, student_lookup, skill_definitions):
         "alignment_ratio": round(most_common_count / len(profiles), 4) if profiles else 0,
     }
 
-    # ── Buddy satisfaction ──
     sid_set = set(student_ids)
     buddy_requests = 0
     buddy_satisfied = 0
-    for p in profiles:
-        bid = p.get("buddy_id")
-        if bid is not None:
+    for profile in profiles:
+        buddy_id = profile.get("buddy_id")
+        if buddy_id is not None:
             buddy_requests += 1
-            if bid in sid_set:
+            if buddy_id in sid_set:
                 buddy_satisfied += 1
     buddy_metrics = {
         "requests": buddy_requests,
@@ -187,8 +180,6 @@ def _empty_team_metrics(team):
     }
 
 
-# ── section-wide metrics ─────────────────────────────────────────────
-
 def compute_section_metrics(team_metrics_list):
     """
     Compute cross-team (section-wide) summary metrics.
@@ -200,59 +191,54 @@ def compute_section_metrics(team_metrics_list):
     if not team_metrics_list:
         return _empty_section_metrics()
 
-    # ── GPA fairness ──
-    team_gpa_means = [t["gpa"]["mean"] for t in team_metrics_list if t["gpa"]["mean"] is not None]
+    team_gpa_means = [team["gpa"]["mean"] for team in team_metrics_list if team["gpa"]["mean"] is not None]
     gpa_cross_team = {
         "team_means": team_gpa_means,
         "std_of_means": round(_safe_std(team_gpa_means), 4) if team_gpa_means else None,
         "range": round(max(team_gpa_means) - min(team_gpa_means), 4) if team_gpa_means else None,
     }
 
-    # ── Reputation fairness ──
-    team_rep_means = [t["reputation"]["mean"] for t in team_metrics_list if t["reputation"]["mean"] is not None]
+    team_rep_means = [team["reputation"]["mean"] for team in team_metrics_list if team["reputation"]["mean"] is not None]
     reputation_cross_team = {
         "team_means": team_rep_means,
         "std_of_means": round(_safe_std(team_rep_means), 4) if team_rep_means else None,
         "range": round(max(team_rep_means) - min(team_rep_means), 4) if team_rep_means else None,
     }
 
-    # ── Categorical balance scores ──
-    year_dists = [t["year_distribution"] for t in team_metrics_list]
-    school_dists = [t["school_distribution"] for t in team_metrics_list]
-    gender_dists = [t["gender_distribution"] for t in team_metrics_list]
+    year_dists = [team["year_distribution"] for team in team_metrics_list]
+    school_dists = [team["school_distribution"] for team in team_metrics_list]
+    gender_dists = [team["gender_distribution"] for team in team_metrics_list]
 
-    # ── Skill balance fairness ──
-    # For each skill, compute std of avg_level across teams
     skill_fairness = []
     if team_metrics_list and team_metrics_list[0].get("skill_balance"):
-        skill_ids = [s["skill_id"] for s in team_metrics_list[0]["skill_balance"]]
-        for sid in skill_ids:
+        skill_ids = [skill["skill_id"] for skill in team_metrics_list[0]["skill_balance"]]
+        for skill_id in skill_ids:
             avg_levels = []
-            label = sid
-            for tm in team_metrics_list:
-                for sb in tm["skill_balance"]:
-                    if sb["skill_id"] == sid:
-                        label = sb.get("skill_label", sid)
-                        if sb["avg_level"] is not None:
-                            avg_levels.append(sb["avg_level"])
-            skill_fairness.append({
-                "skill_id": sid,
-                "skill_label": label,
-                "team_avg_levels": avg_levels,
-                "std_across_teams": round(_safe_std(avg_levels), 4) if avg_levels else None,
-            })
+            label = skill_id
+            for team_metrics in team_metrics_list:
+                for skill in team_metrics["skill_balance"]:
+                    if skill["skill_id"] == skill_id:
+                        label = skill.get("skill_label", skill_id)
+                        if skill["avg_level"] is not None:
+                            avg_levels.append(skill["avg_level"])
+            skill_fairness.append(
+                {
+                    "skill_id": skill_id,
+                    "skill_label": label,
+                    "team_avg_levels": avg_levels,
+                    "std_across_teams": round(_safe_std(avg_levels), 4) if avg_levels else None,
+                }
+            )
 
-    # ── Buddy satisfaction overall ──
-    total_requests = sum(t["buddy_satisfaction"]["requests"] for t in team_metrics_list)
-    total_satisfied = sum(t["buddy_satisfaction"]["satisfied"] for t in team_metrics_list)
+    total_requests = sum(team["buddy_satisfaction"]["requests"] for team in team_metrics_list)
+    total_satisfied = sum(team["buddy_satisfaction"]["satisfied"] for team in team_metrics_list)
     buddy_overall = {
         "total_requests": total_requests,
         "total_satisfied": total_satisfied,
         "rate": round(total_satisfied / total_requests, 4) if total_requests else None,
     }
 
-    # ── Team sizes ──
-    sizes = [t["size"] for t in team_metrics_list]
+    sizes = [team["size"] for team in team_metrics_list]
 
     return {
         "num_teams": len(team_metrics_list),

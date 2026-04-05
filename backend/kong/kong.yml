@@ -148,14 +148,6 @@ services:
           - /team-swap
         strip_path: false
 
-  - name: analytics-service
-    url: http://analytics-service:3014
-    routes:
-      - name: analytics-service-route
-        paths:
-          - /analytics
-        strip_path: false
-
   - name: peer-evaluation-service
     url: http://peer-evaluation-service:3020
     routes:

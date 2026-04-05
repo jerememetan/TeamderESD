@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getBackendSectionId } from "../../../../data/backendIds";
 import { fetchCourseByCode } from "../../../../services/courseService";
 import { fetchEnrollmentsBySectionId } from "../../../../services/enrollmentService";
+import { fetchJson } from "../../../../services/httpClient";
 import { getSectionById } from "../../../../services/sectionService";
 import {
   buildSectionRoster,
@@ -14,11 +15,34 @@ import {
   normalizeAnalyticsTeams,
 } from "../../../../adapters/analyticsAdapter";
 
+const DASHBOARD_ANALYTICS_URL =
+  import.meta.env.VITE_DASHBOARD_ANALYTICS_URL ??
+  import.meta.env.VITE_DASHBOARD_URL ??
+  "http://localhost:8000/dashboard";
+
+async function fetchSectionDashboardAnalytics(sectionId) {
+  const payload = await fetchJson(
+    `${DASHBOARD_ANALYTICS_URL}?section_id=${encodeURIComponent(sectionId)}`,
+    {
+      headers: { Accept: "application/json" },
+      cache: false,
+    },
+  );
+
+  const data = payload?.data ?? {};
+  return {
+    sectionAnalytics: data?.section_analytics ?? null,
+    teamAnalytics: Array.isArray(data?.team_analytics) ? data.team_analytics : [],
+  };
+}
+
 export function useAnalyticsPage(courseId, groupId) {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [groupTeams, setGroupTeams] = useState([]);
   const [backendStudents, setBackendStudents] = useState([]);
+  const [sectionAnalytics, setSectionAnalytics] = useState(null);
+  const [teamAnalytics, setTeamAnalytics] = useState([]);
   const [isLoadingRoster, setIsLoadingRoster] = useState(true);
   const [rosterError, setRosterError] = useState("");
 
@@ -44,12 +68,14 @@ export function useAnalyticsPage(courseId, groupId) {
         setSelectedGroup(null);
         setGroupTeams([]);
         setBackendStudents([]);
+        setSectionAnalytics(null);
+        setTeamAnalytics([]);
         setRosterError("Missing group ID");
         setIsLoadingRoster(false);
         return;
       }
 
-      const [courseResult, groupResult, teamsResult, rosterResult] =
+      const [courseResult, groupResult, teamsResult, rosterResult, analyticsResult] =
         await Promise.allSettled([
           fetchCourseByCode(courseId),
           getSectionById(groupId),
@@ -64,6 +90,9 @@ export function useAnalyticsPage(courseId, groupId) {
                 buildSectionRoster(enrollments, students),
               )
             : Promise.resolve([]),
+          rosterSectionId
+            ? fetchSectionDashboardAnalytics(rosterSectionId)
+            : Promise.resolve({ sectionAnalytics: null, teamAnalytics: [] }),
         ]);
 
       if (!isMounted) {
@@ -90,6 +119,17 @@ export function useAnalyticsPage(courseId, groupId) {
           ? rosterResult.value
           : [],
       );
+      setSectionAnalytics(
+        analyticsResult.status === "fulfilled"
+          ? analyticsResult.value?.sectionAnalytics ?? null
+          : null,
+      );
+      setTeamAnalytics(
+        analyticsResult.status === "fulfilled" &&
+          Array.isArray(analyticsResult.value?.teamAnalytics)
+          ? analyticsResult.value.teamAnalytics
+          : [],
+      );
 
       const errors = [];
       if (courseResult.status === "rejected") {
@@ -103,6 +143,12 @@ export function useAnalyticsPage(courseId, groupId) {
       }
       if (rosterResult.status === "rejected") {
         errors.push(rosterResult.reason?.message || "Failed to load roster");
+      }
+      if (analyticsResult.status === "rejected") {
+        errors.push(
+          analyticsResult.reason?.message ||
+            "Failed to load scenario-2 dashboard analytics",
+        );
       }
 
       setRosterError(errors.join(" | "));
@@ -120,6 +166,8 @@ export function useAnalyticsPage(courseId, groupId) {
     selectedGroup,
     groupTeams,
     backendStudents,
+    sectionAnalytics,
+    teamAnalytics,
     isLoadingRoster,
     rosterError,
   };

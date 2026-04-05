@@ -12,7 +12,7 @@ export function getEffectiveGroupStage(group, formingSectionIds = new Set()) {
     return GROUP_STAGE.FORMING;
   }
 
-  const backendStage = String(group?.lifecycleStage || GROUP_STAGE.SETUP).toLowerCase();
+  const backendStage = String(group?.stage ?? GROUP_STAGE.SETUP).toLowerCase();
   if (backendStage === GROUP_STAGE.SETUP) return GROUP_STAGE.SETUP;
   if (backendStage === GROUP_STAGE.COLLECTING) return GROUP_STAGE.COLLECTING;
   if (backendStage === GROUP_STAGE.FORMED) return GROUP_STAGE.FORMED;
@@ -31,8 +31,12 @@ export function isFormsRequired(formState) {
   const topicWeight = Number(weights.topic_weight || 0);
   const skillWeight = Number(weights.skill_weight || 0);
 
-  const hasTopics = topics.some((topic) => String(topic?.topic_label || "").trim().length > 0);
-  const hasSkills = skills.some((skill) => String(skill?.skill_label || "").trim().length > 0);
+  const hasTopics = topics.some(
+    (topic) => String(topic?.topic_label || "").trim().length > 0,
+  );
+  const hasSkills = skills.some(
+    (skill) => String(skill?.skill_label || "").trim().length > 0,
+  );
 
   return (
     buddyWeight !== 0 ||

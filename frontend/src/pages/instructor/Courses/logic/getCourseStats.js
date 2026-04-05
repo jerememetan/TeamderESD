@@ -12,7 +12,7 @@ export function buildCourseBase(courses, sections, formMap = {}) {
         label: `Group ${s.section_number}`,
         studentsCount: null,
         teamsCount: null,
-        lifecycleStage: s.stage || 'setup',
+        stage: s.stage || 'setup',
         formSummary: formMap[s.id] || null,
       })),
   }));

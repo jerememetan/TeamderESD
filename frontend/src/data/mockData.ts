@@ -10,6 +10,7 @@ export const mockCourses: Course[] = [
     id: '1',
     name: 'Software Engineering',
     code: 'CS3240',
+    semester: 'AY2026-S1',
     groups: [
       {
         id: '1-g1',
@@ -18,7 +19,7 @@ export const mockCourses: Course[] = [
         studentsCount: 60,
         teamsCount: 12,
         formStatus: 'closed',
-        lifecycleStage: 'formed',
+        stage: 'formed',
       },
       {
         id: '1-g2',
@@ -27,7 +28,7 @@ export const mockCourses: Course[] = [
         studentsCount: 60,
         teamsCount: 12,
         formStatus: 'closed',
-        lifecycleStage: 'formed',
+        stage: 'formed',
       },
     ],
   },
@@ -35,6 +36,7 @@ export const mockCourses: Course[] = [
     id: '2',
     name: 'Database Systems',
     code: 'CS4320',
+    semester: 'AY2026-S1',
     groups: [
       {
         id: '2-g1',
@@ -43,7 +45,7 @@ export const mockCourses: Course[] = [
         studentsCount: 40,
         teamsCount: 0,
         formStatus: 'active',
-        lifecycleStage: 'collecting',
+        stage: 'collecting',
       },
       {
         id: '2-g2',
@@ -52,7 +54,7 @@ export const mockCourses: Course[] = [
         studentsCount: 40,
         teamsCount: 8,
         formStatus: 'closed',
-        lifecycleStage: 'completed',
+        stage: 'completed',
       },
     ],
   },
@@ -60,6 +62,7 @@ export const mockCourses: Course[] = [
     id: '3',
     name: 'Human-Computer Interaction',
     code: 'CS3250',
+    semester: 'AY2026-S1',
     groups: [
       {
         id: '3-g1',
@@ -68,7 +71,7 @@ export const mockCourses: Course[] = [
         studentsCount: 30,
         teamsCount: 0,
         formStatus: 'draft',
-        lifecycleStage: 'setup',
+        stage: 'setup',
       },
       {
         id: '3-g2',
@@ -77,7 +80,7 @@ export const mockCourses: Course[] = [
         studentsCount: 30,
         teamsCount: 0,
         formStatus: 'draft',
-        lifecycleStage: 'setup',
+        stage: 'setup',
       },
     ],
   },

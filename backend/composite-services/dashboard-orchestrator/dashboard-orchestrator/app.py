@@ -10,25 +10,13 @@ for _candidate in _SWAGGER_PATH_CANDIDATES:
         break
 
 from swagger_helper import register_swagger
-"""
-Dashboard Orchestrator Composite Service
-
-Orchestrates the instructor team dashboard flow:
-1. Fetch teams from Team Service
-2. Fetch student profiles from Student Profile composite
-3. Fetch criteria from Criteria Service
-4. Fetch skill definitions from Skill Service
-5. Fetch topic definitions from Topic Service
-6. POST assembled payload to Analytics Service
-7. Return analytics to the Instructor UI
-"""
+from analytics_engine import compute_section_metrics, compute_team_metrics
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import os
 import json
-from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
@@ -40,10 +28,7 @@ STUDENT_PROFILE_URL = os.getenv("STUDENT_PROFILE_URL", "http://localhost:4001/st
 STUDENT_FORM_SUBMISSIONS_URL = os.getenv(
     "STUDENT_FORM_SUBMISSIONS_URL", "http://localhost:3015/student-form/submissions"
 )
-CRITERIA_URL = os.getenv("CRITERIA_URL", "http://localhost:3004/criteria")
-SKILL_URL = os.getenv("SKILL_URL", "http://localhost:3002/skill")
-TOPIC_URL = os.getenv("TOPIC_URL", "http://localhost:3003/topic")
-ANALYTICS_URL = os.getenv("ANALYTICS_URL", "http://localhost:3014/analytics")
+FORMATION_CONFIG_URL = os.getenv("FORMATION_CONFIG_URL", "http://localhost:4000/formation-config")
 COURSES_URL = os.getenv("COURSES_URL", "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/")
 # Prefer internal Docker service hostnames when running under compose
 SECTIONS_URL = os.getenv("SECTION_URL", "http://section-service:3018/section")
@@ -73,6 +58,27 @@ def _fetch(url, params=None, label="service"):
                 return None, f"failed to parse {label} response: {str(exc)}"
     except requests.exceptions.RequestException as e:
         return None, f"failed to fetch {label}: {str(e)}"
+
+
+def _build_student_lookup(students):
+    student_lookup = {}
+    for student in students:
+        student_id = student.get("student_id")
+        profile = student.get("profile", {})
+        if student_id is not None and profile:
+            student_lookup[student_id] = profile
+    return student_lookup
+
+
+def _normalize_metrics_payload(section_id, team_metrics, section_metrics):
+    return {
+        "code": 200,
+        "data": {
+            "section_id": section_id,
+            "team_analytics": team_metrics,
+            "section_analytics": section_metrics,
+        },
+    }
 
 
 register_swagger(app, 'dashboard-orchestrator-service')
@@ -114,7 +120,7 @@ def get_dashboard():
             },
         }), 200
 
-    # â”€â”€ 1. Fetch teams â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    #  1. Fetch teams 
     team_data, err = _fetch(
         TEAM_URL, params={"section_id": section_id}, label="team service"
     )
@@ -133,7 +139,7 @@ def get_dashboard():
             }
         }), 200
 
-    # â”€â”€ 2. Fetch student profiles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    #  2. Fetch student profiles 
     profile_data, err = _fetch(
         STUDENT_PROFILE_URL, params={"section_id": section_id}, label="student profile service"
     )
@@ -142,7 +148,7 @@ def get_dashboard():
 
     students = profile_data.get("data", {}).get("students", [])
 
-    # â”€â”€ 2b. Fetch student form submissions (optional) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # 2b. Fetch student form submissions (optional) 
     form_submissions_data, err = _fetch(
         STUDENT_FORM_SUBMISSIONS_URL,
         params={"section_id": section_id},
@@ -152,67 +158,37 @@ def get_dashboard():
     if form_submissions_data:
         form_submissions = form_submissions_data.get("data", [])
 
-    # â”€â”€ 3. Fetch criteria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    criteria_data, err = _fetch(
-        CRITERIA_URL, params={"section_id": section_id}, label="criteria service"
+    #  3. Fetch formation config (criteria + skills + topics) 
+    formation_config_data, err = _fetch(
+        FORMATION_CONFIG_URL,
+        params={"section_id": section_id},
+        label="formation config service",
     )
-    # Criteria is optional for analytics â€” proceed even if it fails
-    criteria = {}
-    if criteria_data:
-        crit_list = criteria_data.get("data", [])
-        if isinstance(crit_list, list) and crit_list:
-            criteria = crit_list[0]
-        elif isinstance(crit_list, dict):
-            criteria = crit_list
+    if err:
+        return jsonify({"code": 502, "message": err}), 502
+    if not isinstance(formation_config_data, dict):
+        return jsonify({"code": 502, "message": "invalid formation config response"}), 502
 
-    # â”€â”€ 4. Fetch skill definitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    skill_data, err = _fetch(
-        SKILL_URL, params={"section_id": section_id}, label="skill service"
-    )
-    skills = []
-    if skill_data:
-        for s in skill_data.get("data", []):
-            skills.append({
-                "skill_id": s.get("skill_id"),
-                "skill_label": s.get("skill_label"),
-                "skill_importance": s.get("skill_importance"),
-            })
+    criteria = formation_config_data.get("criteria")
+    if not isinstance(criteria, dict):
+        criteria = {}
 
-    # â”€â”€ 5. Fetch topic definitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    topic_data, err = _fetch(
-        TOPIC_URL, params={"section_id": section_id}, label="topic service"
-    )
-    topics = []
-    if topic_data:
-        for t in topic_data.get("data", []):
-            topics.append({
-                "topic_id": t.get("topic_id"),
-                "topic_label": t.get("topic_label"),
-            })
+    topics = formation_config_data.get("topics")
+    if not isinstance(topics, list):
+        topics = []
 
-    # â”€â”€ 6. POST to Analytics Service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    analytics_payload = {
-        "section_id": section_id,
-        "teams": teams,
-        "students": students,
-        "student_form_submissions": form_submissions,
-        "criteria": criteria,
-        "skills": skills,
-        "topics": topics,
-    }
+    skills = formation_config_data.get("skills")
+    if not isinstance(skills, list):
+        skills = []
 
-    try:
-        analytics_resp = requests.post(
-            ANALYTICS_URL,
-            json=analytics_payload,
-            timeout=REQUEST_TIMEOUT,
-        )
-        analytics_resp.raise_for_status()
-        analytics_result = analytics_resp.json()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"code": 502, "message": f"failed to compute analytics: {str(e)}"}), 502
+    student_lookup = _build_student_lookup(students)
+    team_metrics = [
+        compute_team_metrics(team, student_lookup, skills)
+        for team in teams
+    ]
+    section_metrics = compute_section_metrics(team_metrics)
 
-    return jsonify(analytics_result), analytics_result.get("code", 200)
+    return jsonify(_normalize_metrics_payload(section_id, team_metrics, section_metrics)), 200
 
 @app.route("/dashboard/peer-eval/initiate", methods=["POST"])
 def initiate_peer_eval():
