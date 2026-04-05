@@ -1,11 +1,13 @@
 import { Link, useNavigate, useParams } from "react-router";
 import { AlertTriangle, ArrowLeft, Mail, RefreshCw } from "lucide-react";
+import { useState } from "react";
 import GroupChip from "../../../components/schematic/GroupChip";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
 import StudentSwitcher from "../../../components/student/StudentSwitcher";
 import { Button } from "../../../components/ui/button";
+import { createSwapRequest } from "../../../services/swapRequestService";
 import { useStudentSession } from "../../../services/studentSession";
 import { useMyTeamPage } from "./logic/useMyTeamPage";
 import styles from "./MyTeam.module.css";
@@ -13,6 +15,9 @@ import styles from "./MyTeam.module.css";
 function MyTeam() {
   const navigate = useNavigate();
   const { studentId: routeStudentId } = useParams();
+  const [isSubmittingSwap, setIsSubmittingSwap] = useState(false);
+  const [swapFeedback, setSwapFeedback] = useState("");
+  const [swapError, setSwapError] = useState("");
   const {
     activeStudent,
     activeStudentRouteId,
@@ -66,19 +71,52 @@ function MyTeam() {
   }
 
   const studentBasePath = `/student/${activeStudentRouteId}`;
-
-  const currentMember = selectedTeam?.members.find(
-    (member) =>
-      member.id === activeStudent.id ||
-      member.studentId === activeStudent.studentId ||
-      member.email === activeStudent.email,
-  );
-  const isConfirmed = currentMember?.confirmationStatus === "confirmed";
   const sourceTone = assignmentError
     ? "alert"
     : assignmentSource === "backend"
       ? "success"
       : "neutral";
+
+  const activeStudentBackendId = Number(activeStudent?.backendStudentId);
+
+  async function handleSwapSubmit(event) {
+    event.preventDefault();
+
+    if (!Number.isFinite(activeStudentBackendId)) {
+      setSwapError(
+        "Unable to resolve your backend student id for this request.",
+      );
+      return;
+    }
+
+    if (!selectedTeam?.id) {
+      setSwapError("No selected team was found for this request.");
+      return;
+    }
+
+    setIsSubmittingSwap(true);
+    setSwapError("");
+    setSwapFeedback("");
+
+    try {
+      await createSwapRequest({
+        studentId: activeStudentBackendId,
+        currentTeamId: selectedTeam.id,
+        reason: swapReason,
+      });
+      setSwapFeedback(
+        "Swap request submitted. Your instructor can now review it.",
+      );
+      setSwapReason("");
+      setShowSwapModal(false);
+    } catch (error) {
+      setSwapError(
+        error?.message || "Unable to submit your swap request right now.",
+      );
+    } finally {
+      setIsSubmittingSwap(false);
+    }
+  }
 
   if (!isLoadingAssignments && !selectedTeam) {
     return (
@@ -109,7 +147,8 @@ function MyTeam() {
         <div>
           <h2 className={styles.title}>Your team assignments</h2>
           <p className={styles.subtitle}>
-            Backend assignments for {activeStudent.name}.
+            You are allocated to a team automatically and can optionally request
+            a swap.
           </p>
         </div>
         <div className={styles.heroTags}>
@@ -125,7 +164,7 @@ function MyTeam() {
               ? "Loading assignments"
               : assignmentError
                 ? "Backend data unavailable"
-                : "Backend assignments loaded"}
+                : "Team allocations loaded"}
           </SystemTag>
           <Button onClick={() => setShowSwapModal(true)}>
             <RefreshCw className={styles.buttonIcon} /> Request team swap
@@ -155,12 +194,10 @@ function MyTeam() {
             accent: "green",
           },
           {
-            title: "My Confirmation",
-            metric: isConfirmed ? "YES" : "PEND",
-            label: isConfirmed
-              ? "You have confirmed"
-              : "Waiting for your confirmation",
-            accent: isConfirmed ? "green" : "orange",
+            title: "Swap Option",
+            metric: "OPEN",
+            label: "Optional request available",
+            accent: "orange",
           },
         ].map((item, index) => (
           <ModuleBlock
@@ -184,14 +221,6 @@ function MyTeam() {
       >
         <div className={styles.assignmentStack}>
           {teamAssignments.map((team, index) => {
-            const member = team.members.find(
-              (item) =>
-                item.id === activeStudent.id ||
-                item.studentId === activeStudent.studentId ||
-                item.email === activeStudent.email,
-            );
-            const confirmed = member?.confirmationStatus === "confirmed";
-
             return (
               <button
                 key={team.id}
@@ -203,9 +232,7 @@ function MyTeam() {
                   <p className={styles.assignmentTitle}>
                     You have been assigned to {team.name}
                   </p>
-                  <SystemTag tone={confirmed ? "success" : "neutral"}>
-                    {confirmed ? "Confirmed" : "Pending"}
-                  </SystemTag>
+                  <SystemTag tone="success">Allocated</SystemTag>
                 </div>
                 <p className={styles.assignmentMeta}>
                   {assignmentHeaderLabel} :: {team.members.length} members
@@ -228,14 +255,12 @@ function MyTeam() {
             <GroupChip
               code={selectedTeam.groupCode || selectedTeam.groupId}
               meta={`${selectedTeam.members.length} members`}
-              tone={isConfirmed ? "green" : "orange"}
+              tone="blue"
               className={motionStyles.magneticItem}
             />
             <div className={styles.teamActions}>
-              <SystemTag tone={isConfirmed ? "success" : "neutral"}>
-                {isConfirmed
-                  ? "You have confirmed this team"
-                  : "Backend team membership loaded"}
+              <SystemTag tone="success">
+                You are allocated to this team
               </SystemTag>
             </div>
           </div>
@@ -246,7 +271,6 @@ function MyTeam() {
                 member.id === activeStudent.id ||
                 member.studentId === activeStudent.studentId ||
                 member.email === activeStudent.email;
-              const memberConfirmed = member.confirmationStatus === "confirmed";
 
               return (
                 <div
@@ -259,9 +283,7 @@ function MyTeam() {
                       {member.name.charAt(0)}
                     </div>
                     <div>
-                      <p
-                        className={`${styles.memberName} ${memberConfirmed ? styles.memberNameConfirmed : styles.memberNamePending}`}
-                      >
+                      <p className={styles.memberName}>
                         {member.name}{" "}
                         {isCurrentUser ? (
                           <span className={styles.youTag}>[YOU]</span>
@@ -271,8 +293,8 @@ function MyTeam() {
                     </div>
                   </div>
                   <div className={styles.memberDetail}>
-                    <SystemTag tone={memberConfirmed ? "success" : "neutral"}>
-                      {memberConfirmed ? "Confirmed" : "Pending"}
+                    <SystemTag tone={isCurrentUser ? "success" : "neutral"}>
+                      {isCurrentUser ? "You" : "Teammate"}
                     </SystemTag>
                     <div className={styles.mailLine}>
                       <Mail className={styles.mailIcon} />{" "}
@@ -296,15 +318,13 @@ function MyTeam() {
               </div>
               <SystemTag hazard>Instructor review required</SystemTag>
             </div>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                alert("Swap request submitted successfully!");
-                setShowSwapModal(false);
-                setSwapReason("");
-              }}
-              className={styles.modalForm}
-            >
+            <form onSubmit={handleSwapSubmit} className={styles.modalForm}>
+              {swapError ? (
+                <p className={styles.feedbackAlert}>
+                  <AlertTriangle className={styles.buttonIcon} />
+                  {swapError}
+                </p>
+              ) : null}
               <label className={styles.field}>
                 <span className={styles.fieldLabel}>Reason</span>
                 <textarea
@@ -317,12 +337,15 @@ function MyTeam() {
                 />
               </label>
               <div className={styles.modalActions}>
-                <Button type="submit">Submit request</Button>
+                <Button type="submit" disabled={isSubmittingSwap}>
+                  {isSubmittingSwap ? "Submitting..." : "Submit request"}
+                </Button>
                 <Button
                   type="button"
                   onClick={() => {
                     setShowSwapModal(false);
                     setSwapReason("");
+                    setSwapError("");
                   }}
                   variant="outline"
                 >
@@ -332,6 +355,10 @@ function MyTeam() {
             </form>
           </div>
         </div>
+      ) : null}
+
+      {swapFeedback ? (
+        <p className={styles.feedbackAlert}>{swapFeedback}</p>
       ) : null}
     </div>
   );
