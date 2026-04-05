@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Legend,
   PolarAngleAxis,
   PolarGrid,
@@ -20,170 +19,110 @@ import {
 import GroupChip from "../../../components/schematic/GroupChip";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
-import { fetchCourseByCode } from "../../../services/courseService";
-import { getSectionById } from "../../../services/sectionService";
-import { fetchTeamsBySection } from "../../../services/teamService";
-import { fetchSectionAnalytics } from "../../../services/analyticsService";
+import {
+  buildScenario2TeamDrilldown,
+  buildSiblingGroupSummaryData,
+  buildScenario2BuddyFulfillmentData,
+  buildScenario2DiversityData,
+  buildScenario2KpiSummary,
+  buildScenario2RadarData,
+  buildScenario2TeamLegend,
+  buildScenario2TeamQualityData,
+} from "../../../adapters/analyticsAdapter";
+import { Button } from "../../../components/ui/button";
+import { useAnalyticsPage } from "./logic/useAnalyticsPage";
 import styles from "./Analytics.module.css";
 
-const TEAM_COLORS = [
-  "#0047AB", "#2ECC71", "#FF6B00", "#9B59B6", "#E74C3C",
-  "#1ABC9C", "#F39C12", "#3498DB", "#E91E63", "#00BCD4",
+const QUALITY_METRICS = [
+  { key: "Buddy Satisfaction", color: "#0047AB" },
+  { key: "GPA Mean (to 100)", color: "#2ECC71" },
+  { key: "Reputation Mean", color: "#FF6B00" },
 ];
+
+function formatDelta(value, unit = "") {
+  const numeric = Number(value || 0);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(unit === "%" ? 1 : 2)}${unit}`;
+}
+
+function deltaToneClass(value, stylesRef) {
+  if (value > 0) return stylesRef.deltaPositive;
+  if (value < 0) return stylesRef.deltaNegative;
+  return stylesRef.deltaNeutral;
+}
 
 function Analytics() {
   const { courseId, groupId } = useParams();
+  const {
+    selectedCourse,
+    selectedGroup,
+    groupTeams,
+    backendStudents,
+    sectionAnalytics,
+    teamAnalytics,
+    isLoadingRoster,
+    rosterError,
+  } = useAnalyticsPage(courseId, groupId);
 
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [groupTeams, setGroupTeams] = useState([]);
-  const [analyticsData, setAnalyticsData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const siblingGroupSummaryData = [
+    buildSiblingGroupSummaryData(
+      selectedCourse?.code + " " + selectedGroup?.code,
+      backendStudents.length,
+      groupTeams.length,
+    ),
+  ];
 
-  // Fetch course info
-  useEffect(() => {
-    if (!courseId) return;
-    fetchCourseByCode(courseId)
-      .then(setSelectedCourse)
-      .catch((err) => console.error("Course fetch failed:", err));
-  }, [courseId]);
+  const diversityData = buildScenario2DiversityData(teamAnalytics);
+  const radarData = buildScenario2RadarData(sectionAnalytics || {});
+  const diversitySeries = buildScenario2TeamLegend(teamAnalytics);
+  const teamQualityData = buildScenario2TeamQualityData(teamAnalytics);
+  const buddyFulfillmentData =
+    buildScenario2BuddyFulfillmentData(teamAnalytics);
+  const kpis = buildScenario2KpiSummary(sectionAnalytics || {}, teamAnalytics);
+  const [enabledMetrics, setEnabledMetrics] = useState(
+    QUALITY_METRICS.map((metric) => metric.key),
+  );
+  const [selectedTeamLabel, setSelectedTeamLabel] = useState("");
 
-  // Fetch section info
-  useEffect(() => {
-    if (!groupId) return;
-    getSectionById(groupId)
-      .then(setSelectedGroup)
-      .catch((err) => console.error("Section fetch failed:", err));
-  }, [groupId]);
+  const resolvedSelectedTeam =
+    selectedTeamLabel || teamQualityData?.[0]?.team || "";
 
-  // Fetch teams
-  useEffect(() => {
-    if (!groupId) return;
-    fetchTeamsBySection(groupId)
-      .then((teams) => setGroupTeams(teams || []))
-      .catch((err) => {
-        console.error("Teams fetch failed:", err);
-        setGroupTeams([]);
-      });
-  }, [groupId]);
+  const selectedTeam = useMemo(() => {
+    return buildScenario2TeamDrilldown(
+      teamAnalytics,
+      resolvedSelectedTeam,
+      sectionAnalytics || {},
+    );
+  }, [teamAnalytics, resolvedSelectedTeam, sectionAnalytics]);
 
-  // Fetch analytics from dashboard orchestrator
-  useEffect(() => {
-    if (!groupId) {
-      setIsLoading(false);
-      setError("Missing group ID");
-      return;
-    }
-    setIsLoading(true);
-    setError("");
-    fetchSectionAnalytics(groupId)
-      .then((data) => {
-        setAnalyticsData(data);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error("Analytics fetch failed:", err);
-        setError(err.message);
-        setIsLoading(false);
-      });
-  }, [groupId]);
+  const activeMetrics = QUALITY_METRICS.filter((metric) =>
+    enabledMetrics.includes(metric.key),
+  );
 
-  // ── Derived chart data from real analytics ──────────────────────────
+  function toggleMetric(metricKey) {
+    setEnabledMetrics((current) => {
+      if (current.includes(metricKey)) {
+        const next = current.filter((item) => item !== metricKey);
+        return next.length ? next : current;
+      }
 
-  const teamAnalytics = analyticsData?.team_analytics ?? [];
-  const sectionAnalytics = analyticsData?.section_analytics ?? {};
-
-  // GPA per team
-  const gpaChartData = teamAnalytics.map((t) => ({
-    name: `Team ${t.team_number}`,
-    mean: t.gpa?.mean ?? 0,
-    min: t.gpa?.min ?? 0,
-    max: t.gpa?.max ?? 0,
-  }));
-
-  // Skill balance radar — average across all teams per skill
-  const skillRadarData = useMemo(() => {
-    if (!sectionAnalytics.skill_fairness) return [];
-    return sectionAnalytics.skill_fairness.map((skill) => {
-      const avgAcrossTeams =
-        skill.team_avg_levels.reduce((a, b) => a + b, 0) /
-        (skill.team_avg_levels.length || 1);
-      return {
-        skill: skill.skill_label,
-        average: parseFloat(avgAcrossTeams.toFixed(2)),
-        fairness: parseFloat(
-          ((1 - (skill.std_across_teams ?? 0) / 2.5) * 5).toFixed(2)
-        ),
-      };
+      return [...current, metricKey];
     });
-  }, [sectionAnalytics]);
-
-  // Gender distribution per team
-  const genderChartData = teamAnalytics.map((t) => ({
-    name: `Team ${t.team_number}`,
-    Male: t.gender_distribution?.M ?? 0,
-    Female: t.gender_distribution?.F ?? 0,
-  }));
-
-  // Year distribution per team
-  const yearChartData = teamAnalytics.map((t) => ({
-    name: `Team ${t.team_number}`,
-    "Year 1": t.year_distribution?.["1"] ?? 0,
-    "Year 2": t.year_distribution?.["2"] ?? 0,
-    "Year 3": t.year_distribution?.["3"] ?? 0,
-    "Year 4": t.year_distribution?.["4"] ?? 0,
-  }));
-
-  // School distribution per team
-  const schoolChartData = teamAnalytics.map((t) => ({
-    name: `Team ${t.team_number}`,
-    "School 1": t.school_distribution?.["1"] ?? 0,
-    "School 2": t.school_distribution?.["2"] ?? 0,
-    "School 3": t.school_distribution?.["3"] ?? 0,
-    "School 4": t.school_distribution?.["4"] ?? 0,
-  }));
-
-  // Reputation per team
-  const reputationChartData = teamAnalytics.map((t) => ({
-    name: `Team ${t.team_number}`,
-    mean: t.reputation?.mean ?? 0,
-    min: t.reputation?.min ?? 0,
-    max: t.reputation?.max ?? 0,
-  }));
-
-  // Buddy satisfaction per team
-  const buddyChartData = teamAnalytics.map((t) => ({
-    name: `Team ${t.team_number}`,
-    rate: t.buddy_satisfaction?.rate != null
-      ? parseFloat((t.buddy_satisfaction.rate * 100).toFixed(1))
-      : 0,
-  }));
-
-  // Skill balance per team — grouped bar
-  const skillBalancePerTeam = useMemo(() => {
-    if (!teamAnalytics.length) return [];
-    const skills = teamAnalytics[0]?.skill_balance ?? [];
-    return skills.map((skill) => {
-      const row = { skill: skill.skill_label };
-      teamAnalytics.forEach((t) => {
-        const match = t.skill_balance?.find(
-          (s) => s.skill_id === skill.skill_id
-        );
-        row[`Team ${t.team_number}`] = match?.avg_level ?? 0;
-      });
-      return row;
-    });
-  }, [teamAnalytics]);
-
-  // ── Render ──────────────────────────────────────────────────────────
-
-  if (!selectedCourse || !selectedGroup) {
-    return <div className={styles.notFound}>Loading course data...</div>;
   }
 
-  const totalStudents = teamAnalytics.reduce((sum, t) => sum + t.size, 0);
-  const buddyOverall = sectionAnalytics.buddy_satisfaction_overall;
+  if (!selectedCourse || !selectedGroup) {
+    return (
+      <div className={styles.notFound}>Loading Course.... Please Wait</div>
+    );
+  }
+
+  const totalStudents = backendStudents.length || selectedGroup.studentsCount;
+  const averageStudentsPerTeam = totalStudents / (groupTeams.length || 1);
+  const rosterSourceTone = rosterError
+    ? "alert"
+    : backendStudents.length
+      ? "success"
+      : "neutral";
 
   return (
     <div className={styles.page}>
@@ -194,187 +133,140 @@ function Analytics() {
       <section className={styles.hero}>
         <div>
           <h2 className={styles.title}>
-            Analytics — {selectedCourse.code} G
-            {selectedGroup.section_number}
+            {selectedGroup.code} Analytics Page - {selectedCourse.code} G
+            {selectedGroup.sectionNumber}
           </h2>
           <p className={styles.subtitle}>
-            <b>Course Name</b>: {selectedCourse.name}
+            <b>Course Name</b> : {selectedCourse.name}
           </p>
         </div>
         <div className={styles.heroTags}>
           <GroupChip
             code={selectedGroup.code}
-            meta={`${totalStudents} students · ${groupTeams.length} teams`}
+            meta={`${totalStudents} students | ${groupTeams.length} teams`}
             tone="green"
           />
-          <SystemTag tone={isLoading ? "neutral" : error ? "alert" : "success"}>
-            {isLoading
-              ? "Loading analytics…"
-              : error
-                ? "Analytics unavailable"
-                : "Live analytics loaded"}
+          <SystemTag tone={rosterSourceTone}>
+            {isLoadingRoster
+              ? "Loading roster"
+              : backendStudents.length
+                ? "Live roster loaded"
+                : "Roster fallback"}
           </SystemTag>
         </div>
       </section>
 
-      {error && (
-        <p className={styles.rosterError}>Analytics load failed: {error}</p>
-      )}
+      {rosterError ? (
+        <p className={styles.rosterError}>
+          Atomic roster load failed: {rosterError}.{" "}
+          <Link to="/instructor/error-logs">Go to Error Logs</Link>
+        </p>
+      ) : null}
 
-      {/* ── Summary Cards ─────────────────────────────────────────── */}
       <section className={styles.statsGrid}>
         <ModuleBlock
           componentId="MOD-A1"
-          eyebrow="Fairness"
-          title="GPA Spread"
-          metric={
-            sectionAnalytics.gpa_fairness?.std_of_means?.toFixed(3) ?? "—"
-          }
-          metricLabel="Std of team GPA means (lower = fairer)"
+          eyebrow="Buddy Match"
+          title="Overall Satisfaction"
+          metric={`${kpis.buddyRate.toFixed(1)}%`}
+          metricLabel={`${kpis.buddySatisfied}/${kpis.buddyRequests} requests satisfied`}
         />
         <ModuleBlock
           componentId="MOD-A2"
-          eyebrow="Teams"
-          title="Total Teams"
-          metric={String(sectionAnalytics.num_teams ?? 0).padStart(2, "0")}
-          metricLabel={`${totalStudents} students across teams`}
+          eyebrow="Academic"
+          title="Average Team GPA"
+          metric={kpis.avgGpaMean.toFixed(2)}
+          metricLabel={`${averageStudentsPerTeam.toFixed(1)} students per team`}
           accent="green"
         />
         <ModuleBlock
           componentId="MOD-A3"
-          eyebrow="Satisfaction"
-          title="Buddy Match Rate"
-          metric={
-            buddyOverall?.rate != null
-              ? `${(buddyOverall.rate * 100).toFixed(0)}%`
-              : "—"
+          eyebrow="Reputation"
+          title="Average Team Reputation"
+          metric={kpis.avgReputationMean.toFixed(1)}
+          metricLabel={
+            backendStudents.length
+              ? "Pulled from enrollment + student-service"
+              : "Using frontend fallback count"
           }
-          metricLabel={`${buddyOverall?.total_satisfied ?? 0}/${buddyOverall?.total_requests ?? 0} requests fulfilled`}
           accent="orange"
         />
       </section>
 
-      {/* ── Balance Score Cards ────────────────────────────────────── */}
-      <section className={styles.statsGrid}>
-        <ModuleBlock
-          componentId="MOD-B1"
-          eyebrow="Balance"
-          title="Gender Balance"
-          metric={
-            sectionAnalytics.gender_balance_score != null
-              ? `${(sectionAnalytics.gender_balance_score * 100).toFixed(0)}%`
-              : "—"
-          }
-          metricLabel="Cross-team gender evenness"
-        />
-        <ModuleBlock
-          componentId="MOD-B2"
-          eyebrow="Balance"
-          title="Year Balance"
-          metric={
-            sectionAnalytics.year_balance_score != null
-              ? `${(sectionAnalytics.year_balance_score * 100).toFixed(0)}%`
-              : "—"
-          }
-          metricLabel="Cross-team year-level evenness"
-          accent="green"
-        />
-        <ModuleBlock
-          componentId="MOD-B3"
-          eyebrow="Balance"
-          title="School Balance"
-          metric={
-            sectionAnalytics.school_balance_score != null
-              ? `${(sectionAnalytics.school_balance_score * 100).toFixed(0)}%`
-              : "—"
-          }
-          metricLabel="Cross-team school mix evenness"
-          accent="orange"
-        />
-      </section>
-
-      {/* ── Charts ────────────────────────────────────────────────── */}
       <section className={styles.chartGrid}>
-        {/* GPA by Team */}
         <ModuleBlock
-          componentId="MOD-C1"
-          eyebrow="GPA"
-          title="Team GPA Comparison"
+          componentId="MOD-A4"
+          eyebrow="Comparison"
+          title="Course Group Breakdown"
           className={styles.chartModule}
         >
-          <div className={styles.chartWrap}>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={gpaChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
-                <XAxis dataKey="name" stroke="#51606F" tick={{ fontSize: 12 }} />
-                <YAxis domain={[0, 4]} stroke="#51606F" tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="mean" fill="#0047AB" name="Mean GPA" />
-                <Bar dataKey="min" fill="#E74C3C" name="Min GPA" />
-                <Bar dataKey="max" fill="#2ECC71" name="Max GPA" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className={styles.insightList}>
+            <div className={styles.insightRow}>
+              <p className={styles.insightText}>
+                <b>Group:</b> {siblingGroupSummaryData[0]?.name || "N/A"}
+              </p>
+            </div>
+            <div className={styles.insightRow}>
+              <p className={styles.insightText}>
+                <b>Students:</b> {siblingGroupSummaryData[0]?.students ?? 0}
+              </p>
+            </div>
+            <div className={styles.insightRow}>
+              <p className={styles.insightText}>
+                <b>Teams:</b> {siblingGroupSummaryData[0]?.teams ?? 0}
+              </p>
+            </div>
           </div>
         </ModuleBlock>
 
-        {/* Skill Balance Radar */}
         <ModuleBlock
-          componentId="MOD-C2"
-          eyebrow="Skills"
-          title="Average Skill Levels (Section-Wide)"
+          componentId="MOD-A5"
+          eyebrow="Team Quality"
+          title={`Team Composite Quality :: ${selectedGroup.code}`}
           className={styles.chartModule}
         >
-          <div className={styles.chartWrap}>
-            <ResponsiveContainer width="100%" height={300}>
-              <RadarChart data={skillRadarData}>
-                <PolarGrid stroke="#B7C5D3" />
-                <PolarAngleAxis
-                  dataKey="skill"
-                  tick={{ fontSize: 10, fill: "#51606F" }}
-                />
-                <PolarRadiusAxis domain={[0, 5]} tick={{ fill: "#51606F" }} />
-                <Radar
-                  name="Avg Level"
-                  dataKey="average"
-                  stroke="#0047AB"
-                  fill="#0047AB"
-                  fillOpacity={0.25}
-                />
-                <Radar
-                  name="Fairness (5=perfect)"
-                  dataKey="fairness"
-                  stroke="#FF6B00"
-                  fill="#FF6B00"
-                  fillOpacity={0.15}
-                />
-                <Legend />
-                <Tooltip />
-              </RadarChart>
-            </ResponsiveContainer>
+          <div className={styles.metricToggleRow}>
+            {QUALITY_METRICS.map((metric) => {
+              const active = enabledMetrics.includes(metric.key);
+              return (
+                <Button
+                  key={metric.key}
+                  variant={active ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleMetric(metric.key)}
+                  className={active ? styles.metricToggleActive : ""}
+                >
+                  {metric.key}
+                </Button>
+              );
+            })}
           </div>
-        </ModuleBlock>
-
-        {/* Skill Balance Per Team */}
-        <ModuleBlock
-          componentId="MOD-C3"
-          eyebrow="Skills"
-          title="Skill Balance by Team"
-          className={styles.chartModule}
-        >
           <div className={styles.chartWrap}>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={skillBalancePerTeam}>
+              <BarChart data={teamQualityData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
-                <XAxis dataKey="skill" stroke="#51606F" tick={{ fontSize: 10 }} />
-                <YAxis domain={[0, 5]} stroke="#51606F" tick={{ fontSize: 12 }} />
+                <XAxis
+                  dataKey="team"
+                  stroke="#51606F"
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  stroke="#51606F"
+                  tick={{ fontSize: 12 }}
+                />
                 <Tooltip />
                 <Legend />
-                {teamAnalytics.map((t, i) => (
+                {activeMetrics.map((metric) => (
                   <Bar
-                    key={t.team_id}
-                    dataKey={`Team ${t.team_number}`}
-                    fill={TEAM_COLORS[i % TEAM_COLORS.length]}
+                    key={metric.key}
+                    dataKey={metric.key}
+                    fill={metric.color}
+                    onClick={(entry) => {
+                      if (entry?.team) {
+                        setSelectedTeamLabel(entry.team);
+                      }
+                    }}
                   />
                 ))}
               </BarChart>
@@ -382,126 +274,184 @@ function Analytics() {
           </div>
         </ModuleBlock>
 
-        {/* Gender Distribution */}
         <ModuleBlock
-          componentId="MOD-C4"
-          eyebrow="Demographics"
-          title="Gender Distribution by Team"
+          componentId="MOD-A6"
+          eyebrow="Balance Radar"
+          title="Overall Team Quality"
           className={styles.chartModule}
         >
           <div className={styles.chartWrap}>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={genderChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
-                <XAxis dataKey="name" stroke="#51606F" tick={{ fontSize: 12 }} />
-                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Male" fill="#0047AB" />
-                <Bar dataKey="Female" fill="#E91E63" />
-              </BarChart>
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="#B7C5D3" />
+                <PolarAngleAxis
+                  dataKey="metric"
+                  tick={{ fontSize: 11, fill: "#51606F" }}
+                />
+                <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "#51606F" }} />
+                <Radar
+                  name="Score"
+                  dataKey="value"
+                  stroke="#FF6B00"
+                  fill="#FF6B00"
+                  fillOpacity={0.28}
+                />
+              </RadarChart>
             </ResponsiveContainer>
           </div>
         </ModuleBlock>
 
-        {/* Year Distribution */}
         <ModuleBlock
-          componentId="MOD-C5"
-          eyebrow="Demographics"
-          title="Year Level Distribution by Team"
+          componentId="MOD-A7"
+          eyebrow="Diversity"
+          title="Metrics by Team"
           className={styles.chartModule}
         >
           <div className={styles.chartWrap}>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={yearChartData}>
+              <BarChart data={diversityData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
-                <XAxis dataKey="name" stroke="#51606F" tick={{ fontSize: 12 }} />
-                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Year 1" fill="#0047AB" />
-                <Bar dataKey="Year 2" fill="#2ECC71" />
-                <Bar dataKey="Year 3" fill="#FF6B00" />
-                <Bar dataKey="Year 4" fill="#9B59B6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </ModuleBlock>
-
-        {/* School Distribution */}
-        <ModuleBlock
-          componentId="MOD-C6"
-          eyebrow="Demographics"
-          title="School Distribution by Team"
-          className={styles.chartModule}
-        >
-          <div className={styles.chartWrap}>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={schoolChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
-                <XAxis dataKey="name" stroke="#51606F" tick={{ fontSize: 12 }} />
-                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="School 1" fill="#0047AB" />
-                <Bar dataKey="School 2" fill="#2ECC71" />
-                <Bar dataKey="School 3" fill="#FF6B00" />
-                <Bar dataKey="School 4" fill="#9B59B6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </ModuleBlock>
-
-        {/* Reputation by Team */}
-        <ModuleBlock
-          componentId="MOD-C7"
-          eyebrow="Reputation"
-          title="Reputation Scores by Team"
-          className={styles.chartModule}
-        >
-          <div className={styles.chartWrap}>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={reputationChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
-                <XAxis dataKey="name" stroke="#51606F" tick={{ fontSize: 12 }} />
-                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="mean" fill="#0047AB" name="Mean" />
-                <Bar dataKey="min" fill="#E74C3C" name="Min" />
-                <Bar dataKey="max" fill="#2ECC71" name="Max" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </ModuleBlock>
-
-        {/* Buddy Satisfaction */}
-        <ModuleBlock
-          componentId="MOD-C8"
-          eyebrow="Social"
-          title="Buddy Satisfaction Rate by Team"
-          className={styles.chartModule}
-        >
-          <div className={styles.chartWrap}>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={buddyChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
-                <XAxis dataKey="name" stroke="#51606F" tick={{ fontSize: 12 }} />
+                <XAxis
+                  dataKey="metric"
+                  stroke="#51606F"
+                  tick={{ fontSize: 12 }}
+                />
                 <YAxis
                   domain={[0, 100]}
                   stroke="#51606F"
                   tick={{ fontSize: 12 }}
-                  tickFormatter={(v) => `${v}%`}
                 />
-                <Tooltip formatter={(v) => `${v}%`} />
-                <Bar dataKey="rate" name="Satisfaction %">
-                  {buddyChartData.map((_, i) => (
-                    <Cell
-                      key={i}
-                      fill={TEAM_COLORS[i % TEAM_COLORS.length]}
-                    />
+                <Tooltip />
+                <Legend />
+                {diversitySeries.length ? (
+                  diversitySeries.map((seriesName, index) => {
+                    const palette = [
+                      "#0047AB",
+                      "#2ECC71",
+                      "#FF6B00",
+                      "#1F7A8C",
+                      "#D7263D",
+                    ];
+                    return (
+                      <Bar
+                        key={seriesName}
+                        dataKey={seriesName}
+                        fill={palette[index % palette.length]}
+                      />
+                    );
+                  })
+                ) : (
+                  <Bar dataKey="No Team Data" fill="#9AA5B1" />
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ModuleBlock>
+        
+        <ModuleBlock
+          componentId="MOD-A9"
+          eyebrow="Team Drilldown"
+          title={`Selected Team Detail :: ${selectedTeam?.team || "N/A"}`}
+          className={`${styles.chartModule} ${styles.fullSpan}`}
+        >
+          {selectedTeam ? (
+            <div className={styles.drilldownWrap}>
+              <div className={styles.kpiRow}>
+                <div className={styles.kpiCard}>
+                  <p className={styles.kpiLabel}>Buddy Satisfaction</p>
+                  <p className={styles.kpiValue}>
+                    {selectedTeam.buddyRate.toFixed(1)}%
+                  </p>
+                  <p
+                    className={`${styles.kpiDelta} ${deltaToneClass(selectedTeam.deltas.buddyRate, styles)}`}
+                  >
+                    {formatDelta(selectedTeam.deltas.buddyRate, "%")} vs section
+                  </p>
+                </div>
+                <div className={styles.kpiCard}>
+                  <p className={styles.kpiLabel}>GPA Mean</p>
+                  <p className={styles.kpiValue}>
+                    {selectedTeam.gpaMean.toFixed(2)}
+                  </p>
+                  <p
+                    className={`${styles.kpiDelta} ${deltaToneClass(selectedTeam.deltas.gpaMean, styles)}`}
+                  >
+                    {formatDelta(selectedTeam.deltas.gpaMean)} vs section
+                  </p>
+                </div>
+                <div className={styles.kpiCard}>
+                  <p className={styles.kpiLabel}>Reputation Mean</p>
+                  <p className={styles.kpiValue}>
+                    {selectedTeam.reputationMean.toFixed(1)}
+                  </p>
+                  <p
+                    className={`${styles.kpiDelta} ${deltaToneClass(selectedTeam.deltas.reputationMean, styles)}`}
+                  >
+                    {formatDelta(selectedTeam.deltas.reputationMean)} vs section
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.distributionGrid}>
+                <div className={styles.distributionCard}>
+                  <p className={styles.distTitle}>Gender Distribution</p>
+                  {selectedTeam.genderDistribution.map((item) => (
+                    <p key={`gender-${item.label}`} className={styles.distItem}>
+                      {item.label}: {item.count}
+                    </p>
                   ))}
-                </Bar>
+                </div>
+                <div className={styles.distributionCard}>
+                  <p className={styles.distTitle}>School Distribution</p>
+                  {selectedTeam.schoolDistribution.map((item) => (
+                    <p key={`school-${item.label}`} className={styles.distItem}>
+                      School {item.label}: {item.count}
+                    </p>
+                  ))}
+                </div>
+                <div className={styles.distributionCard}>
+                  <p className={styles.distTitle}>Top MBTI Types</p>
+                  {selectedTeam.mbtiDistribution.slice(0, 6).map((item) => (
+                    <p key={`mbti-${item.label}`} className={styles.distItem}>
+                      {item.label}: {item.count}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              <p className={styles.buddyFootnote}>
+                Buddy requests: {selectedTeam.buddyRequests} total,{" "}
+                {selectedTeam.buddySatisfied} satisfied,{" "}
+                {selectedTeam.buddyUnsatisfied} unsatisfied.
+              </p>
+            </div>
+          ) : (
+            <p className={styles.subtitle}>
+              No team analytics found for drill-down.
+            </p>
+          )}
+        </ModuleBlock>
+                <ModuleBlock
+          componentId="MOD-A8"
+          eyebrow="Buddy Requests"
+          title="Request Fulfillment by Team"
+          className={`${styles.chartModule} ${styles.fullSpan}`}
+        >
+          <div className={styles.chartWrap}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={buddyFulfillmentData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#B7C5D3" />
+                <XAxis
+                  dataKey="team"
+                  stroke="#51606F"
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis stroke="#51606F" tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="requests" fill="#1F7A8C" />
+                <Bar dataKey="satisfied" fill="#2ECC71" />
+                <Bar dataKey="unsatisfied" fill="#D7263D" />
               </BarChart>
             </ResponsiveContainer>
           </div>

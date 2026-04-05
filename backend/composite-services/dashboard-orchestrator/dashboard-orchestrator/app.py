@@ -258,6 +258,26 @@ def initiate_peer_eval():
             if sid and email:
                 student_email_map[sid] = email
 
+    # Fallback: if no emails found from profiles, fetch directly from student service
+    if not student_email_map:
+        STUDENT_SERVICE_URL = os.getenv("STUDENT_SERVICE_URL", "http://student-service:3001/api/students")
+        all_student_ids = set()
+        for team in teams:
+            for student in team.get("students", []):
+                sid = student.get("student_id")
+                if sid:
+                    all_student_ids.add(sid)
+
+        for sid in all_student_ids:
+            try:
+                student_data, _ = _fetch(f"{STUDENT_SERVICE_URL}/{sid}", label="student service")
+                if student_data:
+                    email = student_data.get("data", {}).get("email")
+                    if email:
+                        student_email_map[sid] = email
+            except Exception:
+                pass
+
     # ── 4. Send notification emails ───────────────────────────────────
     eval_link = payload.get("eval_link", f"http://localhost:5173/student/peer-evaluation/{round_id}")
     notification_results = {"sent": 0, "failed": 0, "skipped": 0}

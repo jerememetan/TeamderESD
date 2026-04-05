@@ -14,6 +14,7 @@ import PeerEvaluationForm from './pages/student/PeerEvaluation/PeerEvaluationFor
 import StudentDashBoard from './pages/student/StudentDashboard/StudentDashboard'
 import HomePage from './pages/shared/HomePage'
 import TestGalleryPage from './pages/shared/TestGalleryPage'
+import PeerEval from './pages/instructor/PeerEval/PeerEval'
 
 const router = createBrowserRouter([
   {
@@ -59,6 +60,11 @@ const router = createBrowserRouter([
       {
         path: 'instructor/courses/:courseId/groups/:groupId/teams',
         element: <Teams />,
+        
+      },
+      {
+        path: 'instructor/courses/:courseId/groups/:groupId/peer-eval',
+        element: <PeerEval />,
       },
       {
         path: 'instructor/swap-requests',
