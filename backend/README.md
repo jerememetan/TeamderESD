@@ -23,7 +23,6 @@ Atomic services
 - student-topic-preference-service: http://localhost:3009 - /topic-preference
 - student-form-data-service: http://localhost:3010 - /form-data
 - swap-request-service: http://localhost:3011 - /swap-request
-- swap-constraints-service: http://localhost:3012 - /swap-constraints
 - team-swap-service: http://localhost:3013 - /team-swap
 - peer-evaluation-service: http://localhost:3020 - /peer-eval
 - student-form-service: http://localhost:3015 - /student-form
@@ -58,7 +57,7 @@ RabbitMQ management UI: http://localhost:15672 (guest/guest)
 
 Notes
 
-- Ports are taken from `docker-compose.yaml` / `docker-compose.scenario1.yaml` mappings.
-- Use the listed path fragments as example request URLs (e.g. `http://localhost:3001/api/students`).
+- Ports are taken from `docker-compose.yaml` mappings.
+- Use the listed path fragments as example request URLs (e.g. `http://localhost:8000/students`).
 - For browser and frontend use, prefer the same paths via gateway base `http://localhost:8000`.
 - Formation-notification now publishes one batch RabbitMQ message per section request to notification service; frontend request/response payloads are unchanged.

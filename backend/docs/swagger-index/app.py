@@ -18,7 +18,6 @@ SERVICES = [
     ("student-topic-preference-service", "http://localhost:3009"),
     ("student-form-data-service", "http://localhost:3010"),
     ("swap-request-service", "http://localhost:3011"),
-    ("swap-constraints-service", "http://localhost:3012"),
     ("team-swap-service", "http://localhost:3013"),
     ("student-form-service", "http://localhost:3015"),
     ("notification-service", "http://localhost:3016"),

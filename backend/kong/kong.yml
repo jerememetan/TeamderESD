@@ -132,14 +132,6 @@ services:
           - /swap-request
         strip_path: false
 
-  - name: swap-constraints-service
-    url: http://swap-constraints-service:3012
-    routes:
-      - name: swap-constraints-service-route
-        paths:
-          - /swap-constraints
-        strip_path: false
-
   - name: team-swap-service
     url: http://team-swap-service:3013
     routes:

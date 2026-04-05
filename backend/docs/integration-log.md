@@ -257,38 +257,70 @@ Move instructor-facing swap request shaping out of the atomic swap-request servi
 ## 2026-04-05 :: Step 7 :: Cycle list filter options
 
 ### Goal
+
 Support four cycle retrieval modes on one endpoint so frontend and teammate tooling can reuse a single route.
 
 ### Endpoint
+
 - `GET /swap-orchestrator/cycles`
 
 ### Query options
+
 - No query params: returns all cycles.
 - `section_id=<uuid>`: returns cycles for one section.
 - `course_id=<int>`: returns cycles for one course.
 - `section_id=<uuid>&course_id=<int>`: returns cycles matching both filters.
 
 ### Notes
+
 - Invalid `section_id` values return `400` with UUID validation messaging.
 - Invalid `course_id` values return `400` when not parseable as integer.
-- Course filtering now uses direct integer matching (`course_id` is treated as integer end-to-end in swap-orchestrator, swap-constraints, and team-swap payload validation).
+- Course filtering now uses direct integer matching (`course_id` is treated as integer end-to-end in swap-orchestrator and team-swap payload validation).
 - Empty matches return `200` with an empty `data.cycles` list.
 
 ## 2026-04-05 :: Step 8 :: Swap-orchestrator Swagger enhancement
 
 ### Goal
+
 Expose missing query parameters and typed request bodies in Swagger UI for swap-orchestrator routes.
 
 ### Scope
+
 - Enhanced `swagger_helper.py` for swap-orchestrator with operation-level OpenAPI hints.
 - Added explicit query parameter docs for:
-	- `GET /swap-orchestrator/cycles` (`section_id`, `course_id`)
-	- `GET /swap-orchestrator/cycles/{cycle_id}/requests/processed` (`status`)
-	- `GET /swap-orchestrator/student-team` (`section_id`, `student_id`)
+  - `GET /swap-orchestrator/cycles` (`section_id`, `course_id`)
+  - `GET /swap-orchestrator/cycles/{cycle_id}/requests/processed` (`status`)
+  - `GET /swap-orchestrator/student-team` (`section_id`, `student_id`)
 - Added typed request body schemas for key write endpoints:
-	- `POST /swap-orchestrator/cycles`
-	- `POST /swap-orchestrator/cycles/{cycle_id}/requests`
-	- `PATCH /swap-orchestrator/cycles/{cycle_id}/requests/{swap_request_id}/decision`
+  - `POST /swap-orchestrator/cycles`
+  - `POST /swap-orchestrator/cycles/{cycle_id}/requests`
+  - `PATCH /swap-orchestrator/cycles/{cycle_id}/requests/{swap_request_id}/decision`
 
 ### Result
+
 - Swagger UI now displays the missing query options and clearer request payload contracts for frontend and teammate testing.
+
+## 2026-04-05 :: Step 9 :: Swap constraints decommission + cycle-free swap routing
+
+### Goal
+
+Complete the move away from cycle-era swap orchestration and remove the no-longer-used swap-constraints service from runtime routing and local compose.
+
+### Infrastructure scope
+
+- Removed `swap-constraints-service` from `docker-compose.yaml`.
+- Removed `/swap-constraints` route from Kong declarative config.
+- Removed `swap-constraints-service` from docs index service list.
+
+### Runtime contract now in use
+
+- `POST /swap-orchestrator/submission/requests`
+- `GET /swap-orchestrator/review/requests`
+- `PATCH /swap-orchestrator/review/requests/{swap_request_id}/decision`
+- `POST /swap-orchestrator/sections/{section_id}/confirm`
+- `GET /swap-orchestrator/student-team`
+
+### Notes
+
+- CORS remains centralized at Kong and applies to swap-orchestrator routes through the global plugin.
+- Existing cycle-based documentation entries are historical and should be treated as superseded by the cycle-free routes above.
