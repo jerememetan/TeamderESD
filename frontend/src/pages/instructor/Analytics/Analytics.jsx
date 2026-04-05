@@ -31,6 +31,7 @@ import {
 } from "../../../adapters/analyticsAdapter";
 import { Button } from "../../../components/ui/button";
 import { useAnalyticsPage } from "./logic/useAnalyticsPage";
+import WeightRecommendationsSection from "./WeightRecommendationsSection";
 import styles from "./Analytics.module.css";
 
 const QUALITY_METRICS = [
@@ -60,6 +61,7 @@ function Analytics() {
     backendStudents,
     sectionAnalytics,
     teamAnalytics,
+    weightRecommendations,
     isLoadingRoster,
     rosterError,
   } = useAnalyticsPage(courseId, groupId);
@@ -146,13 +148,6 @@ function Analytics() {
             meta={`${totalStudents} students | ${groupTeams.length} teams`}
             tone="green"
           />
-          <SystemTag tone={rosterSourceTone}>
-            {isLoadingRoster
-              ? "Loading roster"
-              : backendStudents.length
-                ? "Live roster loaded"
-                : "Roster fallback"}
-          </SystemTag>
         </div>
       </section>
 
@@ -456,6 +451,12 @@ function Analytics() {
             </ResponsiveContainer>
           </div>
         </ModuleBlock>
+
+        <WeightRecommendationsSection
+          courseId={courseId}
+          groupId={groupId}
+          weightRecommendations={weightRecommendations}
+        />
       </section>
     </div>
   );

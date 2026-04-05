@@ -3,7 +3,6 @@ import { ArrowLeft } from "lucide-react";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
-import StudentSwitcher from "../../../components/student/StudentSwitcher";
 import { useStudentSession } from "../../../services/studentSession";
 import { usePeerEvaluationForm } from "./logic/usePeerEvaluationForm";
 import styles from "./PeerEvaluationForm.module.css";
@@ -15,12 +14,14 @@ function PeerEvaluationForm() {
   const {
     activeStudent,
     activeStudentRouteId,
-    availableStudents,
     studentLoadError,
     isLoadingStudents,
   } = useStudentSession(routeStudentId);
   const studentBasePath = `/student/${activeStudentRouteId}`;
   const {
+    chooserMode,
+    availableRounds,
+    roundsError,
     round,
     currentBackendId,
     myTeam,
@@ -38,6 +39,7 @@ function PeerEvaluationForm() {
     activeStudent,
     isLoadingStudents,
   });
+  const peerEvalBasePath = `/student/${activeStudentRouteId}/peer-evaluation`;
 
   if (isLoading || isLoadingStudents) {
     return <div className={styles.notFound}>Loading peer evaluation...</div>;
@@ -47,6 +49,88 @@ function PeerEvaluationForm() {
     return (
       <div className={styles.notFound}>
         {studentLoadError || "Backend student data is unavailable."}
+      </div>
+    );
+  }
+
+  if (chooserMode) {
+    if (isLoading || isLoadingStudents) {
+      return <div className={styles.notFound}>Loading peer evaluation...</div>;
+    }
+
+    if (roundsError) {
+      return (
+        <div className={styles.page}>
+          <Link to={studentBasePath} className={styles.backLink}>
+            <ArrowLeft className={styles.backIcon} /> Return to student console
+          </Link>
+          <p className={styles.notFound}>{roundsError}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`${styles.page} ${motionStyles.motionPage}`}>
+        <Link to={studentBasePath} className={styles.backLink}>
+          <ArrowLeft className={styles.backIcon} /> Return to student console
+        </Link>
+
+        <section className={styles.hero}>
+          <div>
+            <p className={styles.kicker}>[PEER EVALUATION]</p>
+            <h2 className={styles.title}>Choose a peer evaluation</h2>
+            <p className={styles.subtitle}>
+              Select an available round to evaluate your teammates.
+            </p>
+          </div>
+          <div className={styles.heroTags}>
+            <SystemTag tone="neutral">
+              {availableRounds.length} available
+            </SystemTag>
+          </div>
+        </section>
+
+        {!availableRounds.length ? (
+          <p className={styles.notFound}>
+            No peer evaluations are available to submit right now.
+          </p>
+        ) : (
+          <div className={styles.chooserGrid}>
+            {availableRounds.map((pendingRound, index) => (
+              <Link
+                key={pendingRound.id}
+                to={`${peerEvalBasePath}/${pendingRound.id}`}
+                className={styles.chooserCard}
+              >
+                <ModuleBlock
+                  componentId={`MOD-PCH${index + 1}`}
+                  eyebrow="Peer Evaluation"
+                  title={pendingRound.title || "Peer Evaluation"}
+                >
+                  <p className={styles.subtitle}>
+                    Complete this teammate evaluation round.
+                  </p>
+                  <div className={styles.memberHeader}>
+                    <SystemTag
+                      tone={
+                        pendingRound.status === "active" ? "success" : "neutral"
+                      }
+                    >
+                      {pendingRound.status === "active"
+                        ? "Round active"
+                        : `Round ${pendingRound.status}`}
+                    </SystemTag>
+                    {pendingRound.dueAt ? (
+                      <SystemTag tone="neutral">
+                        Due {new Date(pendingRound.dueAt).toLocaleDateString()}
+                      </SystemTag>
+                    ) : null}
+                  </div>
+                </ModuleBlock>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -67,9 +151,6 @@ function PeerEvaluationForm() {
         <br />
         <br />
         Current student ID: {currentBackendId || "unknown"}
-        <br />
-        Available students:{" "}
-        {availableStudents.map((s) => `${s.name} (${s.id})`).join(", ")}
       </div>
     );
   }
@@ -94,6 +175,13 @@ function PeerEvaluationForm() {
           <div className={styles.actionRow}>
             <Button type="button" onClick={() => navigate(studentBasePath)}>
               Return to dashboard
+            </Button>
+            <Button
+              type="button"
+              onClick={() => navigate(peerEvalBasePath)}
+              variant="outline"
+            >
+              View available evaluations
             </Button>
           </div>
         </ModuleBlock>
@@ -125,13 +213,6 @@ function PeerEvaluationForm() {
           </p>
         </div>
         <div className={styles.heroTags}>
-          <StudentSwitcher
-            activeStudentId={activeStudent.id}
-            availableStudents={availableStudents}
-            onChange={(nextStudentId) =>
-              navigate(`/student/${nextStudentId}/peer-evaluation/${roundId}`)
-            }
-          />
           <SystemTag tone={round.status === "active" ? "success" : "neutral"}>
             {round.status === "active"
               ? "Round active"

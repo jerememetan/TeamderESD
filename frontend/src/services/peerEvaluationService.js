@@ -3,8 +3,9 @@ import { fetchJson } from "./httpClient";
 const PEER_EVAL_URL =
   import.meta.env.VITE_PEER_EVAL_URL ?? "http://localhost:8000/peer-eval";
 
-const DASHBOARD_URL =
-  import.meta.env.VITE_DASHBOARD_URL ?? "http://localhost:8000/dashboard";
+const PEER_EVAL_NOTIFICATION_URL =
+  import.meta.env.VITE_PEER_EVAL_NOTIFICATION_URL ??
+  "http://localhost:8000/peer-eval-notifications";
 
 /**
  * Get a peer evaluation round by ID.
@@ -190,7 +191,7 @@ export async function getActivePeerEvaluationRoundsBySections(sectionIds = []) {
  * Instructor initiates a peer evaluation round via the dashboard orchestrator.
  */
 export async function startPeerEvaluationRound({ sectionId, title, dueAt }) {
-  const payload = await fetchJson(`${DASHBOARD_URL}/peer-eval/initiate`, {
+  const payload = await fetchJson(`${PEER_EVAL_NOTIFICATION_URL}/initiate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -211,7 +212,7 @@ export async function startPeerEvaluationRound({ sectionId, title, dueAt }) {
  * Instructor closes a peer evaluation round via the dashboard orchestrator.
  */
 export async function closePeerEvaluationRound(roundId) {
-  const payload = await fetchJson(`${DASHBOARD_URL}/peer-eval/close`, {
+  const payload = await fetchJson(`${PEER_EVAL_NOTIFICATION_URL}/close`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

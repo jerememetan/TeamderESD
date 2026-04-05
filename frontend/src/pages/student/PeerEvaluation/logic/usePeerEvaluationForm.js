@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  getPendingPeerEvaluations,
   getPeerEvaluationRound,
   getPeerEvaluationSubmission,
   submitPeerEvaluation,
 } from "../../../../services/peerEvaluationService";
+import { fetchAllEnrollments } from "../../../../services/enrollmentService";
 import { fetchTeamsBySection } from "../../../../services/teamService";
 import {
   buildStudentMapByBackendId,
@@ -15,6 +17,9 @@ export function usePeerEvaluationForm({
   activeStudent,
   isLoadingStudents,
 }) {
+  const chooserMode = !roundId;
+  const [availableRounds, setAvailableRounds] = useState([]);
+  const [roundsError, setRoundsError] = useState("");
   const [round, setRound] = useState(null);
   const [teams, setTeams] = useState([]);
   const [studentsByBackendId, setStudentsByBackendId] = useState(new Map());
@@ -38,9 +43,69 @@ export function usePeerEvaluationForm({
       }
 
       setIsLoading(true);
+      setRoundsError("");
       setSubmitError("");
 
       try {
+        if (chooserMode) {
+          const backendStudentId = Number(activeStudent.backendStudentId);
+          if (!Number.isFinite(backendStudentId)) {
+            throw new Error(
+              "Unable to resolve a backend student id for the selected student.",
+            );
+          }
+
+          let allEnrollments = [];
+          try {
+            allEnrollments = await fetchAllEnrollments();
+          } catch {
+            allEnrollments = [];
+          }
+          if (!isMounted) {
+            return;
+          }
+
+          const sectionIds = Array.from(
+            new Set(
+              allEnrollments
+                .filter(
+                  (row) =>
+                    Number(row?.student_id ?? row?.studentId) === backendStudentId,
+                )
+                .map((row) =>
+                  String(row?.section_id ?? row?.sectionId ?? "").trim(),
+                )
+                .filter(Boolean),
+            ),
+          );
+
+          if (!sectionIds.length) {
+            setAvailableRounds([]);
+            return;
+          }
+
+          const pendingRounds = await getPendingPeerEvaluations({
+            studentId: backendStudentId,
+            sectionIds,
+          });
+          if (!isMounted) {
+            return;
+          }
+
+          setAvailableRounds(
+            pendingRounds.sort((left, right) => {
+              const leftDate = left?.dueAt ? Date.parse(left.dueAt) : Infinity;
+              const rightDate = right?.dueAt ? Date.parse(right.dueAt) : Infinity;
+              return leftDate - rightDate;
+            }),
+          );
+          setRound(null);
+          setTeams([]);
+          setExistingSubmission(null);
+          setResponses({});
+          return;
+        }
+
         const fetchedRound = await getPeerEvaluationRound(roundId || "");
         if (!isMounted) {
           return;
@@ -82,6 +147,13 @@ export function usePeerEvaluationForm({
             setExistingSubmission(submission);
           }
         }
+      } catch (error) {
+        if (isMounted && chooserMode) {
+          setAvailableRounds([]);
+          setRoundsError(
+            error?.message || "Unable to load peer evaluation rounds.",
+          );
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -93,7 +165,13 @@ export function usePeerEvaluationForm({
     return () => {
       isMounted = false;
     };
-  }, [activeStudent, currentBackendId, isLoadingStudents, roundId]);
+  }, [
+    activeStudent,
+    chooserMode,
+    currentBackendId,
+    isLoadingStudents,
+    roundId,
+  ]);
 
   const myTeam = useMemo(() => {
     if (!currentBackendId) {
@@ -177,6 +255,9 @@ export function usePeerEvaluationForm({
   }
 
   return {
+    chooserMode,
+    availableRounds,
+    roundsError,
     round,
     currentBackendId,
     myTeam,
