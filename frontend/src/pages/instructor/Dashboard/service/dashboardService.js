@@ -36,7 +36,6 @@ const DASHBOARD_URL =
 //   ]
 // }
 
-
 // Fallback summary object returned by this service must always match:
 // {
 //   totalCourses: number,
@@ -56,7 +55,9 @@ function fallbackSummary() {
 
 function countPendingSwapRequests(requests = []) {
   return (Array.isArray(requests) ? requests : []).filter((request) => {
-    const status = String(request?.status || "").trim().toLowerCase();
+    const status = String(request?.status || "")
+      .trim()
+      .toLowerCase();
     return status === "pending";
   }).length;
 }
@@ -99,7 +100,6 @@ async function fetchDashboardFromAtomicServices() {
 
   const [coursesResult, sectionsResult, enrollmentsResult, swapsResult] =
     await Promise.allSettled([
-
       fetchAllCourses(),
       fetchAllSections(),
       fetchAllEnrollments(),
@@ -112,15 +112,19 @@ async function fetchDashboardFromAtomicServices() {
         ? coursesResult.value.length
         : 0,
     totalGroups:
-      sectionsResult.status === "fulfilled" && Array.isArray(sectionsResult.value)
+      sectionsResult.status === "fulfilled" &&
+      Array.isArray(sectionsResult.value)
         ? sectionsResult.value.length
         : 0,
     totalStudents:
-      enrollmentsResult.status === "fulfilled" && Array.isArray(enrollmentsResult.value)
+      enrollmentsResult.status === "fulfilled" &&
+      Array.isArray(enrollmentsResult.value)
         ? new Set(
             enrollmentsResult.value
               .map((enrollment) => enrollment?.student_id)
-              .filter((studentId) => studentId !== null && studentId !== undefined),
+              .filter(
+                (studentId) => studentId !== null && studentId !== undefined,
+              ),
           ).size
         : 0,
     pendingSwapRequests:

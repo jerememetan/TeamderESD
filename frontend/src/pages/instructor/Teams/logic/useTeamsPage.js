@@ -39,10 +39,7 @@ export function useTeamsPage(courseId, backendSectionId) {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
 
-  const visibleSwapRequests = useMemo(
-    () => swapRequestList,
-    [swapRequestList],
-  );
+  const visibleSwapRequests = useMemo(() => swapRequestList, [swapRequestList]);
 
   useEffect(() => {
     let isMounted = true;
@@ -55,7 +52,9 @@ export function useTeamsPage(courseId, backendSectionId) {
 
       setIsSwapRequestsLoading(true);
       try {
-        const payload = await fetchSwapReviewRequests({ sectionId: backendSectionId });
+        const payload = await fetchSwapReviewRequests({
+          sectionId: backendSectionId,
+        });
         if (!isMounted) {
           return;
         }
@@ -272,7 +271,9 @@ export function useTeamsPage(courseId, backendSectionId) {
       });
       setSwapRequestList((currentRequests) =>
         currentRequests.map((request) =>
-          request.id === requestId ? { ...request, status: "approved" } : request,
+          request.id === requestId
+            ? { ...request, status: "approved" }
+            : request,
         ),
       );
       setSelectedRequest((currentRequest) =>
@@ -296,7 +297,9 @@ export function useTeamsPage(courseId, backendSectionId) {
       });
       setSwapRequestList((currentRequests) =>
         currentRequests.map((request) =>
-          request.id === requestId ? { ...request, status: "rejected" } : request,
+          request.id === requestId
+            ? { ...request, status: "rejected" }
+            : request,
         ),
       );
       setSelectedRequest((currentRequest) =>
@@ -347,8 +350,6 @@ export function useTeamsPage(courseId, backendSectionId) {
   };
 
   const handleMemberSwapClick = (team, member) => {
-    console.log("TEAM",team)
-    console.log("MEMMBER", member)
     if (!swapMode) {
       return;
     }

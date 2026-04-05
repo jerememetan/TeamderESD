@@ -145,8 +145,9 @@ function Teams() {
           <SystemTag hazard>
             {isSwapRequestsLoading
               ? ".."
-              : visibleSwapRequests.filter((request) => request.status === "pending")
-                  .length}{" "}
+              : visibleSwapRequests.filter(
+                  (request) => request.status === "pending",
+                ).length}{" "}
             pending interventions
           </SystemTag>
         </div>
@@ -423,7 +424,7 @@ function Teams() {
                           <Mail className={styles.mailIcon} />{" "}
                           <span>{member.email}</span>
                         </div>
-                        {!isBackendMember && pendingRequest ? (
+                        {pendingRequest ? (
                           <Button
                             onClick={(event) => {
                               event.stopPropagation();

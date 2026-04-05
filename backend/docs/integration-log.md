@@ -223,6 +223,11 @@ Add an end-of-project peer evaluation experience to the frontend before the back
 - This affects publish-form flow through ormation-notification and can also produce repeated backend errors whenever composite services query student-form endpoints.
 - Treat this as an open backend provisioning bug until the student_form schema/tables are created or the service is remapped.
 
+## Superseded Note (2026-04-05)
+
+- Steps 6 to 8 below describe the older cycle-based swap-orchestrator contract.
+- Current active contract is documented in Step 9 (`submission/review/decision/confirm/student-team`).
+
 ## 2026-04-04 :: Step 6 :: Processed swap requests -> swap-orchestrator
 
 ### Goal
