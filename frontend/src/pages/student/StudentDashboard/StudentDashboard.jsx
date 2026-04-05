@@ -24,7 +24,6 @@ function StudentDashBoard() {
   const {
     teamCount,
     peerEvalCount,
-    nextPeerRound,
     availableForms,
     isLoading: isLoadingSummary,
     error: summaryError,
@@ -135,21 +134,20 @@ function StudentDashBoard() {
             text: formActionText,
           },
           {
-            to: nextPeerRound
-              ? `${studentBasePath}/peer-evaluation/${nextPeerRound.id}`
-              : studentBasePath,
+            to: `${studentBasePath}/peer-evaluation`,
             icon: <FileText className={styles.actionIcon} />,
             code: "Peer Review",
             title: "Complete Peer Evaluation",
-            text: nextPeerRound
-              ? "Rate your teammates and yourself for the final project review."
-              : "No peer evaluation rounds are active right now.",
+            text:
+              peerEvalCount > 0
+                ? "View your available peer evaluations and submit each round."
+                : "No peer evaluation rounds are active right now.",
           },
         ].map((action, index) => (
           <Link
             key={action.code + index}
             to={action.to}
-            className={`${styles.actionCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem} ${!nextPeerRound && action.code === "Peer Review" ? styles.actionCardDisabled : ""}`}
+            className={`${styles.actionCard} ${motionStyles.staggerItem} ${motionStyles.magneticItem} ${peerEvalCount < 1 && action.code === "Peer Review" ? styles.actionCardDisabled : ""}`}
             style={{ "--td-stagger-delay": `${(index + 4) * 50}ms` }}
           >
             {action.icon}

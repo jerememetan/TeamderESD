@@ -83,6 +83,10 @@ const router = createBrowserRouter([
         element: <FillForm />,
       },
       {
+        path: 'student/:studentId/peer-evaluation',
+        element: <PeerEvaluationForm />,
+      },
+      {
         path: 'student/:studentId/peer-evaluation/:roundId',
         element: <PeerEvaluationForm />,
       },

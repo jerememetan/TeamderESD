@@ -9,6 +9,9 @@
 .subtitle,.infoText { margin:0; color: var(--td-color-text-muted); line-height:1.7; }
 .memberHeader,.actionRow { display:flex; flex-wrap:wrap; justify-content:space-between; gap: var(--td-space-xs); align-items:center; }
 .memberMeta,.fieldLabel,.infoText { font-size:0.72rem; letter-spacing:0.12em; color: var(--td-color-text-muted); }
+.chooserGrid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--td-space-sm); }
+.chooserCard { text-decoration:none; color:inherit; display:block; }
+.chooserCard :global(article) { height:100%; }
 .scaleGrid { display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: var(--td-space-xs); }
 .scoreCard { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:92px; border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-sharp); background: rgba(255,255,255,0.86); cursor:pointer; }
 .scoreCardActive { background: linear-gradient(180deg, rgba(0,71,171,0.14), rgba(0,71,171,0.22)); border-color: var(--td-color-primary); }
@@ -20,4 +23,8 @@
 .primaryButton,.secondaryButton { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:0 14px; border:1px solid var(--td-color-border-strong); border-radius: var(--td-radius-sharp); font-family: var(--td-font-mono); font-size:0.74rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
 .primaryButton { color: var(--td-color-surface); background: linear-gradient(180deg,var(--td-color-primary),var(--td-color-primary-strong)); }
 .secondaryButton { color: var(--td-color-text); background: rgba(255,255,255,0.86); }
-@media (max-width: 700px) { .hero,.actionRow,.memberHeader,.heroTags { flex-direction:column; align-items:flex-start; } .scaleGrid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 700px) {
+	.hero,.actionRow,.memberHeader,.heroTags { flex-direction:column; align-items:flex-start; }
+	.scaleGrid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+	.chooserGrid { grid-template-columns: 1fr; }
+}
