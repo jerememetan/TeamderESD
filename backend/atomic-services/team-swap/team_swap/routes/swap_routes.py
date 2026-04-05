@@ -97,6 +97,35 @@ def _normalize_approved_ids(values):
     return normalized
 
 
+def _student_team_map(teams_by_id):
+    mapping = {}
+    if not isinstance(teams_by_id, dict):
+        return mapping
+
+    for team_id, students in teams_by_id.items():
+        for student_id in students or []:
+            mapping[int(student_id)] = str(team_id)
+    return mapping
+
+
+def _validate_execute_invariants(original_teams, updated_teams, approved_requests):
+    original_map = _student_team_map(original_teams)
+    updated_map = _student_team_map(updated_teams)
+
+    if set(original_map.keys()) != set(updated_map.keys()):
+        return False, "student roster changed during swap execution"
+
+    approved_students = {int(req["student_id"]) for req in approved_requests}
+
+    for student_id, original_team in original_map.items():
+        updated_team = updated_map.get(student_id)
+        moved = updated_team != original_team
+        if moved and student_id not in approved_students:
+            return False, f"non-approved student {student_id} moved"
+
+    return True, None
+
+
 @swap_bp.route("/optimize", methods=["POST"])
 def optimize_swaps():
     # HTTP endpoint: receives orchestrator payload with teams, approved requests, constraints, and student attributes.
@@ -396,6 +425,7 @@ def execute_swaps_composite():
             200,
         )
 
+    original_teams = {team_id: list(students) for team_id, students in current_teams.items()}
     new_teams = {team_id: list(students) for team_id, students in current_teams.items()}
     valid_requests = []
     invalid_results = []
@@ -466,6 +496,22 @@ def execute_swaps_composite():
                     "reason": "No compatible approved request from a different team",
                 }
             )
+
+    invariants_ok, invariants_error = _validate_execute_invariants(
+        original_teams,
+        new_teams,
+        valid_requests,
+    )
+    if not invariants_ok:
+        return (
+            jsonify(
+                {
+                    "code": 409,
+                    "message": f"swap invariants violated: {invariants_error}",
+                }
+            ),
+            409,
+        )
 
     new_team_roster = {
         "section_id": section_id,

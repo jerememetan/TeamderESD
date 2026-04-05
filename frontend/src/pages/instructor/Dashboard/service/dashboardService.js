@@ -2,11 +2,10 @@ import { fetchJson } from "../../../../services/httpClient";
 import { fetchAllCourses } from "../../../../services/courseService";
 import { fetchAllEnrollments } from "../../../../services/enrollmentService";
 import { fetchAllSections } from "../../../../services/sectionService";
+import { fetchSwapReviewRequests } from "../../../../services/swapRequestService";
 
 const DASHBOARD_URL =
   import.meta.env.VITE_DASHBOARD_URL ?? "http://localhost:8000/dashboard";
-const SWAP_REQUEST_URL =
-  import.meta.env.VITE_SWAP_REQUEST_URL ?? "http://localhost:8000/swap-request";
 
 // TODO(api-backend): Implement and keep stable primary dashboard orchestrator contract.
 // Endpoint: GET /dashboard
@@ -64,19 +63,38 @@ function countPendingSwapRequests(requests = []) {
 
 async function fetchDashboardFromAtomicServices() {
   const fetchSwapRequests = async () => {
-    // TODO(api-backend): Keep this endpoint status field stable for pending-request counting.
-    // Endpoint: GET /swap-request
-    // Supported payload shapes observed:
-    // 1) { code, data: SwapRequest[] }
-    // 2) { code, data: { data: SwapRequest[] } }
-    // SwapRequest object fields used here: { status }
-    const payload = await fetchJson(SWAP_REQUEST_URL, {
-      headers: { Accept: "application/json" },
-      cache: false,
-    });
+    // Aggregate pending requests per section via swap-orchestrator review composite.
+    const sections = await fetchAllSections();
+    const sectionIds = (Array.isArray(sections) ? sections : [])
+      .map((section) => section?.id)
+      .filter((id) => id !== null && id !== undefined)
+      .map((id) => String(id));
 
-    const candidates = payload?.data?.data ?? payload?.data ?? payload;
-    return Array.isArray(candidates) ? candidates : [];
+    if (!sectionIds.length) {
+      return 0;
+    }
+
+    const reviewResults = await Promise.allSettled(
+      sectionIds.map((sectionId) =>
+        fetchSwapReviewRequests({ sectionId, status: "pending" }),
+      ),
+    );
+
+    return reviewResults.reduce((total, result) => {
+      if (result.status !== "fulfilled") {
+        return total;
+      }
+
+      const summaryPending = Number(result.value?.summary?.pending);
+      if (Number.isFinite(summaryPending)) {
+        return total + summaryPending;
+      }
+
+      const requests = Array.isArray(result.value?.requests)
+        ? result.value.requests
+        : [];
+      return total + countPendingSwapRequests(requests);
+    }, 0);
   };
 
   const [coursesResult, sectionsResult, enrollmentsResult, swapsResult] =
@@ -106,9 +124,7 @@ async function fetchDashboardFromAtomicServices() {
           ).size
         : 0,
     pendingSwapRequests:
-      swapsResult.status === "fulfilled"
-        ? countPendingSwapRequests(swapsResult.value)
-        : 0,
+      swapsResult.status === "fulfilled" ? Number(swapsResult.value) || 0 : 0,
   };
 }
 

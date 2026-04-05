@@ -37,6 +37,8 @@ function Teams() {
     swapMode,
     selectedSwapMember,
     selectedRequest,
+    isSwapRequestsLoading,
+    isSwapDecisionUpdating,
     isGeneratingTeams,
     setSelectedTeamId,
     setSelectedRequest,
@@ -141,11 +143,10 @@ function Teams() {
                 : "Mock teams active"}
           </SystemTag>
           <SystemTag hazard>
-            {
-              visibleSwapRequests.filter(
-                (request) => request.status === "pending",
-              ).length
-            }{" "}
+            {isSwapRequestsLoading
+              ? ".."
+              : visibleSwapRequests.filter((request) => request.status === "pending")
+                  .length}{" "}
             pending interventions
           </SystemTag>
         </div>
@@ -485,6 +486,7 @@ function Teams() {
                     onClick={() => handleApprove(selectedRequest.id)}
                     variant="success"
                     size="sm"
+                    disabled={isSwapDecisionUpdating}
                   >
                     <CheckCircle className={styles.actionIcon} /> Approve
                   </Button>
@@ -493,6 +495,7 @@ function Teams() {
                     variant="warning"
                     size="sm"
                     className={motionStyles.pulseWarning}
+                    disabled={isSwapDecisionUpdating}
                   >
                     <XCircle className={styles.actionIcon} /> Reject
                   </Button>

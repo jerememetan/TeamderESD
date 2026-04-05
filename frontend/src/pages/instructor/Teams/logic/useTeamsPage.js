@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { mockSwapRequests } from "../../../../data/mockData";
 import { fetchEnrollmentsBySectionId } from "../../../../services/enrollmentService";
 import { fetchCourseByCode } from "../../../../services/courseService";
 import { getSectionById } from "../../../../services/sectionService";
@@ -10,6 +9,10 @@ import {
 import { generateTeamsForSection } from "../../../../services/teamFormationService";
 import { fetchTeamsBySection } from "../../../../services/teamService";
 import {
+  decideSwapReviewRequest,
+  fetchSwapReviewRequests,
+} from "../../../../services/swapRequestService";
+import {
   mapBackendTeamsToViewModel,
   swapMembersAcrossTeams,
 } from "./teamLogic";
@@ -18,7 +21,7 @@ export function useTeamsPage(courseId, backendSectionId) {
   const [isCourseLoading, setIsCourseLoading] = useState(true);
   const [courseLoadError, setCourseLoadError] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState(null);
-  const [swapRequestList, setSwapRequestList] = useState(mockSwapRequests);
+  const [swapRequestList, setSwapRequestList] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [backendStudents, setBackendStudents] = useState([]);
   const [backendTeams, setBackendTeams] = useState([]);
@@ -26,6 +29,8 @@ export function useTeamsPage(courseId, backendSectionId) {
   const [isRosterLoading, setIsRosterLoading] = useState(true);
   const [isTeamsLoading, setIsTeamsLoading] = useState(true);
   const [isGeneratingTeams, setIsGeneratingTeams] = useState(false);
+  const [isSwapRequestsLoading, setIsSwapRequestsLoading] = useState(false);
+  const [isSwapDecisionUpdating, setIsSwapDecisionUpdating] = useState(false);
   const [rosterError, setRosterError] = useState("");
   const [teamError, setTeamError] = useState("");
   const [teamMessage, setTeamMessage] = useState("");
@@ -35,14 +40,53 @@ export function useTeamsPage(courseId, backendSectionId) {
   const [selectedGroup, setSelectedGroup] = useState(null);
 
   const visibleSwapRequests = useMemo(
-    () =>
-      swapRequestList.filter(
-        (request) =>
-          request.courseId === courseId &&
-          (!backendSectionId || request.groupId === backendSectionId),
-      ),
-    [swapRequestList, courseId, backendSectionId],
+    () => swapRequestList,
+    [swapRequestList],
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSwapRequests() {
+      if (!backendSectionId) {
+        setSwapRequestList([]);
+        return;
+      }
+
+      setIsSwapRequestsLoading(true);
+      try {
+        const payload = await fetchSwapReviewRequests({ sectionId: backendSectionId });
+        if (!isMounted) {
+          return;
+        }
+
+        const rows = Array.isArray(payload?.requests) ? payload.requests : [];
+        const normalizedRows = rows.map((row) => ({
+          ...row,
+          id: String(row?.id || ""),
+          studentId: String(row?.studentId ?? ""),
+          status: String(row?.status || "pending").toLowerCase(),
+        }));
+
+        setSwapRequestList(normalizedRows);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        setSwapRequestList([]);
+        setTeamError(error?.message || "Unable to load swap requests.");
+      } finally {
+        if (isMounted) {
+          setIsSwapRequestsLoading(false);
+        }
+      }
+    }
+
+    loadSwapRequests();
+    return () => {
+      isMounted = false;
+    };
+  }, [backendSectionId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -210,40 +254,61 @@ export function useTeamsPage(courseId, backendSectionId) {
     visibleTeams[0] ||
     null;
 
-  const pendingRequestMap = useMemo(
-    () =>
-      Object.fromEntries(
-        visibleSwapRequests
-          .filter((request) => request.status === "pending")
-          .map((request) => [request.studentId, request]),
-      ),
-    [visibleSwapRequests],
-  );
+  const pendingRequestMap = useMemo(() => {
+    const pendingRows = visibleSwapRequests.filter(
+      (request) => request.status === "pending",
+    );
+    return Object.fromEntries(
+      pendingRows.map((request) => [String(request.studentId), request]),
+    );
+  }, [visibleSwapRequests]);
 
-  const handleApprove = (requestId) => {
-    setSwapRequestList((currentRequests) =>
-      currentRequests.map((request) =>
-        request.id === requestId ? { ...request, status: "approved" } : request,
-      ),
-    );
-    setSelectedRequest((currentRequest) =>
-      currentRequest?.id === requestId
-        ? { ...currentRequest, status: "approved" }
-        : currentRequest,
-    );
+  const handleApprove = async (requestId) => {
+    setIsSwapDecisionUpdating(true);
+    try {
+      await decideSwapReviewRequest({
+        swapRequestId: requestId,
+        decision: "APPROVED",
+      });
+      setSwapRequestList((currentRequests) =>
+        currentRequests.map((request) =>
+          request.id === requestId ? { ...request, status: "approved" } : request,
+        ),
+      );
+      setSelectedRequest((currentRequest) =>
+        currentRequest?.id === requestId
+          ? { ...currentRequest, status: "approved" }
+          : currentRequest,
+      );
+    } catch (error) {
+      setTeamError(error?.message || "Unable to approve swap request.");
+    } finally {
+      setIsSwapDecisionUpdating(false);
+    }
   };
 
-  const handleReject = (requestId) => {
-    setSwapRequestList((currentRequests) =>
-      currentRequests.map((request) =>
-        request.id === requestId ? { ...request, status: "rejected" } : request,
-      ),
-    );
-    setSelectedRequest((currentRequest) =>
-      currentRequest?.id === requestId
-        ? { ...currentRequest, status: "rejected" }
-        : currentRequest,
-    );
+  const handleReject = async (requestId) => {
+    setIsSwapDecisionUpdating(true);
+    try {
+      await decideSwapReviewRequest({
+        swapRequestId: requestId,
+        decision: "REJECTED",
+      });
+      setSwapRequestList((currentRequests) =>
+        currentRequests.map((request) =>
+          request.id === requestId ? { ...request, status: "rejected" } : request,
+        ),
+      );
+      setSelectedRequest((currentRequest) =>
+        currentRequest?.id === requestId
+          ? { ...currentRequest, status: "rejected" }
+          : currentRequest,
+      );
+    } catch (error) {
+      setTeamError(error?.message || "Unable to reject swap request.");
+    } finally {
+      setIsSwapDecisionUpdating(false);
+    }
   };
 
   const handleGenerateTeams = async () => {
@@ -341,6 +406,8 @@ export function useTeamsPage(courseId, backendSectionId) {
     swapMode,
     selectedSwapMember,
     selectedRequest,
+    isSwapRequestsLoading,
+    isSwapDecisionUpdating,
     isGeneratingTeams,
     setSelectedTeamId,
     setSelectedRequest,
