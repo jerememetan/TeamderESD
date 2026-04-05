@@ -348,6 +348,9 @@ def _add_topics_concentration(
         point_vectors.add(tuple(vector))
 
     if max_points_per_student <= 0:
+        prepared.diagnostics["warnings"].append(
+            "No students have topic preferences; topics criterion was skipped."
+        )
         criterion_meta["topics"] = {
             "type": "concentration",
             "weight_int": weight_int,
@@ -658,6 +661,10 @@ def build_deterministic_objective(
 
     print(f"[LOG] Adding reputation diversity constraints...")
     rep_bucket_map = _numeric_bucket_map([student.reputation for student in students], bucket_count=3)
+    if config.weight_ints["reputation_weight"] != 0 and not rep_bucket_map:
+        prepared.diagnostics["warnings"].append(
+            "No students have reputation scores; reputation criterion was skipped."
+        )
     rep_bucket_count = (max(rep_bucket_map.values()) + 1) if rep_bucket_map else 0
     abs_bound += _add_diversity_from_buckets(
         model=model,
