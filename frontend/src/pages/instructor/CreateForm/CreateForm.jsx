@@ -424,9 +424,11 @@ function CreateForm() {
       }
 
       const result = await sendFormLinks({ section_id: groupId });
-      const data = result?.data || {};
+      // support both envelope { data: {...} } and top-level responses
+      const response = result?.data ?? result ?? {};
+      const summary = response?.summary ?? {};
       setSaveMessage(
-        `Criteria saved and forms dispatched. Generated ${data.summary?.total_students ?? 0} link(s); notification success: ${data.summary?.success_count ?? 0}, failure: ${data.summary?.failure_count ?? 0}.`,
+        `Criteria saved and forms dispatched. Generated ${summary.total_students ?? 0} link(s); notification success: ${summary.success_count ?? 0}, failure: ${summary.failed_count ?? 0}.`,
       );
     } catch (error) {
       setErrorMessage(`Publish failed. ${error.message}`);
