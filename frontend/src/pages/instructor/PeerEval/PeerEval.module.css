@@ -1,0 +1,191 @@
+.page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--td-text-secondary, #51606F);
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+}
+
+.backLink:hover {
+  color: var(--td-text-primary, #1A2233);
+}
+
+.backIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--td-text-primary, #1A2233);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--td-text-secondary, #51606F);
+  margin: 0.4rem 0 0;
+  max-width: 600px;
+}
+
+.heroTags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.notFound {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--td-text-secondary, #51606F);
+  font-size: 1rem;
+}
+
+.initiateSection {
+  margin-bottom: 2rem;
+}
+
+.formRow {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.fieldLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--td-text-secondary, #51606F);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--td-border, #D1D9E0);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--td-text-primary, #1A2233);
+  background: var(--td-bg-surface, #fff);
+  min-width: 240px;
+}
+
+.input:focus {
+  outline: 2px solid var(--td-accent, #0047AB);
+  border-color: transparent;
+}
+
+.messageBox {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.messageSuccess {
+  background: #E8F5E9;
+  color: #2E7D32;
+  border: 1px solid #A5D6A7;
+}
+
+.messageError {
+  background: #FFEBEE;
+  color: #C62828;
+  border: 1px solid #EF9A9A;
+}
+
+.roundInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.roundDetail {
+  font-size: 0.85rem;
+  color: var(--td-text-secondary, #51606F);
+}
+
+.roundDetail strong {
+  color: var(--td-text-primary, #1A2233);
+}
+
+.actionRow {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.deltasTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.deltasTable th,
+.deltasTable td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--td-border, #D1D9E0);
+}
+
+.deltasTable th {
+  font-weight: 600;
+  color: var(--td-text-secondary, #51606F);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.deltaPositive {
+  color: #2E7D32;
+  font-weight: 600;
+}
+
+.deltaNegative {
+  color: #C62828;
+  font-weight: 600;
+}
+
+.deltaNeutral {
+  color: var(--td-text-secondary, #51606F);
+}
+
+.actionIcon {
+  width: 14px;
+  height: 14px;
+}
