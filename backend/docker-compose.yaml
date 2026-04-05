@@ -172,6 +172,10 @@ services:
       ENABLE_SWAGGER: "true"
       PORT: 3013
       SUPABASE_URL: ${SUPABASE_URL}
+      REQUEST_TIMEOUT: 10
+      TEAM_URL: "http://team-service:3007/team"
+      SWAP_REQUEST_URL: "http://swap-request-service:3011/swap-request"
+      FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
     ports:
       - "3013:3013"
 
