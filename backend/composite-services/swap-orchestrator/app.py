@@ -71,10 +71,8 @@ SWAP_CONSTRAINTS_URL = os.getenv(
 COURSE_SERVICE_URL = os.getenv(
     "COURSE_SERVICE_URL", "http://localhost:3017/api/courses"
 ).rstrip("/")
+SECTION_URL = os.getenv("SECTION_URL", "http://localhost:3018/section").rstrip("/")
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team").rstrip("/")
-TEAM_SWAP_OPTIMIZE_URL = os.getenv(
-    "TEAM_SWAP_OPTIMIZE_URL", "http://localhost:3013/team-swap/optimize"
-).rstrip("/")
 TEAM_SWAP_EXECUTE_URL = os.getenv(
     "TEAM_SWAP_EXECUTE_URL", "http://localhost:3013/team-swap/execute"
 ).rstrip("/")
@@ -982,6 +980,65 @@ def _resolve_course_name(course_id):
     return fallback
 
 
+def _resolve_course_summary(course_id):
+    course_id_text = str(course_id) if course_id is not None else ""
+    fallback_name = f"Course {course_id_text}" if course_id_text else "Course"
+    fallback_code = f"COURSE-{course_id_text}" if course_id_text else "COURSE"
+
+    payload, error = _http_json(
+        "GET",
+        COURSE_SERVICE_URL,
+        label="course-service",
+    )
+    if error:
+        return {"course_name": fallback_name, "course_code": fallback_code}
+
+    rows = _extract_course_rows(payload)
+    if not rows:
+        return {"course_name": fallback_name, "course_code": fallback_code}
+
+    target_row = None
+    for row in rows:
+        if _course_row_key(row) == course_id_text:
+            target_row = row
+            break
+
+    if not isinstance(target_row, dict):
+        return {"course_name": fallback_name, "course_code": fallback_code}
+
+    course_name = _course_row_name(target_row) or fallback_name
+    course_code = _pick_first(
+        target_row,
+        [
+            "course_code",
+            "courseCode",
+            "CourseCode",
+            "code",
+            "Code",
+        ],
+    )
+    if course_code is None or not str(course_code).strip():
+        course_code = fallback_code
+
+    return {"course_name": course_name, "course_code": str(course_code).strip()}
+
+
+def _fetch_section_row(section_id):
+    payload, error = _http_json(
+        "GET",
+        f"{SECTION_URL}/{section_id}",
+        label="section-service",
+    )
+    if error:
+        return None, error
+
+    row = _extract_data(payload)
+    if not isinstance(row, dict):
+        return None, {"status": 502, "message": "section-service returned invalid payload"}
+
+    return row, None
+
+
 def _team_name_from_lookup(team_id, team_name_by_id):
     team_id_text = str(team_id) if team_id is not None else ""
     if team_id_text in team_name_by_id:
@@ -1003,6 +1060,29 @@ def _coerce_created_at(row, mapping):
             return str(value)
 
     return _as_iso(_utc_now())
+
+
+def _status_from_value(value):
+    text = str(value or "").strip().upper()
+    return text if text else REQUEST_STATUS_PENDING
+
+
+def _normalize_status_filter(value):
+    if value is None:
+        return None
+    normalized = str(value).strip().upper()
+    if not normalized or normalized == "ALL":
+        return None
+    allowed = {
+        REQUEST_STATUS_PENDING,
+        REQUEST_STATUS_APPROVED,
+        REQUEST_STATUS_REJECTED,
+        REQUEST_STATUS_EXECUTED,
+        REQUEST_STATUS_FAILED,
+    }
+    if normalized not in allowed:
+        raise ValueError("status must be one of all,pending,approved,rejected,executed,failed")
+    return normalized
 
 
 def _to_processed_request(
@@ -1188,70 +1268,6 @@ def _build_student_name_lookup(request_details):
         if text:
             lookup[_int_or_none(student_id)] = text
     return lookup
-
-
-def _normalize_constraints_for_optimizer(constraint_row):
-    normalized = _normalize_constraint_row(constraint_row)
-    if not normalized:
-        return None, {"status": 502, "message": "invalid constraints payload"}
-
-    return {
-        "gpa_variance_level": normalized.get("gpa_variance_level"),
-        "class_avg_gpa": normalized.get("class_avg_gpa"),
-        "require_year_diversity": normalized.get("require_year_diversity"),
-        "max_skill_imbalance": normalized.get("max_skill_imbalance"),
-        "swap_window_days": normalized.get("swap_window_days"),
-    }, None
-
-
-def _build_optimizer_students(student_rows_by_id, student_ids, optimizer_constraints):
-    level = _normalize_variance_level(optimizer_constraints.get("gpa_variance_level"))
-    require_gpa = level in {"strict", "standard"}
-
-    missing_year = []
-    missing_gender = []
-    missing_gpa = []
-    missing_student = []
-
-    students = []
-    for student_id in student_ids:
-        row = student_rows_by_id.get(student_id)
-        if not row:
-            missing_student.append(student_id)
-            continue
-
-        year = _int_or_none(row.get("year"))
-        gender = row.get("gender")
-        gpa = _float_or_none(row.get("gpa"))
-
-        if year is None:
-            missing_year.append(student_id)
-        if not isinstance(gender, str) or not gender.strip():
-            missing_gender.append(student_id)
-        if require_gpa and gpa is None:
-            missing_gpa.append(student_id)
-
-        students.append(
-            {
-                "student_id": student_id,
-                "year": year,
-                "gender": gender,
-                "gpa": gpa,
-                "skills": {},
-            }
-        )
-
-    if missing_student or missing_year or missing_gender or missing_gpa:
-        return None, {
-            "status": 400,
-            "message": "student profile data incomplete for optimization",
-            "missing_student": missing_student,
-            "missing_year": missing_year,
-            "missing_gender": missing_gender,
-            "missing_gpa": missing_gpa,
-        }
-
-    return students, None
 
 
 def _upsert_proposal(cycle_id, proposal_payload):
