@@ -20,7 +20,7 @@ export const STAGE_CONFIG = {
     note: "Teams are available for review, analytics, and swap decisions.",
   },
   confirmed: {
-    label: "Swaps confirmed",
+    label: "Teams finalized",
     tone: "success",
     note: "Swap decisions are finalized and teams are locked for this section.",
   },
