@@ -461,7 +461,6 @@ services:
     depends_on:
       - team-service
       - swap-request-service
-      - formation-config-service
 
   # GraphQL
   student-form-gateway-service:

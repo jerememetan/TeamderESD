@@ -4,7 +4,6 @@ import ModuleBlock from "../../../components/schematic/ModuleBlock";
 import SystemTag from "../../../components/schematic/SystemTag";
 import motionStyles from "../../../components/schematic/motion.module.css";
 import { Button } from "../../../components/ui/button";
-import { mockForms } from "../../../data/mockData";
 import chrome from "../../../styles/instructorChrome.module.css";
 import styles from "./Courses.module.css";
 import { STAGE_CONFIG } from "./logic/stageConfig";
@@ -22,7 +21,7 @@ function Courses() {
     formingSectionIds,
     handleEndCollection,
   } = useCoursesPage();
-  const formMap = mockForms;
+  const formMap = {};
 
   if (loading) {
     return (
