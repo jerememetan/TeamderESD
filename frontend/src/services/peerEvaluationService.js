@@ -248,7 +248,7 @@ export async function getActivePeerEvaluationRoundsBySections(sectionIds = []) {
 }
 
 /**
- * Instructor initiates a peer evaluation round via the dashboard orchestrator.
+ * Instructor initiates a peer evaluation round via peer-eval-notification.
  */
 export async function startPeerEvaluationRound({ sectionId, title, dueAt }) {
   const payload = await fetchJson(`${PEER_EVAL_NOTIFICATION_URL}/initiate`, {
@@ -269,7 +269,7 @@ export async function startPeerEvaluationRound({ sectionId, title, dueAt }) {
 }
 
 /**
- * Instructor closes a peer evaluation round via the dashboard orchestrator.
+ * Instructor closes a peer evaluation round via peer-eval-notification.
  */
 export async function closePeerEvaluationRound(roundId) {
   const payload = await fetchJson(`${PEER_EVAL_NOTIFICATION_URL}/close`, {

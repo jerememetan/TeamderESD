@@ -3,10 +3,6 @@ import { getBackendSectionId } from "../../../../data/backendIds";
 import { fetchCourseByCode } from "../../../../services/courseService";
 import { fetchEnrollmentsBySectionId } from "../../../../services/enrollmentService";
 import { fetchJson } from "../../../../services/httpClient";
-import {
-  getPeerEvaluationRoundSubmissions,
-  getPeerEvaluationRoundsForSection,
-} from "../../../../services/peerEvaluationService";
 import { getSectionById } from "../../../../services/sectionService";
 import {
   buildSectionRoster,
@@ -24,54 +20,6 @@ const DASHBOARD_ANALYTICS_URL =
   import.meta.env.VITE_DASHBOARD_URL ??
   "http://localhost:8000/dashboard";
 
-function buildReputationDeltaReport(round, submissions) {
-  if (!round || !Array.isArray(submissions) || submissions.length === 0) {
-    return {
-      round,
-      deltas: [],
-    };
-  }
-
-  const ratingsByStudent = new Map();
-  for (const submission of submissions) {
-    const evaluateeId = Number(submission?.evaluateeId);
-    const rating = Number(submission?.rating);
-    if (!Number.isInteger(evaluateeId) || !Number.isFinite(rating)) {
-      continue;
-    }
-
-    if (!ratingsByStudent.has(evaluateeId)) {
-      ratingsByStudent.set(evaluateeId, []);
-    }
-    ratingsByStudent.get(evaluateeId).push(rating);
-  }
-
-  const deltas = Array.from(ratingsByStudent.entries())
-    .map(([studentId, ratings]) => {
-      const avgRating =
-        ratings.reduce((sum, value) => sum + value, 0) / ratings.length;
-      const delta = Math.round((avgRating - 3.0) * 10);
-      return {
-        studentId,
-        avgRating,
-        numEvaluations: ratings.length,
-        delta,
-      };
-    })
-    .sort((left, right) => {
-      const absDiff = Math.abs(right.delta) - Math.abs(left.delta);
-      if (absDiff !== 0) {
-        return absDiff;
-      }
-      return right.avgRating - left.avgRating;
-    });
-
-  return {
-    round,
-    deltas,
-  };
-}
-
 async function fetchSectionDashboardAnalytics(sectionId) {
   const payload = await fetchJson(
     `${DASHBOARD_ANALYTICS_URL}?section_id=${encodeURIComponent(sectionId)}`,
@@ -87,6 +35,17 @@ async function fetchSectionDashboardAnalytics(sectionId) {
     teamAnalytics: Array.isArray(data?.team_analytics)
       ? data.team_analytics
       : [],
+    reputationDeltaReport: data?.peer_eval_reputation ?? {
+      has_peer_eval: false,
+      round: null,
+      deltas: [],
+      message: "No peer evaluation data available for this section yet.",
+    },
+    weightRecommendations: data?.weight_recommendations ?? {
+      has_peer_eval: false,
+      criteria_recommendations: [],
+      message: "No peer evaluation data available for this section yet.",
+    },
   };
 }
 
@@ -98,8 +57,15 @@ export function useAnalyticsPage(courseId, groupId) {
   const [sectionAnalytics, setSectionAnalytics] = useState(null);
   const [teamAnalytics, setTeamAnalytics] = useState([]);
   const [reputationDeltaReport, setReputationDeltaReport] = useState({
+    has_peer_eval: false,
     round: null,
     deltas: [],
+    message: "No peer evaluation data available for this section yet.",
+  });
+  const [weightRecommendations, setWeightRecommendations] = useState({
+    has_peer_eval: false,
+    criteria_recommendations: [],
+    message: "No peer evaluation data available for this section yet.",
   });
   const [isLoadingRoster, setIsLoadingRoster] = useState(true);
   const [rosterError, setRosterError] = useState("");
@@ -128,6 +94,17 @@ export function useAnalyticsPage(courseId, groupId) {
         setBackendStudents([]);
         setSectionAnalytics(null);
         setTeamAnalytics([]);
+        setReputationDeltaReport({
+          has_peer_eval: false,
+          round: null,
+          deltas: [],
+          message: "Missing group ID",
+        });
+        setWeightRecommendations({
+          has_peer_eval: false,
+          criteria_recommendations: [],
+          message: "Missing group ID",
+        });
         setRosterError("Missing group ID");
         setIsLoadingRoster(false);
         return;
@@ -139,7 +116,6 @@ export function useAnalyticsPage(courseId, groupId) {
         teamsResult,
         rosterResult,
         analyticsResult,
-        reputationDeltaResult,
       ] = await Promise.allSettled([
         fetchCourseByCode(courseId),
         getSectionById(groupId),
@@ -159,24 +135,18 @@ export function useAnalyticsPage(courseId, groupId) {
           : Promise.resolve({
               sectionAnalytics: null,
               teamAnalytics: [],
+              reputationDeltaReport: {
+                has_peer_eval: false,
+                round: null,
+                deltas: [],
+                message: "No peer evaluation data available for this section yet.",
+              },
+              weightRecommendations: {
+                has_peer_eval: false,
+                criteria_recommendations: [],
+                message: "No peer evaluation data available for this section yet.",
+              },
             }),
-        rosterSectionId
-          ? getPeerEvaluationRoundsForSection(rosterSectionId, {
-              status: "closed",
-            }).then(async (closedRounds) => {
-              const latestClosedRound = Array.isArray(closedRounds)
-                ? closedRounds[0] || null
-                : null;
-              if (!latestClosedRound?.id) {
-                return { round: null, deltas: [] };
-              }
-
-              const submissions = await getPeerEvaluationRoundSubmissions(
-                latestClosedRound.id,
-              );
-              return buildReputationDeltaReport(latestClosedRound, submissions);
-            })
-          : Promise.resolve({ round: null, deltas: [] }),
       ]);
 
       if (!isMounted) {
@@ -215,10 +185,25 @@ export function useAnalyticsPage(courseId, groupId) {
           : [],
       );
       setReputationDeltaReport(
-        reputationDeltaResult.status === "fulfilled" &&
-          reputationDeltaResult.value
-          ? reputationDeltaResult.value
-          : { round: null, deltas: [] },
+        analyticsResult.status === "fulfilled" &&
+          analyticsResult.value?.reputationDeltaReport
+          ? analyticsResult.value.reputationDeltaReport
+          : {
+              has_peer_eval: false,
+              round: null,
+              deltas: [],
+              message: "No peer evaluation data available for this section yet.",
+            },
+      );
+      setWeightRecommendations(
+        analyticsResult.status === "fulfilled" &&
+          analyticsResult.value?.weightRecommendations
+          ? analyticsResult.value.weightRecommendations
+          : {
+              has_peer_eval: false,
+              criteria_recommendations: [],
+              message: "No peer evaluation data available for this section yet.",
+            },
       );
 
       const errors = [];
@@ -240,12 +225,6 @@ export function useAnalyticsPage(courseId, groupId) {
             "Failed to load scenario-2 dashboard analytics",
         );
       }
-      if (reputationDeltaResult.status === "rejected") {
-        errors.push(
-          reputationDeltaResult.reason?.message ||
-            "Failed to load peer evaluation reputation deltas",
-        );
-      }
 
       setRosterError(errors.join(" | "));
       setIsLoadingRoster(false);
@@ -265,6 +244,7 @@ export function useAnalyticsPage(courseId, groupId) {
     sectionAnalytics,
     teamAnalytics,
     reputationDeltaReport,
+    weightRecommendations,
     isLoadingRoster,
     rosterError,
   };

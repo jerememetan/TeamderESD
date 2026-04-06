@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import sys
 
 _SWAGGER_PATH_CANDIDATES = [Path(__file__).resolve().parent, Path(__file__).resolve().parent.parent]
@@ -22,8 +22,7 @@ import json
 app = Flask(__name__)
 CORS(app)
 
-# â”€â”€ Upstream service URLs (overridden via docker-compose env) â”€â”€â”€â”€â”€â”€â”€â”€
-
+# Upstream service URLs
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team")
 STUDENT_PROFILE_URL = os.getenv("STUDENT_PROFILE_URL", "http://localhost:4001/student-profile")
 STUDENT_FORM_SUBMISSIONS_URL = os.getenv(
@@ -73,64 +72,133 @@ def _build_student_lookup(students):
     return student_lookup
 
 
-def _normalize_metrics_payload(section_id, team_metrics, section_metrics):
+def _normalize_metrics_payload(
+    section_id,
+    team_metrics,
+    section_metrics,
+    peer_eval_reputation=None,
+    weight_recommendations=None,
+):
     return {
         "code": 200,
         "data": {
             "section_id": section_id,
             "team_analytics": team_metrics,
             "section_analytics": section_metrics,
-            "weight_recommendations": None,
+            "peer_eval_reputation": peer_eval_reputation
+            or {
+                "has_peer_eval": False,
+                "round": None,
+                "deltas": [],
+                "message": "No peer evaluation data available for this section yet.",
+            },
+            "weight_recommendations": weight_recommendations
+            or {
+                "has_peer_eval": False,
+                "message": "No peer evaluation data available for this section yet.",
+                "criteria_recommendations": [],
+            },
         },
     }
 
 
-def _build_weight_recommendations(section_id, team_metrics, criteria):
-    rounds_payload, err = _fetch(
-        f"{PEER_EVAL_URL}/rounds",
-        params={"section_id": section_id, "status": "closed"},
-        label="peer evaluation service rounds",
-    )
-    if err:
-        return {
-            "has_peer_eval": False,
-            "message": "Peer evaluation analytics unavailable for this section.",
-            "criteria_recommendations": [],
-        }
+def _normalize_round_payload(round_payload):
+    if not isinstance(round_payload, dict):
+        return None
 
-    rounds = rounds_payload.get("data", []) if isinstance(rounds_payload, dict) else []
-    if not rounds:
-        return {
-            "has_peer_eval": False,
-            "message": "No closed peer evaluation data available for this section yet.",
-            "criteria_recommendations": [],
-        }
-
-    latest_round = rounds[0]
-    round_id = latest_round.get("round_id")
+    round_id = round_payload.get("round_id") or round_payload.get("id")
     if not round_id:
+        return None
+
+    title = (
+        round_payload.get("title")
+        or round_payload.get("name")
+        or "Peer Evaluation"
+    )
+    return {
+        "id": str(round_id),
+        "title": str(title),
+    }
+
+
+def _build_reputation_delta_report(round_payload, submissions):
+    normalized_round = _normalize_round_payload(round_payload)
+    if not normalized_round:
+        return {
+            "has_peer_eval": False,
+            "round": None,
+            "deltas": [],
+            "message": "Peer evaluation round metadata is incomplete.",
+        }
+
+    if not isinstance(submissions, list) or not submissions:
+        return {
+            "has_peer_eval": False,
+            "round": normalized_round,
+            "deltas": [],
+            "message": "Peer evaluation round exists, but no submissions were found.",
+        }
+
+    ratings_by_student = {}
+    for submission in submissions:
+        evaluatee_id = submission.get("evaluateeId", submission.get("evaluatee_id"))
+        rating = submission.get("rating")
+
+        try:
+            evaluatee_id = int(evaluatee_id)
+            rating = float(rating)
+        except (TypeError, ValueError):
+            continue
+
+        ratings_by_student.setdefault(evaluatee_id, []).append(rating)
+
+    deltas = []
+    for student_id, ratings in ratings_by_student.items():
+        if not ratings:
+            continue
+
+        avg_rating = sum(ratings) / len(ratings)
+        deltas.append(
+            {
+                "studentId": student_id,
+                "avgRating": round(avg_rating, 4),
+                "numEvaluations": len(ratings),
+                "delta": round((avg_rating - 3.0) * 10),
+            }
+        )
+
+    deltas.sort(
+        key=lambda item: (
+            -abs(item.get("delta", 0)),
+            -(item.get("avgRating") or 0),
+        )
+    )
+
+    return {
+        "has_peer_eval": bool(deltas),
+        "round": normalized_round,
+        "deltas": deltas,
+        "message": (
+            "Peer evaluation data available."
+            if deltas
+            else "Peer evaluation submissions were invalid for reputation analysis."
+        ),
+    }
+
+
+def _build_weight_recommendations(team_metrics, criteria, round_payload, submissions):
+    normalized_round = _normalize_round_payload(round_payload)
+    if not normalized_round:
         return {
             "has_peer_eval": False,
             "message": "Peer evaluation round metadata is incomplete.",
             "criteria_recommendations": [],
         }
 
-    submissions_payload, err = _fetch(
-        f"{PEER_EVAL_URL}/rounds/{round_id}/submissions",
-        label="peer evaluation service submissions",
-    )
-    if err:
+    if not isinstance(submissions, list) or not submissions:
         return {
             "has_peer_eval": False,
-            "message": "Peer evaluation submissions are not available right now.",
-            "criteria_recommendations": [],
-        }
-
-    submissions = submissions_payload.get("data", []) if isinstance(submissions_payload, dict) else []
-    if not submissions:
-        return {
-            "has_peer_eval": False,
-            "peer_eval_round_id": round_id,
+            "peer_eval_round_id": normalized_round["id"],
             "message": "Peer evaluation round exists, but no submissions were found.",
             "criteria_recommendations": [],
         }
@@ -140,18 +208,105 @@ def _build_weight_recommendations(section_id, team_metrics, criteria):
         criteria=criteria,
         submissions=submissions,
     )
-    recommendations["peer_eval_round_id"] = round_id
+    recommendations["peer_eval_round_id"] = normalized_round["id"]
     return recommendations
 
 
-register_swagger(app, 'dashboard-orchestrator-service')
+def _build_peer_eval_analytics_payload(section_id, team_metrics, criteria):
+    rounds_payload, err = _fetch(
+        f"{PEER_EVAL_URL}/rounds",
+        params={"section_id": section_id, "status": "closed"},
+        label="peer evaluation service rounds",
+    )
+    if err:
+        return {
+            "reputation": {
+                "has_peer_eval": False,
+                "round": None,
+                "deltas": [],
+                "message": "Peer evaluation analytics unavailable for this section.",
+            },
+            "weight_recommendations": {
+                "has_peer_eval": False,
+                "message": "Peer evaluation analytics unavailable for this section.",
+                "criteria_recommendations": [],
+            },
+        }
+
+    rounds = rounds_payload.get("data", []) if isinstance(rounds_payload, dict) else []
+    latest_round = rounds[0] if rounds else None
+
+    if not latest_round:
+        return {
+            "reputation": {
+                "has_peer_eval": False,
+                "round": None,
+                "deltas": [],
+                "message": "No closed peer evaluation data available for this section yet.",
+            },
+            "weight_recommendations": {
+                "has_peer_eval": False,
+                "message": "No closed peer evaluation data available for this section yet.",
+                "criteria_recommendations": [],
+            },
+        }
+
+    normalized_round = _normalize_round_payload(latest_round)
+    if not normalized_round:
+        return {
+            "reputation": {
+                "has_peer_eval": False,
+                "round": None,
+                "deltas": [],
+                "message": "Peer evaluation round metadata is incomplete.",
+            },
+            "weight_recommendations": {
+                "has_peer_eval": False,
+                "message": "Peer evaluation round metadata is incomplete.",
+                "criteria_recommendations": [],
+            },
+        }
+
+    submissions_payload, err = _fetch(
+        f"{PEER_EVAL_URL}/rounds/{normalized_round['id']}/submissions",
+        label="peer evaluation service submissions",
+    )
+    if err:
+        return {
+            "reputation": {
+                "has_peer_eval": False,
+                "round": normalized_round,
+                "deltas": [],
+                "message": "Peer evaluation submissions are not available right now.",
+            },
+            "weight_recommendations": {
+                "has_peer_eval": False,
+                "peer_eval_round_id": normalized_round["id"],
+                "message": "Peer evaluation submissions are not available right now.",
+                "criteria_recommendations": [],
+            },
+        }
+
+    submissions = submissions_payload.get("data", []) if isinstance(submissions_payload, dict) else []
+    return {
+        "reputation": _build_reputation_delta_report(normalized_round, submissions),
+        "weight_recommendations": _build_weight_recommendations(
+            team_metrics=team_metrics,
+            criteria=criteria,
+            round_payload=normalized_round,
+            submissions=submissions,
+        ),
+    }
+
+
+register_swagger(app, "dashboard-orchestrator-service")
+
 
 @app.route("/dashboard", methods=["GET"])
 def get_dashboard():
     section_id = request.args.get("section_id")
     # If no section_id provided, return a global dashboard summary
     if not section_id:
-        # Fetch courses, sections, and enrollments and compute totals
         # Fetch courses directly from OutSystems.
         courses_data, err = _fetch(COURSES_URL, label="courses service")
         if err or not courses_data:
@@ -173,60 +328,67 @@ def get_dashboard():
         total_groups = len([s for s in sections if s.get("is_active") is True])
         total_students = len(enrollments)
 
-        return jsonify({
-            "code": 200,
-            "data": {
-                "totalCourses": total_courses,
-                "totalGroups": total_groups,
-                "totalStudents": total_students,
-                "pendingSwapRequests": 0,
-            },
-        }), 200
-
-    #  1. Fetch teams 
-    team_data, err = _fetch(
-        TEAM_URL, params={"section_id": section_id}, label="team service"
-    )
-    if err:
-        return jsonify({"code": 502, "message": err}), 502
-
-    teams = team_data.get("data", {}).get("teams", [])
-    if not teams:
-        return jsonify({
-            "code": 200,
-            "data": {
-                "section_id": section_id,
-                "team_analytics": [],
-                "section_analytics": {},
-                "weight_recommendations": {
-                    "has_peer_eval": False,
-                    "message": "No teams found for this section.",
-                    "criteria_recommendations": [],
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "totalCourses": total_courses,
+                    "totalGroups": total_groups,
+                    "totalStudents": total_students,
+                    "pendingSwapRequests": 0,
                 },
-                "message": "no teams found for this section"
             }
-        }), 200
+        ), 200
 
-    #  2. Fetch student profiles 
+    # 1. Fetch teams
+    team_data, err = _fetch(TEAM_URL, params={"section_id": section_id}, label="team service")
+    if err:
+        return jsonify({"code": 502, "message": err}), 502
+
+    teams = team_data.get("data", {}).get("teams", []) if isinstance(team_data, dict) else []
+    if not teams:
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "section_id": section_id,
+                    "team_analytics": [],
+                    "section_analytics": {},
+                    "peer_eval_reputation": {
+                        "has_peer_eval": False,
+                        "round": None,
+                        "deltas": [],
+                        "message": "No teams found for this section.",
+                    },
+                    "weight_recommendations": {
+                        "has_peer_eval": False,
+                        "message": "No teams found for this section.",
+                        "criteria_recommendations": [],
+                    },
+                    "message": "no teams found for this section",
+                },
+            }
+        ), 200
+
+    # 2. Fetch student profiles
     profile_data, err = _fetch(
-        STUDENT_PROFILE_URL, params={"section_id": section_id}, label="student profile service"
+        STUDENT_PROFILE_URL,
+        params={"section_id": section_id},
+        label="student profile service",
     )
     if err:
         return jsonify({"code": 502, "message": err}), 502
 
-    students = profile_data.get("data", {}).get("students", [])
+    students = profile_data.get("data", {}).get("students", []) if isinstance(profile_data, dict) else []
 
-    # 2b. Fetch student form submissions (optional) 
-    form_submissions_data, err = _fetch(
+    # 2b. Fetch student form submissions (optional)
+    _fetch(
         STUDENT_FORM_SUBMISSIONS_URL,
         params={"section_id": section_id},
         label="student form service",
     )
-    form_submissions = []
-    if form_submissions_data:
-        form_submissions = form_submissions_data.get("data", [])
 
-    #  3. Fetch formation config (criteria + skills + topics) 
+    # 3. Fetch formation config (criteria + skills + topics)
     formation_config_data, err = _fetch(
         FORMATION_CONFIG_URL,
         params={"section_id": section_id},
@@ -241,235 +403,28 @@ def get_dashboard():
     if not isinstance(criteria, dict):
         criteria = {}
 
-    topics = formation_config_data.get("topics")
-    if not isinstance(topics, list):
-        topics = []
-
     skills = formation_config_data.get("skills")
     if not isinstance(skills, list):
         skills = []
 
     student_lookup = _build_student_lookup(students)
-    team_metrics = [
-        compute_team_metrics(team, student_lookup, skills)
-        for team in teams
-    ]
+    team_metrics = [compute_team_metrics(team, student_lookup, skills) for team in teams]
     section_metrics = compute_section_metrics(team_metrics)
 
-    return jsonify(_normalize_metrics_payload(section_id, team_metrics, section_metrics)), 200
-
-@app.route("/dashboard/peer-eval/initiate", methods=["POST"])
-def initiate_peer_eval():
-    """
-    Instructor initiates a peer evaluation round.
-
-    Flow:
-    1. Create round in Peer Evaluation Service
-    2. Fetch team rosters from Team Service
-    3. Fetch student profiles (for emails) from Student Profile Service
-    4. Send notification emails via Notification Service (fire-and-forget)
-    5. Return the created round info
-    """
-    payload = request.get_json()
-    if not payload:
-        return jsonify({"code": 400, "message": "request body is required"}), 400
-
-    section_id = payload.get("section_id")
-    if not section_id:
-        return jsonify({"code": 400, "message": "section_id is required"}), 400
-
-    title = payload.get("title", f"Peer Evaluation — Section {section_id[:8]}")
-    due_at = payload.get("due_at")
-
-    # ── 1. Create round in Peer Evaluation Service ────────────────────
-    try:
-        round_resp = requests.post(
-            f"{PEER_EVAL_URL}/rounds",
-            json={"section_id": section_id, "title": title, "due_at": due_at},
-            timeout=REQUEST_TIMEOUT,
-        )
-        round_data = round_resp.json()
-        if round_resp.status_code == 409:
-            return jsonify(round_data), 409
-        round_resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"code": 502, "message": f"failed to create peer eval round: {str(e)}"}), 502
-
-    created_round = round_data.get("data", {})
-    round_id = created_round.get("round_id")
-
-    # ── 2. Fetch team rosters ─────────────────────────────────────────
-    team_data, err = _fetch(
-        TEAM_URL, params={"section_id": section_id}, label="team service"
-    )
-    if err:
-        return jsonify({
-            "code": 200,
-            "data": {
-                "round": created_round,
-                "notification_status": "skipped — could not fetch teams",
-            },
-        }), 200
-
-    teams = team_data.get("data", {}).get("teams", [])
-
-    # ── 3. Fetch student profiles for emails ──────────────────────────
-    profile_data, err = _fetch(
-        STUDENT_PROFILE_URL, params={"section_id": section_id}, label="student profile service"
+    peer_eval_analytics = _build_peer_eval_analytics_payload(
+        section_id=section_id,
+        team_metrics=team_metrics,
+        criteria=criteria,
     )
 
-    student_email_map = {}
-    if profile_data:
-        for s in profile_data.get("data", {}).get("students", []):
-            sid = s.get("student_id")
-            email = s.get("profile", {}).get("email")
-            if sid and email:
-                student_email_map[sid] = email
-
-    # Fallback: if no emails found from profiles, fetch directly from student service
-    if not student_email_map:
-        STUDENT_SERVICE_URL = os.getenv(
-            "STUDENT_SERVICE_URL",
-            "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student",
-        )
-        all_student_ids = set()
-        for team in teams:
-            for student in team.get("students", []):
-                sid = student.get("student_id")
-                if sid:
-                    all_student_ids.add(sid)
-
-        for sid in all_student_ids:
-            try:
-                student_data, _ = _fetch(f"{STUDENT_SERVICE_URL}/{sid}", label="student service")
-                if student_data:
-                    email = student_data.get("data", {}).get("email")
-                    if email:
-                        student_email_map[sid] = email
-            except Exception:
-                pass
-
-    # ── 4. Send notification emails ───────────────────────────────────
-    eval_link = payload.get("eval_link", f"http://localhost:5173/student/peer-evaluation/{round_id}")
-    notification_results = {"sent": 0, "failed": 0, "skipped": 0}
-
-    for team in teams:
-        for student in team.get("students", []):
-            sid = student.get("student_id")
-            email = student_email_map.get(sid)
-            if not email:
-                notification_results["skipped"] += 1
-                continue
-
-            email_payload = {
-                "to": email,
-                "subject": f"Peer Evaluation Round — {title}",
-                "body": (
-                    f"Hello,\n\n"
-                    f"A new peer evaluation round has been initiated for your section.\n\n"
-                    f"Please evaluate your teammates using the link below:\n"
-                    f"{eval_link}\n\n"
-                    f"Due date: {due_at or 'To be announced'}\n\n"
-                    f"Thank you."
-                ),
-                "metadata": {
-                    "event_type": "PeerEvalInitiated",
-                    "round_id": round_id,
-                    "student_id": sid,
-                    "section_id": section_id,
-                },
-            }
-
-            try:
-                notif_resp = requests.post(
-                    f"{NOTIFICATION_URL}/publish-email",
-                    json=email_payload,
-                    timeout=REQUEST_TIMEOUT,
-                )
-                if notif_resp.status_code == 200:
-                    notification_results["sent"] += 1
-                else:
-                    notification_results["failed"] += 1
-            except Exception:
-                notification_results["failed"] += 1
-
-    # ── 5. Return result ──────────────────────────────────────────────
-    return jsonify({
-        "code": 201,
-        "data": {
-            "round": created_round,
-            "teams_count": len(teams),
-            "notification_results": notification_results,
-        },
-    }), 201
-
-
-@app.route("/dashboard/peer-eval/close", methods=["POST"])
-def close_peer_eval():
-    """
-    Instructor closes a peer evaluation round.
-
-    Flow:
-    1. Close the round in Peer Evaluation Service (returns reputation deltas)
-    2. Push each delta to the Reputation Service
-    3. Return summary
-    """
-    payload = request.get_json()
-    if not payload:
-        return jsonify({"code": 400, "message": "request body is required"}), 400
-
-    round_id = payload.get("round_id")
-    if not round_id:
-        return jsonify({"code": 400, "message": "round_id is required"}), 400
-
-    REPUTATION_URL = os.getenv("REPUTATION_URL", "http://localhost:3006/reputation")
-
-    # ── 1. Close round and get deltas ─────────────────────────────────
-    try:
-        close_resp = requests.post(
-            f"{PEER_EVAL_URL}/rounds/{round_id}/close",
-            json={},
-            timeout=REQUEST_TIMEOUT,
-        )
-        close_data = close_resp.json()
-        close_resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"code": 502, "message": f"failed to close peer eval round: {str(e)}"}), 502
-
-    round_info = close_data.get("data", {}).get("round", {})
-    deltas = close_data.get("data", {}).get("reputation_deltas", [])
-
-    # ── 2. Push deltas to Reputation Service ──────────────────────────
-    reputation_results = {"updated": 0, "failed": 0}
-
-    for delta_entry in deltas:
-        student_id = delta_entry.get("student_id")
-        delta = delta_entry.get("delta", 0)
-
-        if delta == 0:
-            continue
-
-        try:
-            rep_resp = requests.put(
-                f"{REPUTATION_URL}/{student_id}",
-                json={"delta": delta},
-                timeout=REQUEST_TIMEOUT,
-            )
-            if rep_resp.status_code == 200:
-                reputation_results["updated"] += 1
-            else:
-                reputation_results["failed"] += 1
-        except Exception:
-            reputation_results["failed"] += 1
-
-    return jsonify({
-        "code": 200,
-        "data": {
-            "round": round_info,
-            "reputation_deltas": deltas,
-            "reputation_update_results": reputation_results,
-        },
-    }), 200
+    payload = _normalize_metrics_payload(
+        section_id,
+        team_metrics,
+        section_metrics,
+        peer_eval_reputation=peer_eval_analytics.get("reputation"),
+        weight_recommendations=peer_eval_analytics.get("weight_recommendations"),
+    )
+    return jsonify(payload), 200
 
 
 @app.route("/dashboard/health", methods=["GET"])
@@ -479,4 +434,3 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 4003)), debug=True)
-

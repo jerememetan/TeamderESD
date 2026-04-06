@@ -59,7 +59,7 @@ COMPOSITE_SERVICES: List[ServiceDoc] = [
     ServiceDoc("formation-config-service", "composite", "http://localhost:4000", "/formation-config", ["/formation-config", "/health"]),
     ServiceDoc("student-profile-service", "composite", "http://localhost:4001", "/student-profile", ["/student-profile", "/health"]),
     ServiceDoc("team-formation-service", "composite", "http://localhost:4002", "/team-formation", ["/team-formation", "/teams", "/health"]),
-    ServiceDoc("dashboard-orchestrator-service", "composite", "http://localhost:4003", "/dashboard", ["/dashboard", "/dashboard/peer-eval/initiate", "/dashboard/peer-eval/close", "/dashboard/health"]),
+    ServiceDoc("dashboard-orchestrator-service", "composite", "http://localhost:4003", "/dashboard", ["/dashboard", "/dashboard/health"]),
     ServiceDoc("formation-notification-service", "composite", "http://localhost:4004", "/formation-notifications", ["/formation-notifications", "/health"]),
     ServiceDoc("swap-orchestrator-service", "composite", "http://localhost:4005", "/swap-orchestrator", ["/swap-orchestrator/submission/requests", "/swap-orchestrator/review/requests", "/swap-orchestrator/review/requests/{swap_request_id}/decision", "/swap-orchestrator/sections/{section_id}/confirm", "/swap-orchestrator/student-team", "/health"]),
     ServiceDoc("student-form-submission-service", "composite", "http://localhost:4006", "/student-form-submission", ["/student-form-submission/submit"]),

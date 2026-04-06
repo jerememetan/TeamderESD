@@ -18,8 +18,8 @@ import {
 } from "recharts";
 import GroupChip from "../../../components/schematic/GroupChip";
 import ModuleBlock from "../../../components/schematic/ModuleBlock";
-import SystemTag from "../../../components/schematic/SystemTag";
 import {
+  buildPeerEvalReputationData,
   buildScenario2TeamDrilldown,
   buildSiblingGroupSummaryData,
   buildScenario2BuddyFulfillmentData,
@@ -28,6 +28,7 @@ import {
   buildScenario2RadarData,
   buildScenario2TeamLegend,
   buildScenario2TeamQualityData,
+  buildWeightRecommendationsData,
 } from "../../../adapters/analyticsAdapter";
 import { Button } from "../../../components/ui/button";
 import { useAnalyticsPage } from "./logic/useAnalyticsPage";
@@ -61,6 +62,7 @@ function Analytics() {
     sectionAnalytics,
     teamAnalytics,
     reputationDeltaReport,
+    weightRecommendations,
     rosterError,
   } = useAnalyticsPage(courseId, groupId);
 
@@ -129,10 +131,17 @@ function Analytics() {
 
   const totalStudents = backendStudents.length || selectedGroup.studentsCount;
   const averageStudentsPerTeam = totalStudents / (groupTeams.length || 1);
-  const reputationDeltaRows = Array.isArray(reputationDeltaReport?.deltas)
-    ? reputationDeltaReport.deltas
-    : [];
-  const reputationDeltaRound = reputationDeltaReport?.round || null;
+  const reputationData = buildPeerEvalReputationData(reputationDeltaReport);
+  const recommendationData = buildWeightRecommendationsData(weightRecommendations);
+  const reputationDeltaRows = reputationData.deltas;
+  const reputationDeltaRound = reputationData.round;
+  const hasPeerEvalData = reputationData.hasPeerEval || recommendationData.hasPeerEval;
+
+  function recommendationToneClass(recommendation) {
+    if (recommendation === "positive") return styles.recIncrease;
+    if (recommendation === "negative") return styles.recFlag;
+    return styles.recNeutral;
+  }
   return (
     <div className={styles.page}>
       <Link to="/instructor/courses" className={styles.backLink}>
@@ -459,70 +468,126 @@ function Analytics() {
           </div>
         </ModuleBlock>
 
-        <ModuleBlock
-          componentId="MOD-A10"
-          eyebrow="Peer Evaluation"
-          title="Reputation Delta Summary"
-          className={`${styles.chartModule} ${styles.fullSpan}`}
-        >
-          {reputationDeltaRound ? (
-            <p className={styles.summaryNote}>
-              Latest closed round:{" "}
-              {reputationDeltaRound.title || "Peer Evaluation"} (
-              {String(reputationDeltaRound.id || "").slice(0, 8)})
-            </p>
-          ) : (
-            <p className={styles.summaryNote}>
-              No closed peer evaluation round found for this section yet.
-            </p>
-          )}
+        {hasPeerEvalData ? (
+          <>
+            <ModuleBlock
+              componentId="MOD-A10"
+              eyebrow="Peer Evaluation"
+              title="Reputation Delta Summary"
+              className={`${styles.chartModule} ${styles.fullSpan}`}
+            >
+              {reputationDeltaRound ? (
+                <p className={styles.summaryNote}>
+                  Latest closed round:{" "}
+                  {reputationDeltaRound.title || "Peer Evaluation"} ({
+                    String(reputationDeltaRound.id || "").slice(0, 8)
+                  })
+                </p>
+              ) : (
+                <p className={styles.summaryNote}>{reputationData.message}</p>
+              )}
 
-          {reputationDeltaRows.length > 0 ? (
-            <table className={styles.deltasTable}>
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Avg Rating</th>
-                  <th>Evaluations</th>
-                  <th>Reputation Delta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reputationDeltaRows.map((delta) => {
-                  const profile = profileByStudentId.get(delta.studentId);
-                  const deltaClass =
-                    delta.delta > 0
-                      ? styles.deltaPositive
-                      : delta.delta < 0
-                        ? styles.deltaNegative
-                        : styles.deltaNeutral;
-                  return (
-                    <tr key={`delta-${delta.studentId}`}>
-                      <td>
-                        {profile?.name || `Student ${delta.studentId}`}
-                        <br />
-                        <small className={styles.summarySubtle}>
-                          ID: {delta.studentId}
-                        </small>
-                      </td>
-                      <td>{Number(delta.avgRating || 0).toFixed(2)}</td>
-                      <td>{delta.numEvaluations}</td>
-                      <td className={deltaClass}>
-                        {delta.delta > 0 ? "+" : ""}
-                        {delta.delta}
-                      </td>
+              {reputationDeltaRows.length > 0 ? (
+                <table className={styles.deltasTable}>
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Avg Rating</th>
+                      <th>Evaluations</th>
+                      <th>Reputation Delta</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          ) : (
+                  </thead>
+                  <tbody>
+                    {reputationDeltaRows.map((delta) => {
+                      const profile = profileByStudentId.get(delta.studentId);
+                      const deltaClass =
+                        delta.delta > 0
+                          ? styles.deltaPositive
+                          : delta.delta < 0
+                            ? styles.deltaNegative
+                            : styles.deltaNeutral;
+                      return (
+                        <tr key={`delta-${delta.studentId}`}>
+                          <td>
+                            {profile?.name || `Student ${delta.studentId}`}
+                            <br />
+                            <small className={styles.summarySubtle}>
+                              ID: {delta.studentId}
+                            </small>
+                          </td>
+                          <td>{Number(delta.avgRating || 0).toFixed(2)}</td>
+                          <td>{delta.numEvaluations}</td>
+                          <td className={deltaClass}>{formatDelta(delta.delta)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <p className={styles.summaryNote}>{reputationData.message}</p>
+              )}
+            </ModuleBlock>
+
+            <ModuleBlock
+              componentId="MOD-A11"
+              eyebrow="Formation Insights"
+              title="Peer Evaluation Insights"
+              className={`${styles.chartModule} ${styles.fullSpan}`}
+            >
+              {recommendationData.hasPeerEval ? (
+                <>
+                  <div className={styles.recommendationHeader}>
+                    <p>
+                      Based on {recommendationData.totalEvalCount} peer evaluations
+                      across {recommendationData.teamsWithPeerEval} teams.
+                    </p>
+                  </div>
+                  {recommendationData.recommendationRows.length ? (
+                    <div className={styles.recommendationGrid}>
+                      {recommendationData.recommendationRows.map((item) => (
+                        <article
+                          key={`recommendation-${item.criterion}`}
+                          className={styles.recommendationCard}
+                        >
+                          <div className={styles.recommendationCardTop}>
+                            <p className={styles.recCriterion}>{item.criterionLabel}</p>
+                            <span
+                              className={`${styles.recBadge} ${recommendationToneClass(item.recommendation)}`}
+                            >
+                              {item.associationLabel}
+                            </span>
+                          </div>
+                          <p className={styles.recMeta}>
+                            {item.insightLabel} | Rating difference: {formatDelta(item.ratingDelta)}
+                          </p>
+                          <p className={styles.recFooter}>
+                            <span>Current Weight: {item.currentWeight.toFixed(2)}</span>
+                            <span>Qualified Teams: {item.qualifiedTeamCount}</span>
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.summaryNote}>{recommendationData.message}</p>
+                  )}
+                </>
+              ) : (
+                <p className={styles.summaryNote}>{recommendationData.message}</p>
+              )}
+            </ModuleBlock>
+          </>
+        ) : (
+          <ModuleBlock
+            componentId="MOD-A10"
+            eyebrow="Peer Evaluation"
+            title="Peer Evaluation Data"
+            className={`${styles.chartModule} ${styles.fullSpan}`}
+          >
             <p className={styles.summaryNote}>
-              No peer evaluation submissions were available to calculate
-              reputation deltas.
+              No peer eval data available yet.
             </p>
-          )}
-        </ModuleBlock>
+          </ModuleBlock>
+        )}
       </section>
     </div>
   );

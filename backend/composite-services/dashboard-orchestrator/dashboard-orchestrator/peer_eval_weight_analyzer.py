@@ -7,7 +7,6 @@ so it can be reused and unit-tested independently.
 from math import log
 
 
-MIN_EVALS_PER_TEAM = 3
 STRONG_DELTA_THRESHOLD = 0.5
 
 
@@ -98,39 +97,15 @@ def _criterion_label(weight_key):
     return weight_key.replace("_weight", "").replace("_", " ").title()
 
 
-def _confidence_for_samples(samples):
-    if not samples:
-        return 0.0
-    avg_eval_count = sum(sample["eval_count"] for sample in samples) / len(samples)
-    team_factor = min(1.0, len(samples) / 4.0)
-    eval_factor = min(1.0, avg_eval_count / 5.0)
-    return round(team_factor * 0.45 + eval_factor * 0.55, 2)
-
-
-def _recommendation_from_delta(delta):
-    if delta >= STRONG_DELTA_THRESHOLD:
-        return "INCREASE", "strong_positive"
-    if delta <= -STRONG_DELTA_THRESHOLD:
-        return "FLAG_REVIEW", "negative"
-    return "KEEP_OR_SLIGHTLY_REDUCE", "weak_or_none"
-
-
-def _reasoning_for_recommendation(association, delta, low_bucket_rating, high_bucket_rating):
-    if association == "strong_positive":
-        return (
-            "Teams with stronger criterion outcomes received higher peer ratings "
-            f"(+{delta:.2f} rating delta: {high_bucket_rating:.2f} vs {low_bucket_rating:.2f})."
-        )
-    if association == "negative":
-        return (
-            "Teams with stronger criterion outcomes received lower peer ratings "
-            f"({delta:.2f} rating delta: {high_bucket_rating:.2f} vs {low_bucket_rating:.2f}). "
-            "Flag for instructor review before increasing this weight."
-        )
-    return (
-        "Criterion outcomes showed weak/no rating separation "
-        f"({delta:.2f} rating delta: {high_bucket_rating:.2f} vs {low_bucket_rating:.2f})."
-    )
+def _low_sample_recommendation(base_payload, samples):
+    avg_rating = sum(sample["avg_rating"] for sample in samples) / len(samples) if samples else None
+    return {
+        **base_payload,
+        "association": "positive" if (avg_rating or 0) >= 3.0 else "negative",
+        "rating_delta": 0.0,
+        "high_bucket_avg_rating": round(avg_rating, 4) if avg_rating is not None else None,
+        "low_bucket_avg_rating": round(avg_rating, 4) if avg_rating is not None else None,
+    }
 
 
 def _analyze_single_criterion(weight_key, current_weight, team_metrics, team_rating_summary, extractor):
@@ -139,8 +114,6 @@ def _analyze_single_criterion(weight_key, current_weight, team_metrics, team_rat
         team_id = str(team_metric.get("team_id"))
         rating_summary = team_rating_summary.get(team_id)
         if not rating_summary:
-            continue
-        if rating_summary["eval_count"] < MIN_EVALS_PER_TEAM:
             continue
 
         criterion_score = extractor(team_metric)
@@ -159,36 +132,17 @@ def _analyze_single_criterion(weight_key, current_weight, team_metrics, team_rat
         "criterion": weight_key,
         "criterion_label": _criterion_label(weight_key),
         "current_weight": _safe_number(current_weight, default=0.0),
-        "min_evals_per_team": MIN_EVALS_PER_TEAM,
         "qualified_team_count": len(samples),
     }
 
     if len(samples) < 2:
-        return {
-            **base_payload,
-            "association": "insufficient_data",
-            "recommendation": "INSUFFICIENT_DATA",
-            "confidence": 0.0,
-            "rating_delta": None,
-            "high_bucket_avg_rating": None,
-            "low_bucket_avg_rating": None,
-            "reasoning": "Not enough qualified team peer-evaluation samples for this criterion.",
-        }
+        return _low_sample_recommendation(base_payload, samples)
 
     samples_sorted = sorted(samples, key=lambda item: item["criterion_score"])
     midpoint = len(samples_sorted) // 2
 
     if midpoint == 0:
-        return {
-            **base_payload,
-            "association": "insufficient_data",
-            "recommendation": "INSUFFICIENT_DATA",
-            "confidence": 0.0,
-            "rating_delta": None,
-            "high_bucket_avg_rating": None,
-            "low_bucket_avg_rating": None,
-            "reasoning": "Not enough sample spread to compare high vs low criterion buckets.",
-        }
+        return _low_sample_recommendation(base_payload, samples)
 
     low_bucket = samples_sorted[:midpoint]
     high_bucket = samples_sorted[-midpoint:]
@@ -196,20 +150,14 @@ def _analyze_single_criterion(weight_key, current_weight, team_metrics, team_rat
     high_bucket_rating = sum(sample["avg_rating"] for sample in high_bucket) / len(high_bucket)
     rating_delta = high_bucket_rating - low_bucket_rating
 
-    recommendation, association = _recommendation_from_delta(rating_delta)
-    confidence = _confidence_for_samples(samples)
+    association = "positive" if rating_delta >= 0 else "negative"
 
     return {
         **base_payload,
         "association": association,
-        "recommendation": recommendation,
-        "confidence": confidence,
         "rating_delta": round(rating_delta, 4),
         "high_bucket_avg_rating": round(high_bucket_rating, 4),
         "low_bucket_avg_rating": round(low_bucket_rating, 4),
-        "reasoning": _reasoning_for_recommendation(
-            association, rating_delta, low_bucket_rating, high_bucket_rating
-        ),
     }
 
 
@@ -236,7 +184,6 @@ def analyze_peer_eval_weight_recommendations(team_metrics, criteria, submissions
 
     recommendations.sort(
         key=lambda item: (
-            item.get("recommendation") == "INSUFFICIENT_DATA",
             -(item.get("confidence") or 0.0),
             item.get("criterion", ""),
         )
@@ -246,6 +193,5 @@ def analyze_peer_eval_weight_recommendations(team_metrics, criteria, submissions
         "has_peer_eval": bool(team_rating_summary),
         "total_eval_count": total_eval_count,
         "teams_with_peer_eval": len(team_rating_summary),
-        "min_evals_per_team": MIN_EVALS_PER_TEAM,
         "criteria_recommendations": recommendations,
     }

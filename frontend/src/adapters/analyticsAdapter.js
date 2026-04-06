@@ -314,3 +314,75 @@ export function buildScenario2TeamDrilldown(
     mbtiDistribution: toDistributionRows(current?.mbti_distribution, false),
   };
 }
+
+export function buildPeerEvalReputationData(report = null) {
+  const payload = report && typeof report === "object" ? report : {};
+  const rows = Array.isArray(payload.deltas) ? payload.deltas : [];
+
+  function effectDescription(delta) {
+    const magnitude = Math.abs(Number(delta) || 0).toFixed(2);
+    if (delta > 0) return `Improves reputation by ${magnitude} points`;
+    if (delta < 0) return `Lowers reputation by ${magnitude} points`;
+    return "No visible change in reputation";
+  }
+
+  return {
+    hasPeerEval: Boolean(payload.has_peer_eval),
+    message: toNonEmptyString(
+      payload.message,
+      "No peer evaluation data available for this section yet.",
+    ),
+    round:
+      payload.round && typeof payload.round === "object"
+        ? {
+            id: toNonEmptyString(payload.round.id),
+            title: toNonEmptyString(payload.round.title, "Peer Evaluation"),
+          }
+        : null,
+    deltas: rows.map((item) => ({
+      studentId: toNumber(item?.studentId, 0),
+      avgRating: toNumber(item?.avgRating, 0),
+      numEvaluations: toNumber(item?.numEvaluations, 0),
+      delta: toNumber(item?.delta, 0),
+      effectDescription: effectDescription(toNumber(item?.delta, 0)),
+    })),
+  };
+}
+
+export function buildWeightRecommendationsData(weightRecommendations = null) {
+  const payload =
+    weightRecommendations && typeof weightRecommendations === "object"
+      ? weightRecommendations
+      : {};
+  const recommendations = Array.isArray(payload.criteria_recommendations)
+    ? payload.criteria_recommendations
+    : [];
+
+  return {
+    hasPeerEval: Boolean(payload.has_peer_eval),
+    message: toNonEmptyString(
+      payload.message,
+      "No peer evaluation data available for this section yet.",
+    ),
+    totalEvalCount: toNumber(payload.total_eval_count, 0),
+    teamsWithPeerEval: toNumber(payload.teams_with_peer_eval, 0),
+    recommendationRows: recommendations.map((item) => ({
+      criterion: toNonEmptyString(item?.criterion, "criterion"),
+      criterionLabel: toNonEmptyString(item?.criterion_label, "Criterion"),
+      association: toNonEmptyString(item?.association, "positive"),
+      associationLabel:
+        toNonEmptyString(item?.association, "positive") === "positive"
+          ? "Positive"
+          : "Negative",
+      insightLabel:
+        toNonEmptyString(item?.association, "positive") === "positive"
+          ? "Points toward increasing this weight"
+          : "Points toward reviewing this weight",
+      ratingDelta: toNumber(item?.rating_delta, 0),
+      currentWeight: toNumber(item?.current_weight, 0),
+      qualifiedTeamCount: toNumber(item?.qualified_team_count, 0),
+      highBucketAvgRating: toNumber(item?.high_bucket_avg_rating, 0),
+      lowBucketAvgRating: toNumber(item?.low_bucket_avg_rating, 0),
+    })),
+  };
+}

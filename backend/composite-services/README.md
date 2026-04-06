@@ -584,7 +584,7 @@ Closes an active peer evaluation round and pushes computed deltas into the reput
 
 # Dashboard Orchestrator Composite Service
 
-This service aggregates instructor dashboard metrics and orchestrates peer-evaluation initiate/close actions.
+This service aggregates instructor dashboard metrics.
 
 ## Base URL
 
@@ -593,13 +593,12 @@ This service aggregates instructor dashboard metrics and orchestrates peer-evalu
 ## Endpoints
 
 - `GET /dashboard`
-- `POST /dashboard/peer-eval/initiate`
-- `POST /dashboard/peer-eval/close`
 - `GET /dashboard/health`
 
 ## Response Structure
 
 - Success responses use a top-level envelope with `code` and `data`.
+- `data` includes `team_analytics`, `section_analytics`, `peer_eval_reputation`, and `weight_recommendations` for the section dashboard view.
 - Validation and downstream failures return `4xx/5xx` with `code` and `message`.
 
 ---

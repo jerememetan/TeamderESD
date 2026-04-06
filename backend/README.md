@@ -35,7 +35,7 @@ Composite services
 - formation-config-service: http://localhost:4000 - /formation-config (GET/POST)
 - student-profile-service: http://localhost:4001 - /student-profile (GET)
 - team-formation-service: http://localhost:4002 - /team-formation (POST), /teams (GET), /health
-- dashboard-orchestrator-service: http://localhost:4003 - /dashboard (GET), /dashboard/peer-eval/initiate (POST), /dashboard/peer-eval/close (POST), /dashboard/health (GET)
+- dashboard-orchestrator-service: http://localhost:4003 - /dashboard (GET), /dashboard/health (GET)
 - formation-notification-service: http://localhost:4004 - /formation-notifications (POST), /health (GET)
 - swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/submission/requests (POST), /swap-orchestrator/review/requests (GET), /swap-orchestrator/review/requests/{swap_request_id}/decision (PATCH), /swap-orchestrator/sections/{section_id}/confirm (POST), /swap-orchestrator/student-team (GET), /health (GET)
 - student-form-submission-service: http://localhost:4006 - /student-form-submission/submit (POST)
