@@ -81,7 +81,7 @@ Aggregate and retrieve formation data from atomic services for a given section.
 
 #### Example
 ```
-GET http://localhost:3010/?section_id=22222222-2222-2222-2222-222222222211
+GET http://localhost:4000/formation-config?section_id=22222222-2222-2222-2222-222222222211
 ```
 
 ### Output
@@ -579,3 +579,72 @@ Closes an active peer evaluation round and pushes computed deltas into the reput
 - Uses shared RabbitMQ notification exchange publishing with a batch event (`PeerEvalInitiatedBatch`).
 - Uses shared error publisher conventions for downstream failures.
 - Keeps response envelopes compatible with existing instructor frontend flows.
+
+---
+
+# Dashboard Orchestrator Composite Service
+
+This service aggregates instructor dashboard metrics and orchestrates peer-evaluation initiate/close actions.
+
+## Base URL
+
+- Default: `/dashboard` (port: 4003)
+
+## Endpoints
+
+- `GET /dashboard`
+- `POST /dashboard/peer-eval/initiate`
+- `POST /dashboard/peer-eval/close`
+- `GET /dashboard/health`
+
+## Response Structure
+
+- Success responses use a top-level envelope with `code` and `data`.
+- Validation and downstream failures return `4xx/5xx` with `code` and `message`.
+
+---
+
+# Swap Orchestrator Composite Service
+
+This service owns staged swap request orchestration flows (`submission`, `review`, `decision`, and `confirm`) and student-facing team retrieval.
+
+## Base URL
+
+- Default: `/swap-orchestrator` (port: 4005)
+
+## Endpoints
+
+- `POST /swap-orchestrator/submission/requests`
+- `GET /swap-orchestrator/review/requests`
+- `PATCH /swap-orchestrator/review/requests/{swap_request_id}/decision`
+- `POST /swap-orchestrator/sections/{section_id}/confirm`
+- `GET /swap-orchestrator/student-team`
+- `GET /health`
+
+## Response Structure
+
+- Success responses use a top-level envelope with `code` and `data`.
+- Validation and downstream failures return `4xx/5xx` with `code` and `message`.
+
+---
+
+# Student Form Submission Composite Service
+
+This service orchestrates student form submission fan-out to student-form-data, competence, and topic-preference atomic services.
+
+## Base URL
+
+- Default: `/student-form-submission` (port: 4006)
+
+## Endpoint
+
+- `POST /student-form-submission/submit`
+
+## Request Structure
+
+- JSON body contains `form_submission` and related student-level preference/competence payload sections.
+
+## Response Structure
+
+- Success responses use a top-level envelope with `code` and `data`.
+- Validation and downstream failures return `4xx/5xx` with `code` and `message`.

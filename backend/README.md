@@ -34,10 +34,12 @@ Composite services
 
 - formation-config-service: http://localhost:4000 - /formation-config (GET/POST)
 - student-profile-service: http://localhost:4001 - /student-profile (GET)
-- team-formation-service: http://localhost:4002 - /team-formation (POST; orchestrates student-form consumption and reputation updates before solve)
-- dashboard-orchestrator-service: http://localhost:4003 - /dashboard, /dashboard/health
-- formation-notification-service: http://localhost:4004 - /formation-notifications, /health
-- swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/\*
+- team-formation-service: http://localhost:4002 - /team-formation (POST), /teams (GET), /health
+- dashboard-orchestrator-service: http://localhost:4003 - /dashboard (GET), /dashboard/peer-eval/initiate (POST), /dashboard/peer-eval/close (POST), /dashboard/health (GET)
+- formation-notification-service: http://localhost:4004 - /formation-notifications (POST), /health (GET)
+- swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/submission/requests (POST), /swap-orchestrator/review/requests (GET), /swap-orchestrator/review/requests/{swap_request_id}/decision (PATCH), /swap-orchestrator/sections/{section_id}/confirm (POST), /swap-orchestrator/student-team (GET), /health (GET)
+- student-form-submission-service: http://localhost:4006 - /student-form-submission/submit (POST)
+- peer-eval-notification-service: http://localhost:4008 - /peer-eval-notifications/health (GET), /peer-eval-notifications/initiate (POST), /peer-eval-notifications/close (POST)
 
 Shared error logging
 
@@ -51,6 +53,9 @@ Swagger docs
   - Swagger UI: `http://localhost:<service-port>/docs`
   - OpenAPI JSON: `http://localhost:<service-port>/openapi.json`
 - Central docs index: http://localhost:4010/docs-index
+- Central JSON index: http://localhost:4010/docs-index.json?scope=all
+- Central OpenAPI audit: http://localhost:4010/audit/openapi?scope=all
+- Scope filters: `scope=all`, `scope=atomic`, `scope=composite`
 - Swagger exposure is config-gated with `ENABLE_SWAGGER` (enabled in local compose files by default).
 
 RabbitMQ management UI: http://localhost:15672 (guest/guest)
