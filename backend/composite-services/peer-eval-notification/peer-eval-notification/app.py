@@ -53,7 +53,6 @@ SERVICE_NAME = "peer-eval-notification-service"
 REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "8"))
 MAX_PARALLEL_WORKERS = int(os.getenv("MAX_PARALLEL_WORKERS", "20"))
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team")
-STUDENT_PROFILE_URL = os.getenv("STUDENT_PROFILE_URL", "http://localhost:4001/student-profile")
 STUDENT_SERVICE_URL = os.getenv(
     "STUDENT_SERVICE_URL",
     "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student",
@@ -257,23 +256,8 @@ def initiate_peer_eval():
     if not isinstance(teams, list):
         teams = []
 
-    profile_resp = call_http(
-        method="GET",
-        url=STUDENT_PROFILE_URL,
-        params={"section_id": section_id},
-        timeout=REQUEST_TIMEOUT,
-    )
-    if not profile_resp["ok"]:
-        publish_downstream_error(
-            "student-profile",
-            "STUDENT_PROFILE_LOOKUP_FAILED",
-            profile_resp.get("error") or "failed to fetch student profile",
-            request_context={"section_id": section_id, "operation": "load-student-profiles"},
-            http_status=profile_resp.get("status_code"),
-            response_payload=profile_resp,
-        )
 
-    student_email_map = _build_student_email_map(profile_resp.get("payload") or {})
+    student_email_map: Dict[int, str] = {}
     team_student_ids = _collect_student_ids_from_teams(teams)
 
     missing_ids = [sid for sid in team_student_ids if sid not in student_email_map]

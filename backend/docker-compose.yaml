@@ -387,7 +387,6 @@ services:
       NOTIFICATION_EXCHANGE_TYPE: "topic"
       NOTIFICATION_ROUTING_KEY: "notification.email"
       TEAM_URL: "http://team-service:3007/team"
-      STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
       STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
       PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
@@ -395,7 +394,6 @@ services:
       FRONTEND_PEER_EVAL_URL: "http://localhost:5173/student/peer-evaluation"
     depends_on:
       - team-service
-      - student-profile-service
       - peer-evaluation-service
       - reputation-service
       - rabbitmq
