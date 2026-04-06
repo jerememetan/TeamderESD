@@ -5,6 +5,8 @@ const SWAP_REQUEST_URL =
 const SWAP_ORCHESTRATOR_URL =
   import.meta.env.VITE_SWAP_ORCHESTRATOR_URL ??
   "http://localhost:8000/swap-orchestrator";
+const TEAM_SWAP_URL =
+  import.meta.env.VITE_TEAM_SWAP_URL ?? "http://localhost:8000/team-swap";
 
 export async function createSwapRequest({ studentId, currentTeamId, reason }) {
   const payload = await fetchJson(SWAP_REQUEST_URL, {
@@ -77,16 +79,13 @@ export async function confirmSectionSwaps({ sectionId }) {
     throw new Error("sectionId is required");
   }
 
-  const payload = await fetchJson(
-    `${SWAP_ORCHESTRATOR_URL}/sections/${sectionId}/confirm`,
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-      },
-      cache: false,
+  const payload = await fetchJson(`${TEAM_SWAP_URL}/sections/${sectionId}/confirm`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
     },
-  );
+    cache: false,
+  });
 
   return payload?.data ?? payload;
 }

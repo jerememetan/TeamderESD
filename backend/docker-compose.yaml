@@ -164,21 +164,6 @@ services:
       rabbitmq-setup:
         condition: service_healthy
 
-  team-swap-service:
-    build:
-      context: ./atomic-services/team-swap
-    container_name: teamder-team-swap-service
-    environment:
-      ENABLE_SWAGGER: "true"
-      PORT: 3013
-      SUPABASE_URL: ${SUPABASE_URL}
-      REQUEST_TIMEOUT: 10
-      TEAM_URL: "http://team-service:3007/team"
-      SWAP_REQUEST_URL: "http://swap-request-service:3011/swap-request"
-      FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
-    ports:
-      - "3013:3013"
-
   notification-service:
     build: ./atomic-services/notification
     container_name: teamder-notification-service
@@ -449,6 +434,7 @@ services:
       SECTION_URL: "http://section-service:3018/section"
       TEAM_URL: "http://team-service:3007/team"
       TEAM_SWAP_EXECUTE_URL: "http://team-swap-service:3013/team-swap/execute"
+      TEAM_SWAP_CONFIRM_URL: "http://team-swap-service:3013/team-swap/sections"
       STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
       STUDENT_BULK_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/students/bulk-info"
     depends_on:
@@ -456,6 +442,25 @@ services:
       - section-service
       - team-service
       - team-swap-service
+
+  team-swap-service:
+    build:
+      context: ./composite-services/team-swap
+    container_name: teamder-team-swap-service
+    environment:
+      ENABLE_SWAGGER: "true"
+      PORT: 3013
+      SUPABASE_URL: ${SUPABASE_URL}
+      REQUEST_TIMEOUT: 10
+      TEAM_URL: "http://team-service:3007/team"
+      SWAP_REQUEST_URL: "http://swap-request-service:3011/swap-request"
+      SECTION_URL: "http://section-service:3018/section"
+      FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
+    ports:
+      - "3013:3013"
+    depends_on:
+      - team-service
+      - swap-request-service
 
   # GraphQL
   student-form-gateway-service:

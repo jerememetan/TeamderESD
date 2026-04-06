@@ -26,7 +26,7 @@ Atomic services
 - student-topic-preference-service: http://localhost:3009 - /topic-preference
 - student-form-data-service: http://localhost:3010 - /form-data
 - swap-request-service: http://localhost:3011 - /swap-request
-- team-swap-service: http://localhost:3013 - /team-swap
+- team-swap-service: http://localhost:3013 - /team-swap/execute (POST), /team-swap/sections/{section_id}/confirm (POST)
 - peer-evaluation-service: http://localhost:3020 - /peer-eval
 - student-form-service: http://localhost:3015 - /student-form
 - notification-service: http://localhost:3016 - /health, /notification/send-form-link, /notification/publish-email
@@ -40,7 +40,7 @@ Composite services
 - team-formation-service: http://localhost:4002 - /team-formation (POST), /teams (GET), /health
 - dashboard-orchestrator-service: http://localhost:4003 - /dashboard (GET), /dashboard/health (GET)
 - formation-notification-service: http://localhost:4004 - /formation-notifications (POST), /health (GET)
-- swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/submission/requests (POST), /swap-orchestrator/review/requests (GET), /swap-orchestrator/review/requests/{swap_request_id}/decision (PATCH), /swap-orchestrator/sections/{section_id}/confirm (POST), /swap-orchestrator/student-team (GET), /health (GET)
+- swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/submission/requests (POST), /swap-orchestrator/review/requests (GET), /swap-orchestrator/review/requests/{swap_request_id}/decision (PATCH), /swap-orchestrator/sections/{section_id}/confirm (POST, deprecated proxy to team-swap), /swap-orchestrator/student-team (GET), /health (GET)
 - student-form-submission-service: http://localhost:4006 - /student-form-submission/submit (POST)
 - peer-eval-notification-service: http://localhost:4008 - /peer-eval-notifications/health (GET), /peer-eval-notifications/initiate (POST), /peer-eval-notifications/close (POST)
 

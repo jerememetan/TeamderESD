@@ -730,67 +730,49 @@ python -m error.app
 
 ## Team Swap Microservice
 
-This microservice optimizes team swap selections using Google OR-Tools constraint solver.
-It receives current teams, approved swap requests, swap constraints, and student attributes,
-then finds the optimal subset of swaps that satisfy constraints while maximizing successful executions.
+This microservice executes approved swap requests for a section.
+It fetches teams and approved requests from downstream services, pairs compatible requests across different teams,
+applies swaps, validates invariants, and persists the updated roster.
 
 ### Endpoint
 
-- **POST /team-swap/optimize**
-  - Body: Orchestrator payload with teams, approved requests, constraints, and student attributes
-  - Returns: New team rosters and per-request execution status
-  - Example request (basic):
+- **POST /team-swap/execute**
+  - Body:
+    - `section_id` (required, UUID)
+    - `approved_request_ids` (optional, array of UUIDs; if provided, only these approved requests are considered)
+  - Returns: Updated team roster and per-request execution status
+  - Example request:
     ```json
     {
       "section_id": "11111111-1111-1111-1111-111111111111",
-      "course_id": "22222222-2222-2222-2222-222222222222",
-      "module_id": "33333333-3333-3333-3333-333333333333",
-      "class_id": "44444444-4444-4444-4444-444444444444",
-      "teams": [
-        {
-          "team_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-          "team_number": 1,
-          "section_id": "11111111-1111-1111-1111-111111111111",
-          "students": [101, 102]
-        }
-      ],
-      "students": [
-        {
-          "student_id": 101,
-          "year": 2,
-          "gender": "M",
-          "gpa": 3.5,
-          "skills": {"skill-1": 0.8}
-        },
-        {
-          "student_id": 102,
-          "year": 1,
-          "gender": "F",
-          "gpa": 3.2,
-          "skills": {"skill-1": 0.5}
-        }
-      ],
-      "approved_swap_requests": [
-        {
-          "swap_request_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-          "student_id": 101,
-          "current_team": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-        }
-      ],
-      "swap_constraints": {
-        "min_team_avg_gpa": 3.0,
-        "require_year_diversity": true,
-        "max_skill_imbalance": 1.5,
-        "swap_window_days": 2
-      }
+      "approved_request_ids": [
+        "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "cccccccc-cccc-cccc-cccc-cccccccccccc"
+      ]
     }
     ```
-  - Response includes `new_team_roster`, `per_request_result`, selected swap pairs, and solver metrics
+  - Response includes:
+    - `new_team_roster`
+    - `per_request_result`
+    - `num_executed`
+    - `team_update_response`
+    - `formation_config` (if available)
 
-### Algorithm Details
+### Execution Details
 
-- Uses CP-SAT solver from Google OR-Tools for optimal swap selection
-- Candidate generation: evaluates all pairwise swaps between students from different teams
-- Feasibility check: year diversity, gender balance, skill imbalance, and minimum team GPA
-- Optimization: maximizes number of successful swaps subject to one-student-per-swap and one-swap-per-team-pair constraints
-- Fallback: requests not selected are marked FAILED with reason
+- Loads current teams from Team Service for the given section
+- Loads approved swap requests from Swap Request Service
+- Filters requests to students currently in teams for that section
+- Pairs requests greedily:
+  - each request used at most once
+  - only pairs from different teams are swapped
+- Marks each request as:
+  - `EXECUTED` if swapped
+  - `FAILED` if invalid or no compatible partner exists
+- Persists final roster via Team Service `POST /team`
+- Returns per-request outcomes and final roster snapshot
+
+### Notes
+
+- This `/execute` path does **not** currently use the OR-Tools CP-SAT optimizer.
+- Optimization logic exists separately in the `/team-swap/optimize` route and is not the route used by section confirmation flow.

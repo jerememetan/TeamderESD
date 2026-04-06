@@ -51,12 +51,72 @@ function CallApi {
 }
 
 $base = 'http://localhost:8000'
-$section = '7f7b954e-0cf0-429c-8c01-f780f7c25007'
-$team1 = '5d551fa6-e2c2-46a2-9743-bf0f9b4508d9'
-$team2 = '1a900daa-90bf-478c-9a95-2452406a074b'
+
+$sectionsResp = CallApi -Method 'GET' -Url "$base/section"
+$sectionRows = @()
+if ($sectionsResp.body -and $sectionsResp.body.data) {
+  $sectionRows = $sectionsResp.body.data
+}
+
+$selectedSection = $null
+$selectedTeams = $null
+foreach ($sectionRow in $sectionRows) {
+  $sectionId = '' + $sectionRow.id
+  if (-not $sectionId) {
+    continue
+  }
+
+  $teamsResp = CallApi -Method 'GET' -Url "$base/team?section_id=$sectionId"
+  if ($teamsResp.status -ne 200 -or -not $teamsResp.body -or -not $teamsResp.body.data -or -not $teamsResp.body.data.teams) {
+    continue
+  }
+
+  $teams = @($teamsResp.body.data.teams)
+  if ($teams.Count -lt 2) {
+    continue
+  }
+
+  $teamA = $teams[0]
+  $teamB = $teams[1]
+  if (-not $teamA.students -or -not $teamB.students -or $teamA.students.Count -lt 1 -or $teamB.students.Count -lt 1) {
+    continue
+  }
+
+  $selectedSection = $sectionId
+  $selectedTeams = $teams
+  break
+}
+
+if (-not $selectedSection) {
+  throw 'No section with at least two populated teams was found for swap flow verification.'
+}
+
+$section = $selectedSection
+$team1 = '' + $selectedTeams[0].team_id
+$team2 = '' + $selectedTeams[1].team_id
+$studentA = [int]$selectedTeams[0].students[0].student_id
+$studentB = [int]$selectedTeams[1].students[0].student_id
+$studentC = $null
+if ($selectedTeams[1].students.Count -ge 2) {
+  $studentC = [int]$selectedTeams[1].students[1].student_id
+} elseif ($selectedTeams[0].students.Count -ge 2) {
+  $studentC = [int]$selectedTeams[0].students[1].student_id
+}
 
 # Keep verification rerunnable by reopening the section for submissions.
 $reopenSection = CallApi -Method 'PUT' -Url "$base/section/$section" -Body @{ stage = 'formed' }
+
+$baselineReview = CallApi -Method 'GET' -Url "$base/swap-orchestrator/review/requests?section_id=$section"
+$baselineApprovedStudentIds = @()
+if ($baselineReview.body -and $baselineReview.body.data -and $baselineReview.body.data.requests) {
+  foreach ($row in $baselineReview.body.data.requests) {
+    $status = ('' + $row.status).ToLowerInvariant()
+    if ($status -eq 'approved' -and $null -ne $row.studentId) {
+      $baselineApprovedStudentIds += ('' + $row.studentId)
+    }
+  }
+}
+$baselineApprovedStudentIds = @($baselineApprovedStudentIds | Select-Object -Unique)
 
 $tag = [DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
 $reasonA = "verify-$tag-A"
@@ -65,13 +125,13 @@ $reasonC = "verify-$tag-C"
 
 $submitA = CallApi -Method 'POST' -Url "$base/swap-orchestrator/submission/requests" -Body @{
   section_id = $section
-  student_id = 44
+  student_id = $studentA
   current_team = $team1
   reason = $reasonA
 }
 $submitB = CallApi -Method 'POST' -Url "$base/swap-orchestrator/submission/requests" -Body @{
   section_id = $section
-  student_id = 45
+  student_id = $studentB
   current_team = $team2
   reason = $reasonB
 }
@@ -96,11 +156,14 @@ if ($rowB) {
   $reapproveRejected = CallApi -Method 'PATCH' -Url "$base/swap-orchestrator/review/requests/$($rowB.id)/decision" -Body @{ decision = 'APPROVED' }
 }
 
-$submitC = CallApi -Method 'POST' -Url "$base/swap-orchestrator/submission/requests" -Body @{
-  section_id = $section
-  student_id = 40
-  current_team = $team2
-  reason = $reasonC
+$submitC = $null
+if ($null -ne $studentC) {
+  $submitC = CallApi -Method 'POST' -Url "$base/swap-orchestrator/submission/requests" -Body @{
+    section_id = $section
+    student_id = $studentC
+    current_team = $team2
+    reason = $reasonC
+  }
 }
 
 $review2 = CallApi -Method 'GET' -Url "$base/swap-orchestrator/review/requests?section_id=$section"
@@ -108,7 +171,10 @@ $rows2 = @()
 if ($review2.body -and $review2.body.data -and $review2.body.data.requests) {
   $rows2 = $review2.body.data.requests
 }
-$rowC = $rows2 | Where-Object { $_.reason -eq $reasonC } | Select-Object -First 1
+$rowC = $null
+if ($null -ne $submitC) {
+  $rowC = $rows2 | Where-Object { $_.reason -eq $reasonC } | Select-Object -First 1
+}
 
 $approveC = $null
 if ($rowC) {
@@ -125,7 +191,7 @@ if ($beforeTeamsResp.body -and $beforeTeamsResp.body.data -and $beforeTeamsResp.
   }
 }
 
-$confirm = CallApi -Method 'POST' -Url "$base/swap-orchestrator/sections/$section/confirm"
+$confirm = CallApi -Method 'POST' -Url "$base/team-swap/sections/$section/confirm"
 
 $afterTeamsResp = CallApi -Method 'GET' -Url "$base/team?section_id=$section"
 $afterMap = @{}
@@ -151,7 +217,14 @@ $sectionAfter = CallApi -Method 'GET' -Url "$base/section/$section"
 
 $nonRequestedUnchanged = $true
 foreach ($studentId in $beforeMap.Keys) {
-  if (@('44', '45', '40') -contains ('' + $studentId)) {
+  $requestedStudents = @('' + $studentA, '' + $studentB)
+  if ($null -ne $studentC) {
+    $requestedStudents += ('' + $studentC)
+  }
+  $requestedStudents += $baselineApprovedStudentIds
+  $requestedStudents = @($requestedStudents | Select-Object -Unique)
+
+  if ($requestedStudents -contains ('' + $studentId)) {
     continue
   }
   if ($beforeMap[$studentId] -ne $afterMap[$studentId]) {
@@ -162,10 +235,18 @@ foreach ($studentId in $beforeMap.Keys) {
 
 $result = [PSCustomObject]@{
   section_id = $section
+  selected = [PSCustomObject]@{
+    team1 = $team1
+    team2 = $team2
+    student_a = $studentA
+    student_b = $studentB
+    student_c = $studentC
+    baseline_approved_students = $baselineApprovedStudentIds
+  }
   submissions = [PSCustomObject]@{
     a = $submitA.status
     b = $submitB.status
-    c = $submitC.status
+    c = if ($submitC) { $submitC.status } else { $null }
   }
   enrichment = [PSCustomObject]@{
     a_has_studentName = [bool]($rowA -and $rowA.studentName)

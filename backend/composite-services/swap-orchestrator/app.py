@@ -32,6 +32,7 @@ COURSE_SERVICE_URL = os.getenv(
 SECTION_URL = os.getenv("SECTION_URL", "http://localhost:3018/section").rstrip("/")
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team").rstrip("/")
 TEAM_SWAP_EXECUTE_URL = os.getenv("TEAM_SWAP_EXECUTE_URL", "http://localhost:3013/team-swap/execute").rstrip("/")
+TEAM_SWAP_CONFIRM_URL = os.getenv("TEAM_SWAP_CONFIRM_URL", "http://localhost:3013/team-swap/sections").rstrip("/")
 STUDENT_SERVICE_URL = os.getenv(
     "STUDENT_SERVICE_URL",
     "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student",
@@ -893,152 +894,24 @@ def decide_review_request_composite(swap_request_id):
 
 @app.route("/swap-orchestrator/sections/<uuid:section_id>/confirm", methods=["POST"])
 def confirm_section_swaps(section_id):
-    section_row, section_error = _fetch_section_row(section_id)
-    if section_error:
-        return jsonify({"code": section_error.get("status", 502), "message": section_error.get("message")}), section_error.get("status", 502)
-
-    stage = str(section_row.get("stage") or "").strip().lower()
-    if stage != "formed":
-        return jsonify({"code": 409, "message": "section must be in formed stage to confirm swaps", "data": {"stage": stage}}), 409
-
-    course_id = _int_or_none(section_row.get("course_id"))
-
-    section_teams, team_error = _fetch_section_teams(section_id)
-    if team_error:
-        return jsonify({"code": team_error.get("status", 502), "message": team_error.get("message")}), team_error.get("status", 502)
-
-    section_team_ids = {str(team.get("team_id")) for team in section_teams}
-
-    list_payload, list_error = _http_json(
-        "GET",
-        SWAP_REQUEST_URL,
-        label="swap-request list",
-        params={"status": REQUEST_STATUS_APPROVED},
-    )
-    if list_error:
-        return jsonify({"code": list_error.get("status", 502), "message": list_error.get("message")}), list_error.get("status", 502)
-
-    request_rows = _extract_data(list_payload)
-    if isinstance(request_rows, dict):
-        request_rows = [request_rows]
-    if not isinstance(request_rows, list):
-        request_rows = []
-
-    approved_rows = []
-    approved_request_ids = []
-    for row in request_rows:
-        if not isinstance(row, dict):
-            continue
-
-        current_team = str(row.get("current_team") or "")
-        if current_team not in section_team_ids:
-            continue
-
-        request_id = row.get("swap_request_id")
-        if request_id is None:
-            continue
-
-        approved_rows.append(row)
-        approved_request_ids.append(str(request_id))
-
-    if not approved_rows:
-        updated_section, update_error = _update_section_stage(section_id, "confirmed")
-        if update_error:
-            return jsonify({"code": update_error.get("status", 502), "message": update_error.get("message")}), update_error.get("status", 502)
-
-        return jsonify({
-            "code": 200,
-            "data": {
-                "section": updated_section,
-                "approved_request_count": 0,
-                "executed_count": 0,
-                "failed_count": 0,
-                "message": "No approved requests; section confirmed",
-            },
-        }), 200
-
-    execute_payload = {
-        "section_id": str(section_id),
-        "course_id": course_id,
-        "approved_request_ids": approved_request_ids,
-    }
-    execute_response, execute_error = _http_json(
-        "POST",
-        TEAM_SWAP_EXECUTE_URL,
-        label="team-swap execute",
-        payload=execute_payload,
-    )
-    if execute_error:
-        return jsonify({"code": execute_error.get("status", 502), "message": execute_error.get("message")}), execute_error.get("status", 502)
-
-    execute_data = _extract_data(execute_response)
-    if not isinstance(execute_data, dict):
-        return jsonify({"code": 502, "message": "team-swap execute returned invalid payload"}), 502
-
-    request_results = execute_data.get("per_request_result")
-    if not isinstance(request_results, list):
-        request_results = []
-
-    update_errors = []
-    for result in request_results:
-        if not isinstance(result, dict):
-            continue
-        swap_request_id = result.get("swap_request_id")
-        status = _status_from_value(result.get("status"))
-        if swap_request_id is None or status not in {REQUEST_STATUS_EXECUTED, REQUEST_STATUS_FAILED}:
-            continue
-
-        _, status_error = _http_json(
-            "PATCH",
-            f"{SWAP_REQUEST_URL}/{swap_request_id}/status",
-            label="swap-request status update",
-            payload={"status": status},
+    target_url = f"{TEAM_SWAP_CONFIRM_URL}/{section_id}/confirm"
+    try:
+        response = requests.request(
+            method="POST",
+            url=target_url,
+            timeout=REQUEST_TIMEOUT,
         )
-        if status_error:
-            update_errors.append({"swap_request_id": str(swap_request_id), "error": status_error})
+    except requests.RequestException as error:
+        return jsonify({"code": 502, "message": f"failed to call team-swap confirm: {str(error)}"}), 502
 
-    if update_errors:
-        return (
-            jsonify(
-                {
-                    "code": 502,
-                    "message": "failed to apply one or more swap request status updates",
-                    "data": {"errors": update_errors},
-                }
-            ),
-            502,
-        )
+    payload = _safe_json(response)
+    if isinstance(payload, dict) and payload:
+        return jsonify(payload), response.status_code
 
-    updated_section, update_error = _update_section_stage(section_id, "confirmed")
-    if update_error:
-        return jsonify({"code": update_error.get("status", 502), "message": update_error.get("message")}), update_error.get("status", 502)
+    if 200 <= response.status_code < 300:
+        return jsonify({"code": response.status_code, "data": {}}), response.status_code
 
-    executed_count = 0
-    failed_count = 0
-    for result in request_results:
-        if not isinstance(result, dict):
-            continue
-        status = _status_from_value(result.get("status"))
-        if status == REQUEST_STATUS_EXECUTED:
-            executed_count += 1
-        elif status == REQUEST_STATUS_FAILED:
-            failed_count += 1
-
-    return (
-        jsonify(
-            {
-                "code": 200,
-                "data": {
-                    "section": updated_section,
-                    "approved_request_count": len(approved_rows),
-                    "executed_count": executed_count,
-                    "failed_count": failed_count,
-                    "execution": execute_data,
-                },
-            }
-        ),
-        200,
-    )
+    return jsonify({"code": response.status_code, "message": f"team-swap confirm returned {response.status_code}"}), response.status_code
 
 
 @app.route("/swap-orchestrator/student-team", methods=["GET"])
