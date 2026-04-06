@@ -12,6 +12,23 @@ import { useStudentSession } from "../../../services/studentSession";
 import { useMyTeamPage } from "./logic/useMyTeamPage";
 import styles from "./MyTeam.module.css";
 
+function getSwapRequestMeta(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "approved") {
+    return { tone: "success", label: "Swap request approved" };
+  }
+  if (normalized === "rejected") {
+    return { tone: "alert", label: "Swap request rejected" };
+  }
+  if (normalized === "executed") {
+    return { tone: "success", label: "Swap executed" };
+  }
+  if (normalized === "failed") {
+    return { tone: "alert", label: "Swap failed" };
+  }
+  return { tone: "alert", label: "Swap request pending" };
+}
+
 function MyTeam() {
   const navigate = useNavigate();
   const { studentId: routeStudentId } = useParams();
@@ -38,6 +55,12 @@ function MyTeam() {
     isLoadingAssignments,
     assignmentSource,
     assignmentError,
+    mySwapRequests,
+    swapRequestBySection,
+    selectedTeamSwapRequest,
+    isLoadingSwapRequests,
+    swapRequestError,
+    refreshSwapRequests,
   } = useMyTeamPage(activeStudent, isLoadingStudents);
 
   if (isLoadingStudents) {
@@ -104,6 +127,7 @@ function MyTeam() {
         currentTeamId: selectedTeam.id,
         reason: swapReason,
       });
+      refreshSwapRequests();
       setSwapFeedback(
         "Swap request submitted. Your instructor can now review it.",
       );
@@ -136,6 +160,9 @@ function MyTeam() {
   const assignmentHeaderLabel = selectedTeam
     ? `${selectedTeam.courseCode || selectedTeam.courseId} :: ${selectedTeam.groupCode || selectedTeam.groupId}`
     : "Backend team";
+  const selectedSwapMeta = selectedTeamSwapRequest
+    ? getSwapRequestMeta(selectedTeamSwapRequest.status)
+    : null;
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -166,6 +193,11 @@ function MyTeam() {
                 ? "Backend data unavailable"
                 : "Team allocations loaded"}
           </SystemTag>
+          <SystemTag tone={selectedSwapMeta?.tone || "neutral"}>
+            {isLoadingSwapRequests
+              ? "Loading swap status"
+              : selectedSwapMeta?.label || "No swap request yet"}
+          </SystemTag>
           <Button onClick={() => setShowSwapModal(true)}>
             <RefreshCw className={styles.buttonIcon} /> Request team swap
           </Button>
@@ -176,6 +208,12 @@ function MyTeam() {
         <p className={styles.feedbackAlert}>
           <AlertTriangle className={styles.buttonIcon} />
           {assignmentError}
+        </p>
+      ) : null}
+      {swapRequestError ? (
+        <p className={styles.feedbackAlert}>
+          <AlertTriangle className={styles.buttonIcon} />
+          {swapRequestError}
         </p>
       ) : null}
 
@@ -195,8 +233,8 @@ function MyTeam() {
           },
           {
             title: "Swap Option",
-            metric: "OPEN",
-            label: "Optional request available",
+            metric: String(mySwapRequests.length).padStart(2, "0"),
+            label: "Your swap requests",
             accent: "orange",
           },
         ].map((item, index) => (
@@ -221,6 +259,12 @@ function MyTeam() {
       >
         <div className={styles.assignmentStack}>
           {teamAssignments.map((team, index) => {
+            const sectionKey = String(team.sectionId || team.groupId || "");
+            const sectionSwapRequest = swapRequestBySection[sectionKey] ?? null;
+            const sectionSwapMeta = sectionSwapRequest
+              ? getSwapRequestMeta(sectionSwapRequest.status)
+              : null;
+
             return (
               <button
                 key={team.id}
@@ -232,7 +276,14 @@ function MyTeam() {
                   <p className={styles.assignmentTitle}>
                     You have been assigned to {team.name}
                   </p>
-                  <SystemTag tone="success">Allocated</SystemTag>
+                  <div className={styles.tagRow}>
+                    <SystemTag tone="success">Allocated</SystemTag>
+                    {sectionSwapMeta ? (
+                      <SystemTag tone={sectionSwapMeta.tone}>
+                        {sectionSwapMeta.label}
+                      </SystemTag>
+                    ) : null}
+                  </div>
                 </div>
                 <p className={styles.assignmentMeta}>
                   {assignmentHeaderLabel} :: {team.members.length} members
@@ -262,6 +313,11 @@ function MyTeam() {
               <SystemTag tone="success">
                 You are allocated to this team
               </SystemTag>
+              {selectedSwapMeta ? (
+                <SystemTag tone={selectedSwapMeta.tone}>
+                  {selectedSwapMeta.label}
+                </SystemTag>
+              ) : null}
             </div>
           </div>
 
