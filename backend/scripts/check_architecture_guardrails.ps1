@@ -12,19 +12,7 @@ function Add-Violation {
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $violations = New-Object "System.Collections.Generic.List[string]"
 
-# 1) Legacy swap-constraints must stay decommissioned in active runtime/config code.
-$legacyConstraintHits = @(
-  Get-ChildItem -Path (Join-Path $repoRoot "docker-compose.yaml") -File -ErrorAction SilentlyContinue
-  Get-ChildItem -Path (Join-Path $repoRoot "kong\kong.yml") -File -ErrorAction SilentlyContinue
-) | ForEach-Object {
-  Select-String -Path $_.FullName -Pattern "swap-constraints" -SimpleMatch -ErrorAction SilentlyContinue
-}
-
-foreach ($hit in $legacyConstraintHits) {
-  Add-Violation $violations "Legacy swap-constraints reference found: $($hit.Path):$($hit.LineNumber)"
-}
-
-# 2) Cycle-era swap routes must not appear in active app code.
+# 1) Cycle-era swap routes must not appear in active app code.
 $activeCodeRoots = @(
   (Join-Path $repoRoot "composite-services"),
   (Join-Path $repoRoot "..\frontend\src")
@@ -47,7 +35,7 @@ foreach ($root in $activeCodeRoots) {
   }
 }
 
-# 3) Instructor courses stage mapping must include full stage model.
+# 2) Instructor courses stage mapping must include full stage model.
 $formationFlowPath = Join-Path $repoRoot "..\frontend\src\pages\instructor\logic\formationFlow.js"
 $stageConfigPath = Join-Path $repoRoot "..\frontend\src\pages\instructor\Courses\logic\stageConfig.js"
 $swapOrchestratorPath = Join-Path $repoRoot "composite-services\swap-orchestrator\app.py"
@@ -84,7 +72,7 @@ if (Test-Path $stageConfigPath) {
   Add-Violation $violations "Missing required file: $stageConfigPath"
 }
 
-# 4) Swap policy enforcement must match architecture diagrams.
+# 3) Swap policy enforcement must match architecture diagrams.
 if (Test-Path $swapOrchestratorPath) {
   $swapOrchestratorText = Get-Content -Path $swapOrchestratorPath -Raw
 

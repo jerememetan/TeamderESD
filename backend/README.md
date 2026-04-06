@@ -72,7 +72,6 @@ Architecture baseline and enforcement
   - `cd backend`
   - `./scripts/check_architecture_guardrails.ps1`
 - Current guardrails include:
-  - no runtime `swap-constraints` references in compose/Kong
   - no cycle-era `/swap-orchestrator/cycles` route references in active app code
   - required instructor stage model keys: setup, collecting, forming, formed, confirmed, completed
 

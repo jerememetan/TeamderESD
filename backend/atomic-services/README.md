@@ -725,48 +725,8 @@ python -m error.app
     - The service uses the `student_form` table (schema `student_form`) and returns `created_at` / `updated_at` timestamps in ISO format.
 
 
-## Swap Constraints Microservice
+<!-- Swap Constraints microservice removed from the project. -->
 
-This microservice stores swap-appeal hard constraints per class/course/module scope.
-
-### Endpoints
-
-- **GET /swap-constraints**
-  - Query params: `course_id` (optional), `module_id` (optional), `class_id` (optional)
-  - Returns: Swap constraints filtered by the given scope values
-  - Example:
-    ```http
-    GET http://localhost:3012/swap-constraints?course_id={uuid}&module_id={uuid}&class_id={uuid}
-    ```
-
-- **GET /swap-constraints/{constraint_id}**
-  - Returns: One swap constraints record by its ID
-  - Example:
-    ```http
-    GET http://localhost:3012/swap-constraints/{constraint_id}
-    ```
-
-- **POST /swap-constraints**
-  - Body: JSON with `course_id`, `module_id`, `class_id`, and optional constraint values
-  - Example:
-    ```json
-    {
-      "course_id": "11111111-1111-1111-1111-111111111111",
-      "module_id": "22222222-2222-2222-2222-222222222222",
-      "class_id": "33333333-3333-3333-3333-333333333333",
-      "min_team_avg_gpa": 3.0,
-      "require_year_diversity": true,
-      "max_skill_imbalance": 1.0,
-      "swap_window_days": 2
-    }
-    ```
-
-### Uniqueness Rule
-
-Only one row is allowed per `course_id + module_id + class_id` combination.
-If a duplicate combination is posted, the API returns `409 Conflict`.
-
----
 
 ## Team Swap Microservice
 

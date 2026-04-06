@@ -46,7 +46,6 @@ ATOMIC_SERVICES: List[ServiceDoc] = [
     ServiceDoc("student-topic-preference-service", "atomic", "http://localhost:3009", "/topic-preference", ["/topic-preference"]),
     ServiceDoc("student-form-data-service", "atomic", "http://localhost:3010", "/form-data", ["/form-data"]),
     ServiceDoc("swap-request-service", "atomic", "http://localhost:3011", "/swap-request", ["/swap-request"]),
-    ServiceDoc("swap-constraints-service", "atomic", "http://localhost:3012", "/swap-constraints", ["/swap-constraints"], managed_in_backend_compose=False),
     ServiceDoc("team-swap-service", "atomic", "http://localhost:3013", "/team-swap", ["/team-swap", "/team-swap/execute"]),
     ServiceDoc("student-form-service", "atomic", "http://localhost:3015", "/student-form", ["/student-form", "/student-form/submissions"]),
     ServiceDoc("notification-service", "atomic", "http://localhost:3016", "/notification", ["/health", "/notification/send-form-link", "/notification/publish-email"]),

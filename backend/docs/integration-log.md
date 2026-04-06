@@ -305,29 +305,6 @@ Expose missing query parameters and typed request bodies in Swagger UI for swap-
 
 - Swagger UI now displays the missing query options and clearer request payload contracts for frontend and teammate testing.
 
-## 2026-04-05 :: Step 9 :: Swap constraints decommission + cycle-free swap routing
-
-### Goal
-
-Complete the move away from cycle-era swap orchestration and remove the no-longer-used swap-constraints service from runtime routing and local compose.
-
-### Infrastructure scope
-
-- Removed `swap-constraints-service` from `docker-compose.yaml`.
-- Removed `/swap-constraints` route from Kong declarative config.
-- Removed `swap-constraints-service` from docs index service list.
-
-### Runtime contract now in use
-
-- `POST /swap-orchestrator/submission/requests`
-- `GET /swap-orchestrator/review/requests`
-- `PATCH /swap-orchestrator/review/requests/{swap_request_id}/decision`
-- `POST /swap-orchestrator/sections/{section_id}/confirm`
-- `GET /swap-orchestrator/student-team`
-
-### Notes
-
-- CORS remains centralized at Kong and applies to swap-orchestrator routes through the global plugin.
 - Existing cycle-based documentation entries are historical and should be treated as superseded by the cycle-free routes above.
 
 ## 2026-04-05 :: Step 10 :: Confirm-path hotfix + verification gate pass
@@ -396,7 +373,6 @@ Persist the target microservice architecture as a repo artifact and make core mi
 
 ### Guardrails currently enforced
 
-- No `swap-constraints` references in active runtime config (`docker-compose.yaml`, `kong/kong.yml`).
 - No cycle-era swap routes (`/swap-orchestrator/cycles`, `/cycles/`) in active app code roots.
 - Instructor stage model mapping contains:
   - setup, collecting, forming, formed, confirmed, completed
