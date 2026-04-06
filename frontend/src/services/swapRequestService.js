@@ -71,3 +71,22 @@ export async function decideSwapReviewRequest({ swapRequestId, decision }) {
 
   return payload?.data ?? payload;
 }
+
+export async function confirmSectionSwaps({ sectionId }) {
+  if (!sectionId) {
+    throw new Error("sectionId is required");
+  }
+
+  const payload = await fetchJson(
+    `${SWAP_ORCHESTRATOR_URL}/sections/${sectionId}/confirm`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+      cache: false,
+    },
+  );
+
+  return payload?.data ?? payload;
+}

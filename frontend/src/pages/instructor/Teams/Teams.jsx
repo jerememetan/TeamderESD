@@ -39,11 +39,17 @@ function Teams() {
     selectedRequest,
     isSwapRequestsLoading,
     isSwapDecisionUpdating,
+    isConfirmingSwaps,
     isGeneratingTeams,
+    pendingSwapCount,
+    approvedSwapCount,
+    hasPendingSwapRequests,
+    canConfirmSwaps,
     setSelectedTeamId,
     setSelectedRequest,
     handleApprove,
     handleReject,
+    handleConfirmSwaps,
     handleGenerateTeams,
     handleToggleSwapMode,
     handleCancelSelection,
@@ -228,6 +234,19 @@ function Teams() {
               >
                 {swapMode ? "Swap mode on" : "Swap mode"}
               </Button>
+              {hasPendingSwapRequests ? (
+                <SystemTag hazard>Pending approval</SystemTag>
+              ) : (
+                <Button
+                  onClick={handleConfirmSwaps}
+                  variant="success"
+                  size="sm"
+                  disabled={!canConfirmSwaps || isConfirmingSwaps}
+                >
+                  <CheckCircle className={styles.actionIcon} />
+                  {isConfirmingSwaps ? "Confirming..." : "Confirmed Swap"}
+                </Button>
+              )}
               {swapMode && selectedSwapMember ? (
                 <Button
                   onClick={handleCancelSelection}
@@ -244,6 +263,11 @@ function Teams() {
             {teamDataSource === "backend"
               ? "Showing backend teams persisted by the team service."
               : "Showing fallback mock teams until backend teams are generated for this section."}
+          </p>
+          <p className={styles.sourceNote}>
+            {hasPendingSwapRequests
+              ? `Pending approval: ${pendingSwapCount} request(s) still need instructor decision before confirmation.`
+              : `Ready to confirm: ${approvedSwapCount} approved request(s), no pending approvals.`}
           </p>
           {swapMode ? (
             <p className={styles.sourceNote}>

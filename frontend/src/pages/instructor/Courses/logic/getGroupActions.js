@@ -27,7 +27,9 @@ export function getGroupActions(courseCode, group, options = {}) {
           variant: "outline",
         },
         {
-          label: options.isEndingCollection ? "Ending collection..." : "End form collection",
+          label: options.isEndingCollection
+            ? "Ending collection..."
+            : "End form collection",
           kind: "button",
           onClick: () => options.onEndCollection?.(courseCode, group),
           variant: "outline",
@@ -42,9 +44,20 @@ export function getGroupActions(courseCode, group, options = {}) {
           variant: "outline",
         },
       ];
-    case GROUP_STAGE.CONFIRMED:
-    case GROUP_STAGE.COMPLETED:
     case GROUP_STAGE.FORMED:
+      return [
+        {
+          label: "View teams",
+          to: `/instructor/courses/${courseCode}/groups/${group.id}/teams`,
+          variant: "default",
+        },
+        {
+          label: "View analytics",
+          to: `/instructor/courses/${courseCode}/groups/${group.id}/analytics`,
+          variant: "outline",
+        },
+      ];
+    case GROUP_STAGE.CONFIRMED:
       return [
         {
           label: "View teams",
@@ -59,6 +72,19 @@ export function getGroupActions(courseCode, group, options = {}) {
         {
           label: "Start peer evaluation",
           to: `/instructor/courses/${courseCode}/groups/${group.id}/teams`,
+          variant: "outline",
+        },
+      ];
+    case GROUP_STAGE.COMPLETED:
+      return [
+        {
+          label: "View teams",
+          to: `/instructor/courses/${courseCode}/groups/${group.id}/teams`,
+          variant: "default",
+        },
+        {
+          label: "View analytics",
+          to: `/instructor/courses/${courseCode}/groups/${group.id}/analytics`,
           variant: "outline",
         },
       ];

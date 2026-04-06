@@ -17,7 +17,7 @@ export const STAGE_CONFIG = {
   formed: {
     label: "Teams formed",
     tone: "success",
-    note: "Teams are available for review, analytics, and peer evaluation.",
+    note: "Teams are available for review, analytics, and swap decisions.",
   },
   confirmed: {
     label: "Swaps confirmed",

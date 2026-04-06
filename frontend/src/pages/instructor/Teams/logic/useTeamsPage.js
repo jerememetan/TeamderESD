@@ -9,6 +9,7 @@ import {
 import { generateTeamsForSection } from "../../../../services/teamFormationService";
 import { fetchTeamsBySection } from "../../../../services/teamService";
 import {
+  confirmSectionSwaps,
   decideSwapReviewRequest,
   fetchSwapReviewRequests,
 } from "../../../../services/swapRequestService";
@@ -31,6 +32,7 @@ export function useTeamsPage(courseId, backendSectionId) {
   const [isGeneratingTeams, setIsGeneratingTeams] = useState(false);
   const [isSwapRequestsLoading, setIsSwapRequestsLoading] = useState(false);
   const [isSwapDecisionUpdating, setIsSwapDecisionUpdating] = useState(false);
+  const [isConfirmingSwaps, setIsConfirmingSwaps] = useState(false);
   const [rosterError, setRosterError] = useState("");
   const [teamError, setTeamError] = useState("");
   const [teamMessage, setTeamMessage] = useState("");
@@ -263,6 +265,30 @@ export function useTeamsPage(courseId, backendSectionId) {
     );
   }, [visibleSwapRequests]);
 
+  const pendingSwapCount = useMemo(
+    () =>
+      visibleSwapRequests.filter((request) => request.status === "pending")
+        .length,
+    [visibleSwapRequests],
+  );
+
+  const approvedSwapCount = useMemo(
+    () =>
+      visibleSwapRequests.filter((request) => request.status === "approved")
+        .length,
+    [visibleSwapRequests],
+  );
+
+  const sectionStage = String(selectedGroup?.stage || "").toLowerCase();
+  const isSectionFinalized =
+    sectionStage === "confirmed" || sectionStage === "completed";
+  const hasPendingSwapRequests = pendingSwapCount > 0;
+  const canConfirmSwaps =
+    Boolean(backendSectionId) &&
+    !isSectionFinalized &&
+    !hasPendingSwapRequests &&
+    !isSwapRequestsLoading;
+
   const handleApprove = async (requestId) => {
     setIsSwapDecisionUpdating(true);
     try {
@@ -333,6 +359,60 @@ export function useTeamsPage(courseId, backendSectionId) {
       setTeamError(error.message);
     } finally {
       setIsGeneratingTeams(false);
+    }
+  };
+
+  const handleConfirmSwaps = async () => {
+    if (!backendSectionId || !canConfirmSwaps || isConfirmingSwaps) {
+      return;
+    }
+
+    setIsConfirmingSwaps(true);
+    setTeamError("");
+
+    try {
+      const result = await confirmSectionSwaps({ sectionId: backendSectionId });
+
+      const [swapPayload, refreshedTeams, refreshedSection] = await Promise.all(
+        [
+          fetchSwapReviewRequests({
+            sectionId: backendSectionId,
+          }),
+          fetchTeamsBySection(backendSectionId),
+          getSectionById(backendSectionId),
+        ],
+      );
+
+      const rows = Array.isArray(swapPayload?.requests)
+        ? swapPayload.requests
+        : [];
+      const normalizedRows = rows.map((row) => ({
+        ...row,
+        id: String(row?.id || ""),
+        studentId: String(row?.studentId ?? ""),
+        status: String(row?.status || "pending").toLowerCase(),
+      }));
+
+      setSwapRequestList(normalizedRows);
+      setBackendTeams(refreshedTeams);
+      setSelectedGroup(refreshedSection);
+      setSelectedRequest(null);
+
+      const executedCount = Number(
+        result?.executed_count ?? result?.executedCount ?? 0,
+      );
+      const failedCount = Number(
+        result?.failed_count ?? result?.failedCount ?? 0,
+      );
+      setTeamMessage(
+        `Confirmed swaps. Executed: ${Number.isFinite(executedCount) ? executedCount : 0}, Failed: ${Number.isFinite(failedCount) ? failedCount : 0}.`,
+      );
+    } catch (error) {
+      setTeamError(
+        error?.message || "Unable to confirm swaps for this section.",
+      );
+    } finally {
+      setIsConfirmingSwaps(false);
     }
   };
 
@@ -410,11 +490,17 @@ export function useTeamsPage(courseId, backendSectionId) {
     selectedRequest,
     isSwapRequestsLoading,
     isSwapDecisionUpdating,
+    isConfirmingSwaps,
     isGeneratingTeams,
+    pendingSwapCount,
+    approvedSwapCount,
+    hasPendingSwapRequests,
+    canConfirmSwaps,
     setSelectedTeamId,
     setSelectedRequest,
     handleApprove,
     handleReject,
+    handleConfirmSwaps,
     handleGenerateTeams,
     handleToggleSwapMode,
     handleCancelSelection,
