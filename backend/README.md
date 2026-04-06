@@ -46,6 +46,7 @@ Shared error logging
 - Error service: http://localhost:3019 - /errors (GET, GET /errors/<id>, DELETE /errors/<id>)
 - Composite services publish structured downstream failures to RabbitMQ using `ERROR_EXCHANGE_NAME`, `ERROR_EXCHANGE_TYPE`, and `ERROR_ROUTING_KEY_PREFIX`.
 - The error service consumes `*.error` routing keys and stores the resulting log entries for the frontend error-log view.
+- Notification queues are configured with RabbitMQ dead-letter routing to `notification.topic` using `*.error` routing keys, so rejected notification messages are also stored by error-service.
 
 Swagger docs
 
