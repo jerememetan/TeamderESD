@@ -246,7 +246,6 @@ services:
       OUTSYSTEMS_BASE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student"
       ENROLLMENT_URL: "http://enrollment-service:3005/enrollment"
       FORM_DATA_URL: "http://student-form-data-service:3010/form-data"
-      STUDENT_FORM_SUBMISSION_URL: "http://student-form-submission-service:4006/student-form-submission/submit"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
       TOPIC_PREFERENCE_URL: "http://student-topic-preference-service:3009/topic-preference"
       COMPETENCE_URL: "http://student-competence-service:3008/competence"
