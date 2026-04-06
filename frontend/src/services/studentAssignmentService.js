@@ -106,6 +106,7 @@ export async function fetchStudentAssignments({ studentProfile }) {
       courseName: course?.name || `Course ${section.courseId || "Unknown"}`,
       sectionId: section.id,
       sectionNumber: section.sectionNumber,
+      sectionStage: String(section.stage || "setup").toLowerCase(),
       groupId: section.id,
       groupCode: course?.code
         ? `${course.code}G${section.sectionNumber}`

@@ -58,6 +58,7 @@ function MyTeam() {
     mySwapRequests,
     swapRequestBySection,
     selectedTeamSwapRequest,
+    isSelectedTeamFinalized,
     isLoadingSwapRequests,
     swapRequestError,
     refreshSwapRequests,
@@ -104,6 +105,13 @@ function MyTeam() {
 
   async function handleSwapSubmit(event) {
     event.preventDefault();
+
+    if (isSelectedTeamFinalized) {
+      setSwapError(
+        "Swap requests are closed because this section is already confirmed.",
+      );
+      return;
+    }
 
     if (!Number.isFinite(activeStudentBackendId)) {
       setSwapError(
@@ -163,6 +171,7 @@ function MyTeam() {
   const selectedSwapMeta = selectedTeamSwapRequest
     ? getSwapRequestMeta(selectedTeamSwapRequest.status)
     : null;
+  const isSwapRequestDisabled = !selectedTeam || isSelectedTeamFinalized;
 
   return (
     <div className={`${styles.page} ${motionStyles.motionPage}`}>
@@ -198,11 +207,32 @@ function MyTeam() {
               ? "Loading swap status"
               : selectedSwapMeta?.label || "No swap request yet"}
           </SystemTag>
-          <Button onClick={() => setShowSwapModal(true)}>
+          <Button
+            onClick={() => {
+              if (isSwapRequestDisabled) {
+                return;
+              }
+              setShowSwapModal(true);
+            }}
+            disabled={isSwapRequestDisabled}
+            title={
+              isSelectedTeamFinalized
+                ? "Swap requests are closed because this section is confirmed."
+                : undefined
+            }
+          >
             <RefreshCw className={styles.buttonIcon} /> Request team swap
           </Button>
         </div>
       </section>
+
+      {isSelectedTeamFinalized ? (
+        <p className={styles.feedbackAlert}>
+          <AlertTriangle className={styles.buttonIcon} />
+          Swap requests are closed for this team because the section is
+          confirmed.
+        </p>
+      ) : null}
 
       {assignmentError ? (
         <p className={styles.feedbackAlert}>

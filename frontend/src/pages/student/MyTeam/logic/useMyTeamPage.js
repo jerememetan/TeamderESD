@@ -136,6 +136,11 @@ export function useMyTeamPage(activeStudent, isLoadingStudents) {
     return swapRequestBySection[sectionKey] ?? null;
   }, [selectedTeam, swapRequestBySection]);
 
+  const isSelectedTeamFinalized = useMemo(() => {
+    const stage = String(selectedTeam?.sectionStage || "").toLowerCase();
+    return stage === "confirmed" || stage === "completed";
+  }, [selectedTeam]);
+
   return {
     teamAssignments,
     selectedTeamId,
@@ -151,6 +156,7 @@ export function useMyTeamPage(activeStudent, isLoadingStudents) {
     mySwapRequests,
     swapRequestBySection,
     selectedTeamSwapRequest,
+    isSelectedTeamFinalized,
     isLoadingSwapRequests,
     swapRequestError,
     refreshSwapRequests: () => setSwapRequestsVersion((current) => current + 1),
