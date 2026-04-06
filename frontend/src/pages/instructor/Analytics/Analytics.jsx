@@ -62,7 +62,6 @@ function Analytics() {
     sectionAnalytics,
     teamAnalytics,
     weightRecommendations,
-    isLoadingRoster,
     rosterError,
   } = useAnalyticsPage(courseId, groupId);
 
@@ -120,12 +119,6 @@ function Analytics() {
 
   const totalStudents = backendStudents.length || selectedGroup.studentsCount;
   const averageStudentsPerTeam = totalStudents / (groupTeams.length || 1);
-  const rosterSourceTone = rosterError
-    ? "alert"
-    : backendStudents.length
-      ? "success"
-      : "neutral";
-
   return (
     <div className={styles.page}>
       <Link to="/instructor/courses" className={styles.backLink}>
@@ -342,7 +335,7 @@ function Analytics() {
             </ResponsiveContainer>
           </div>
         </ModuleBlock>
-        
+
         <ModuleBlock
           componentId="MOD-A9"
           eyebrow="Team Drilldown"
@@ -426,7 +419,7 @@ function Analytics() {
             </p>
           )}
         </ModuleBlock>
-                <ModuleBlock
+        <ModuleBlock
           componentId="MOD-A8"
           eyebrow="Buddy Requests"
           title="Request Fulfillment by Team"

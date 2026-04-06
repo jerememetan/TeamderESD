@@ -13,7 +13,6 @@ function PeerEval() {
   const {
     selectedCourse,
     selectedGroup,
-    teams,
     students,
     activeRound,
     closedResult,
@@ -72,13 +71,15 @@ function PeerEval() {
           </h2>
           <p className={styles.subtitle}>
             Initiate peer evaluation rounds, monitor submission progress, and
-            close rounds to compute reputation updates for{" "}
-            {selectedCourse.name}.
+            close rounds to compute reputation updates for {selectedCourse.name}
+            .
           </p>
         </div>
         <div className={styles.heroTags}>
           <SystemTag
-            tone={hasActiveRound ? "success" : hasClosedRound ? "neutral" : "alert"}
+            tone={
+              hasActiveRound ? "success" : hasClosedRound ? "neutral" : "alert"
+            }
           >
             {hasActiveRound
               ? "Round active"
@@ -120,11 +121,7 @@ function PeerEval() {
           eyebrow="Round"
           title="Status"
           metric={
-            hasActiveRound
-              ? "ACTIVE"
-              : hasClosedRound
-                ? "CLOSED"
-                : "NONE"
+            hasActiveRound ? "ACTIVE" : hasClosedRound ? "CLOSED" : "NONE"
           }
           metricLabel={
             hasActiveRound
@@ -192,7 +189,7 @@ function PeerEval() {
                 handleInitiate(
                   title ||
                     `${selectedCourse.code} G${selectedGroup.section_number} Peer Evaluation`,
-                  dueAt ? new Date(dueAt).toISOString() : null
+                  dueAt ? new Date(dueAt).toISOString() : null,
                 )
               }
               disabled={isInitiating || totalTeams === 0}
@@ -240,11 +237,7 @@ function PeerEval() {
             </p>
           </div>
           <div className={styles.actionRow}>
-            <Button
-              onClick={refreshRound}
-              variant="outline"
-              size="sm"
-            >
+            <Button onClick={refreshRound} variant="outline" size="sm">
               <RefreshCw className={styles.actionIcon} /> Refresh Status
             </Button>
             <Button
@@ -359,7 +352,7 @@ function PeerEval() {
                 handleInitiate(
                   title ||
                     `${selectedCourse.code} G${selectedGroup.section_number} Peer Evaluation`,
-                  dueAt ? new Date(dueAt).toISOString() : null
+                  dueAt ? new Date(dueAt).toISOString() : null,
                 )
               }
               disabled={isInitiating}
