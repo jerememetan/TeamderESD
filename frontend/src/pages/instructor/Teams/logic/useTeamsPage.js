@@ -253,12 +253,13 @@ export function useTeamsPage(courseId, backendSectionId) {
     visibleTeams[0] ||
     null;
 
-  const pendingRequestMap = useMemo(() => {
-    const pendingRows = visibleSwapRequests.filter(
-      (request) => request.status === "pending",
+  const swapRequestMap = useMemo(() => {
+    const requestRows = visibleSwapRequests.filter(
+      (request) =>
+        request.status === "pending" || request.status === "approved",
     );
     return Object.fromEntries(
-      pendingRows.map((request) => [String(request.studentId), request]),
+      requestRows.map((request) => [String(request.studentId), request]),
     );
   }, [visibleSwapRequests]);
 
@@ -403,7 +404,7 @@ export function useTeamsPage(courseId, backendSectionId) {
     backendVisibleTeams,
     visibleTeams,
     selectedTeam,
-    pendingRequestMap,
+    swapRequestMap,
     swapMode,
     selectedSwapMember,
     selectedRequest,

@@ -33,7 +33,7 @@ function Teams() {
     backendVisibleTeams,
     visibleTeams,
     selectedTeam,
-    pendingRequestMap,
+    swapRequestMap,
     swapMode,
     selectedSwapMember,
     selectedRequest,
@@ -259,7 +259,10 @@ function Teams() {
             ) : null}
             {visibleTeams.map((team, index) => {
               const hasPendingRequest = team.members.some(
-                (member) => pendingRequestMap[member.id],
+                (member) => swapRequestMap[member.id]?.status === "pending",
+              );
+              const hasApprovedRequest = team.members.some(
+                (member) => swapRequestMap[member.id]?.status === "approved",
               );
               const isTeamConfirmed =
                 team.source === "backend"
@@ -282,6 +285,9 @@ function Teams() {
                     </p>
                     {hasPendingRequest ? (
                       <SystemTag hazard>Pending swap</SystemTag>
+                    ) : null}
+                    {!hasPendingRequest && hasApprovedRequest ? (
+                      <SystemTag tone="success">Approved swap</SystemTag>
                     ) : null}
                   </div>
                   <p className={styles.teamMeta}>
@@ -360,7 +366,11 @@ function Teams() {
               </div>
               <div className={styles.memberList}>
                 {selectedTeam.members.map((member, index) => {
-                  const pendingRequest = pendingRequestMap[member.id];
+                  const memberSwapRequest = swapRequestMap[member.id];
+                  const hasPendingRequest =
+                    memberSwapRequest?.status === "pending";
+                  const hasApprovedRequest =
+                    memberSwapRequest?.status === "approved";
                   const isBackendMember = selectedTeam.source === "backend";
                   const isSelectedForSwap =
                     selectedSwapMember?.teamId === selectedTeam.id &&
@@ -383,7 +393,7 @@ function Teams() {
                           handleMemberSwapClick(selectedTeam, member);
                         }
                       }}
-                      className={`${styles.memberCard} ${pendingRequest ? styles.memberCardAlert : ""} ${swapMode ? styles.memberCardInteractive : ""} ${isSelectedForSwap ? styles.memberCardSelected : ""} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
+                      className={`${styles.memberCard} ${hasPendingRequest ? styles.memberCardAlert : ""} ${hasApprovedRequest ? styles.memberCardSuccess : ""} ${swapMode ? styles.memberCardInteractive : ""} ${isSelectedForSwap ? styles.memberCardSelected : ""} ${motionStyles.staggerItem} ${motionStyles.magneticItem}`}
                       style={{ "--td-stagger-delay": `${index * 50}ms` }}
                     >
                       <div className={styles.memberIdentity}>
@@ -420,21 +430,32 @@ function Teams() {
                               ? "Confirmed"
                               : "Pending"}
                         </SystemTag>
+                        {hasPendingRequest ? (
+                          <SystemTag hazard>Swap pending</SystemTag>
+                        ) : hasApprovedRequest ? (
+                          <SystemTag tone="success">Swap approved</SystemTag>
+                        ) : null}
                         <div className={styles.mailLine}>
                           <Mail className={styles.mailIcon} />{" "}
                           <span>{member.email}</span>
                         </div>
-                        {pendingRequest ? (
+                        {memberSwapRequest ? (
                           <Button
                             onClick={(event) => {
                               event.stopPropagation();
-                              setSelectedRequest(pendingRequest);
+                              setSelectedRequest(memberSwapRequest);
                             }}
-                            variant="warning"
+                            variant={hasPendingRequest ? "warning" : "success"}
                             size="sm"
-                            className={motionStyles.pulseWarning}
+                            className={
+                              hasPendingRequest
+                                ? motionStyles.pulseWarning
+                                : undefined
+                            }
                           >
-                            See swap request
+                            {hasPendingRequest
+                              ? "See swap request"
+                              : "See approved request"}
                           </Button>
                         ) : null}
                       </div>
