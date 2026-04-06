@@ -378,3 +378,62 @@ Close remaining frontend lint debt noted during swap migration and align plannin
 
 - Updated `backend/docs/plan.md` to mark Phase 7 cleanup as done.
 - Removed outdated note claiming unresolved frontend lint warnings.
+
+## 2026-04-06 :: Step 12 :: MSA diagram persisted + architecture guardrails enforced
+
+### Goal
+
+Persist the target microservice architecture as a repo artifact and make core migration rules enforceable.
+
+### Work completed
+
+- Added architecture baseline diagram:
+  - `backend/docs/msa-architecture.md`
+- Added architecture guardrail script:
+  - `backend/scripts/check_architecture_guardrails.ps1`
+- Linked guardrails in backend ops docs:
+  - `backend/README.md`
+
+### Guardrails currently enforced
+
+- No `swap-constraints` references in active runtime config (`docker-compose.yaml`, `kong/kong.yml`).
+- No cycle-era swap routes (`/swap-orchestrator/cycles`, `/cycles/`) in active app code roots.
+- Instructor stage model mapping contains:
+  - setup, collecting, forming, formed, confirmed, completed
+
+## 2026-04-06 :: Step 13 :: Split MSA into 3 diagram views
+
+### Goal
+
+Provide separate architecture views for clearer stakeholder validation.
+
+### Added diagrams
+
+- Student UI view:
+  - `backend/docs/msa-student-ui.md`
+- Instructor UI view:
+  - `backend/docs/msa-instructor-ui.md`
+- Swap functionality view:
+  - `backend/docs/msa-swap-functionality.md`
+
+### Documentation wiring
+
+- Added cross-links from `backend/docs/msa-architecture.md`.
+- Added all three diagram entries to `backend/README.md` architecture section.
+
+## 2026-04-06 :: Step 14 :: Runtime policy alignment to MSA diagrams (strict)
+
+### Goal
+
+Align swap runtime behavior 100% with approved flow diagrams, especially appeal/confirm stage rules.
+
+### Enforcements added
+
+- `swap-orchestrator` decision endpoint now blocks in-app appeal when section stage is `confirmed` or `completed`.
+- `swap-orchestrator` confirm endpoint now requires section stage to be exactly `formed`.
+
+### Guardrail script updates
+
+- `backend/scripts/check_architecture_guardrails.ps1` now verifies:
+  - no-appeal guard exists for `confirmed`/`completed`
+  - confirm flow contains formed-only stage guard

@@ -42,6 +42,7 @@ export function getGroupActions(courseCode, group, options = {}) {
           variant: "outline",
         },
       ];
+    case GROUP_STAGE.CONFIRMED:
     case GROUP_STAGE.COMPLETED:
     case GROUP_STAGE.FORMED:
       return [

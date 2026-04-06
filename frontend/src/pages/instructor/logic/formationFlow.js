@@ -3,6 +3,7 @@ export const GROUP_STAGE = {
   COLLECTING: "collecting",
   FORMING: "forming",
   FORMED: "formed",
+  CONFIRMED: "confirmed",
   COMPLETED: "completed",
 };
 
@@ -15,7 +16,9 @@ export function getEffectiveGroupStage(group, formingSectionIds = new Set()) {
   const backendStage = String(group?.stage ?? GROUP_STAGE.SETUP).toLowerCase();
   if (backendStage === GROUP_STAGE.SETUP) return GROUP_STAGE.SETUP;
   if (backendStage === GROUP_STAGE.COLLECTING) return GROUP_STAGE.COLLECTING;
+  if (backendStage === GROUP_STAGE.FORMING) return GROUP_STAGE.FORMING;
   if (backendStage === GROUP_STAGE.FORMED) return GROUP_STAGE.FORMED;
+  if (backendStage === GROUP_STAGE.CONFIRMED) return GROUP_STAGE.CONFIRMED;
   if (backendStage === GROUP_STAGE.COMPLETED) return GROUP_STAGE.COMPLETED;
 
   return GROUP_STAGE.SETUP;

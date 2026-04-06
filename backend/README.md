@@ -55,6 +55,21 @@ Swagger docs
 
 RabbitMQ management UI: http://localhost:15672 (guest/guest)
 
+Architecture baseline and enforcement
+
+- MSA baseline diagram: `backend/docs/msa-architecture.md`
+- MSA student UI view: `backend/docs/msa-student-ui.md`
+- MSA instructor UI view: `backend/docs/msa-instructor-ui.md`
+- MSA swap functionality view: `backend/docs/msa-swap-functionality.md`
+- Guardrail check script: `backend/scripts/check_architecture_guardrails.ps1`
+- Run guardrails:
+  - `cd backend`
+  - `./scripts/check_architecture_guardrails.ps1`
+- Current guardrails include:
+  - no runtime `swap-constraints` references in compose/Kong
+  - no cycle-era `/swap-orchestrator/cycles` route references in active app code
+  - required instructor stage model keys: setup, collecting, forming, formed, confirmed, completed
+
 Notes
 
 - Ports are taken from `docker-compose.yaml` mappings.

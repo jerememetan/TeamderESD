@@ -19,9 +19,14 @@ export const STAGE_CONFIG = {
     tone: "success",
     note: "Teams are available for review, analytics, and peer evaluation.",
   },
-  completed: {
-    label: "Teams formed",
+  confirmed: {
+    label: "Swaps confirmed",
     tone: "success",
-    note: "Teams are available for review, analytics, and peer evaluation.",
+    note: "Swap decisions are finalized and teams are locked for this section.",
+  },
+  completed: {
+    label: "Completed",
+    tone: "success",
+    note: "Section workflow is complete. Historical teams and analytics remain available.",
   },
 };

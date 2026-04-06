@@ -411,6 +411,85 @@ def _fetch_section_row(section_id):
     return row, None
 
 
+def _fetch_section_rows():
+    payload, error = _http_json(
+        "GET",
+        SECTION_URL,
+        label="section-service list",
+    )
+    if error:
+        return None, error
+
+    rows = _extract_data(payload)
+    if isinstance(rows, dict):
+        rows = [rows]
+    if not isinstance(rows, list):
+        return None, {"status": 502, "message": "section-service list returned invalid payload"}
+
+    return rows, None
+
+
+def _resolve_section_id_for_team(team_id):
+    team_id_text = str(team_id or "").strip()
+    if not team_id_text:
+        return None, {"status": 400, "message": "current_team is required on swap request"}
+
+    section_rows, section_error = _fetch_section_rows()
+    if section_error:
+        return None, section_error
+
+    section_ids = []
+    seen = set()
+    for row in section_rows:
+        if not isinstance(row, dict):
+            continue
+        section_id = row.get("id")
+        if section_id is None:
+            continue
+        section_id_text = str(section_id)
+        if section_id_text in seen:
+            continue
+        seen.add(section_id_text)
+        section_ids.append(section_id_text)
+
+    if not section_ids:
+        return None, {"status": 404, "message": "no sections available for team lookup"}
+
+    payload, team_error = _http_json(
+        "GET",
+        TEAM_URL,
+        label="team service",
+        params={"section_ids": ",".join(section_ids)},
+    )
+    if team_error:
+        return None, team_error
+
+    data = _extract_data(payload)
+    sections_payload = data.get("sections") if isinstance(data, dict) else None
+    if not isinstance(sections_payload, list):
+        return None, {"status": 502, "message": "team service returned invalid section list payload"}
+
+    for section_row in sections_payload:
+        if not isinstance(section_row, dict):
+            continue
+
+        section_id = section_row.get("section_id")
+        if section_id is None:
+            continue
+
+        teams = section_row.get("teams")
+        if not isinstance(teams, list):
+            continue
+
+        for team in teams:
+            if not isinstance(team, dict):
+                continue
+            if str(team.get("team_id") or "").strip() == team_id_text:
+                return str(section_id), None
+
+    return None, {"status": 404, "message": "unable to resolve section for swap request team"}
+
+
 def _update_section_stage(section_id, stage):
     payload, error = _http_json(
         "PUT",
@@ -763,6 +842,27 @@ def decide_review_request_composite(swap_request_id):
     if not isinstance(existing_row, dict):
         return jsonify({"code": 502, "message": "swap-request payload missing data"}), 502
 
+    section_id_for_request, section_lookup_error = _resolve_section_id_for_team(existing_row.get("current_team"))
+    if section_lookup_error:
+        return jsonify({"code": section_lookup_error.get("status", 502), "message": section_lookup_error.get("message")}), section_lookup_error.get("status", 502)
+
+    section_row, section_error = _fetch_section_row(section_id_for_request)
+    if section_error:
+        return jsonify({"code": section_error.get("status", 502), "message": section_error.get("message")}), section_error.get("status", 502)
+
+    section_stage = str(section_row.get("stage") or "").strip().lower()
+    if section_stage in {"confirmed", "completed"}:
+        return (
+            jsonify(
+                {
+                    "code": 409,
+                    "message": "no in-app appeal allowed after section is confirmed",
+                    "data": {"section_id": str(section_id_for_request), "stage": section_stage},
+                }
+            ),
+            409,
+        )
+
     existing_status = _status_from_value(existing_row.get("status"))
     if existing_status in TERMINAL_REQUEST_STATUSES:
         message = "rejected requests are terminal" if existing_status == REQUEST_STATUS_REJECTED else "request is already finalized"
@@ -798,7 +898,7 @@ def confirm_section_swaps(section_id):
         return jsonify({"code": section_error.get("status", 502), "message": section_error.get("message")}), section_error.get("status", 502)
 
     stage = str(section_row.get("stage") or "").strip().lower()
-    if stage not in {"formed", "confirmed"}:
+    if stage != "formed":
         return jsonify({"code": 409, "message": "section must be in formed stage to confirm swaps", "data": {"stage": stage}}), 409
 
     course_id = _int_or_none(section_row.get("course_id"))
