@@ -31,7 +31,6 @@ import {
 } from "../../../adapters/analyticsAdapter";
 import { Button } from "../../../components/ui/button";
 import { useAnalyticsPage } from "./logic/useAnalyticsPage";
-import WeightRecommendationsSection from "./WeightRecommendationsSection";
 import styles from "./Analytics.module.css";
 
 const QUALITY_METRICS = [
@@ -61,7 +60,7 @@ function Analytics() {
     backendStudents,
     sectionAnalytics,
     teamAnalytics,
-    weightRecommendations,
+    reputationDeltaReport,
     rosterError,
   } = useAnalyticsPage(courseId, groupId);
 
@@ -111,6 +110,17 @@ function Analytics() {
     });
   }
 
+  const profileByStudentId = useMemo(
+    () =>
+      new Map(
+        (backendStudents || []).map((row) => [
+          Number(row?.student_id),
+          row?.profile || {},
+        ]),
+      ),
+    [backendStudents],
+  );
+
   if (!selectedCourse || !selectedGroup) {
     return (
       <div className={styles.notFound}>Loading Course.... Please Wait</div>
@@ -119,6 +129,10 @@ function Analytics() {
 
   const totalStudents = backendStudents.length || selectedGroup.studentsCount;
   const averageStudentsPerTeam = totalStudents / (groupTeams.length || 1);
+  const reputationDeltaRows = Array.isArray(reputationDeltaReport?.deltas)
+    ? reputationDeltaReport.deltas
+    : [];
+  const reputationDeltaRound = reputationDeltaReport?.round || null;
   return (
     <div className={styles.page}>
       <Link to="/instructor/courses" className={styles.backLink}>
@@ -445,11 +459,70 @@ function Analytics() {
           </div>
         </ModuleBlock>
 
-        <WeightRecommendationsSection
-          courseId={courseId}
-          groupId={groupId}
-          weightRecommendations={weightRecommendations}
-        />
+        <ModuleBlock
+          componentId="MOD-A10"
+          eyebrow="Peer Evaluation"
+          title="Reputation Delta Summary"
+          className={`${styles.chartModule} ${styles.fullSpan}`}
+        >
+          {reputationDeltaRound ? (
+            <p className={styles.summaryNote}>
+              Latest closed round:{" "}
+              {reputationDeltaRound.title || "Peer Evaluation"} (
+              {String(reputationDeltaRound.id || "").slice(0, 8)})
+            </p>
+          ) : (
+            <p className={styles.summaryNote}>
+              No closed peer evaluation round found for this section yet.
+            </p>
+          )}
+
+          {reputationDeltaRows.length > 0 ? (
+            <table className={styles.deltasTable}>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Avg Rating</th>
+                  <th>Evaluations</th>
+                  <th>Reputation Delta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reputationDeltaRows.map((delta) => {
+                  const profile = profileByStudentId.get(delta.studentId);
+                  const deltaClass =
+                    delta.delta > 0
+                      ? styles.deltaPositive
+                      : delta.delta < 0
+                        ? styles.deltaNegative
+                        : styles.deltaNeutral;
+                  return (
+                    <tr key={`delta-${delta.studentId}`}>
+                      <td>
+                        {profile?.name || `Student ${delta.studentId}`}
+                        <br />
+                        <small className={styles.summarySubtle}>
+                          ID: {delta.studentId}
+                        </small>
+                      </td>
+                      <td>{Number(delta.avgRating || 0).toFixed(2)}</td>
+                      <td>{delta.numEvaluations}</td>
+                      <td className={deltaClass}>
+                        {delta.delta > 0 ? "+" : ""}
+                        {delta.delta}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p className={styles.summaryNote}>
+              No peer evaluation submissions were available to calculate
+              reputation deltas.
+            </p>
+          )}
+        </ModuleBlock>
       </section>
     </div>
   );

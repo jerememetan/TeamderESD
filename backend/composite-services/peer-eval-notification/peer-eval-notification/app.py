@@ -60,6 +60,7 @@ STUDENT_SERVICE_URL = os.getenv(
 )
 PEER_EVAL_URL = os.getenv("PEER_EVAL_URL", "http://localhost:3020/peer-eval")
 REPUTATION_URL = os.getenv("REPUTATION_URL", "http://localhost:3006/reputation")
+SECTION_URL = os.getenv("SECTION_URL", "http://section-service:3018/section")
 FRONTEND_PEER_EVAL_URL = os.getenv(
     "FRONTEND_PEER_EVAL_URL", "http://localhost:5173/student/peer-evaluation"
 )
@@ -380,6 +381,7 @@ def close_peer_eval():
     close_data = _extract_round_payload(close_resp.get("payload") or {})
     round_info = close_data.get("round", {}) if isinstance(close_data, dict) else {}
     deltas = close_data.get("reputation_deltas", []) if isinstance(close_data, dict) else []
+    section_id = round_info.get("section_id") if isinstance(round_info, dict) else None
 
     reputation_results = {"updated": 0, "failed": 0}
 
@@ -412,6 +414,76 @@ def close_peer_eval():
                 response_payload=rep_resp,
             )
 
+    section_update_result = {
+        "attempted": False,
+        "updated": False,
+        "section_id": section_id,
+        "from_stage": None,
+        "to_stage": "completed",
+        "message": "section_id not available from closed round",
+    }
+
+    if section_id:
+        section_update_result["attempted"] = True
+        section_get_resp = call_http(
+            method="GET",
+            url=f"{SECTION_URL}/{section_id}",
+            timeout=REQUEST_TIMEOUT,
+            expected_statuses={200},
+        )
+
+        if not section_get_resp["ok"]:
+            section_update_result["message"] = (
+                section_get_resp.get("error") or "failed to fetch section before stage update"
+            )
+            publish_downstream_error(
+                "section",
+                "SECTION_FETCH_FAILED",
+                section_update_result["message"],
+                request_context={"round_id": round_id, "section_id": section_id, "operation": "fetch-section"},
+                http_status=section_get_resp.get("status_code"),
+                response_payload=section_get_resp,
+            )
+        else:
+            section_payload = extract_data(section_get_resp.get("payload") or {})
+            current_stage = str((section_payload or {}).get("stage") or "").strip().lower()
+            section_update_result["from_stage"] = current_stage or None
+
+            if current_stage == "completed":
+                section_update_result["updated"] = True
+                section_update_result["message"] = "section already in completed stage"
+            elif current_stage and current_stage != "confirmed":
+                section_update_result["message"] = (
+                    f"section stage is {current_stage}; skipping automatic transition to completed"
+                )
+            else:
+                section_put_resp = call_http(
+                    method="PUT",
+                    url=f"{SECTION_URL}/{section_id}",
+                    payload={"stage": "completed"},
+                    timeout=REQUEST_TIMEOUT,
+                    expected_statuses={200},
+                )
+                if section_put_resp["ok"]:
+                    section_update_result["updated"] = True
+                    section_update_result["message"] = "section stage updated to completed"
+                else:
+                    section_update_result["message"] = (
+                        section_put_resp.get("error") or "failed to update section stage to completed"
+                    )
+                    publish_downstream_error(
+                        "section",
+                        "SECTION_STAGE_UPDATE_FAILED",
+                        section_update_result["message"],
+                        request_context={
+                            "round_id": round_id,
+                            "section_id": section_id,
+                            "operation": "set-stage-completed",
+                        },
+                        http_status=section_put_resp.get("status_code"),
+                        response_payload=section_put_resp,
+                    )
+
     return jsonify(
         {
             "code": 200,
@@ -419,6 +491,7 @@ def close_peer_eval():
                 "round": round_info,
                 "reputation_deltas": deltas,
                 "reputation_update_results": reputation_results,
+                "section_update": section_update_result,
             },
         }
     ), 200

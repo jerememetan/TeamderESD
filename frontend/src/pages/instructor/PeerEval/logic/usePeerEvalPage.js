@@ -143,9 +143,26 @@ export function usePeerEvalPage(courseId, sectionId) {
         status: "closed",
       });
 
+      const sectionUpdate = result.section_update || {};
+      if (sectionUpdate.updated) {
+        setSelectedGroup((currentGroup) =>
+          currentGroup
+            ? {
+                ...currentGroup,
+                stage: "completed",
+              }
+            : currentGroup,
+        );
+      }
+
       const repResults = result.reputation_update_results || {};
+      const sectionMessage = sectionUpdate.updated
+        ? "Section marked as completed."
+        : sectionUpdate.attempted
+          ? `Section stage not updated (${sectionUpdate.message || "unknown reason"}).`
+          : "Section stage update was skipped.";
       setActionMessage(
-        `Round closed. ${result.reputation_deltas?.length || 0} reputation deltas computed. ${repResults.updated || 0} updated, ${repResults.failed || 0} failed.`
+        `Round closed. ${result.reputation_deltas?.length || 0} reputation deltas computed. ${repResults.updated || 0} updated, ${repResults.failed || 0} failed. ${sectionMessage}`
       );
     } catch (err) {
       setError(err.message || "Failed to close peer evaluation round");

@@ -304,6 +304,35 @@
   text-decoration: underline;
 }
 
+.summaryNote {
+  margin: 0 0 var(--td-space-sm);
+  color: var(--td-color-text-muted);
+}
+
+.summarySubtle {
+  color: #6a7784;
+}
+
+.deltasTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.deltasTable th,
+.deltasTable td {
+  border-bottom: 1px solid rgba(124, 145, 166, 0.35);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.deltasTable th {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--td-color-text-muted);
+}
+
 @media (max-width: 900px) {
   .statsGrid,
   .chartGrid {

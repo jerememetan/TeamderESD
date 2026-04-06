@@ -58,6 +58,66 @@ export async function getPeerEvaluationRoundForSection(sectionId) {
   }
 }
 
+export async function getPeerEvaluationRoundsForSection(
+  sectionId,
+  { status } = {},
+) {
+  if (!sectionId) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    section_id: String(sectionId),
+  });
+  if (status) {
+    params.set("status", String(status).toLowerCase());
+  }
+
+  const payload = await fetchJson(
+    `${PEER_EVAL_URL}/rounds?${params.toString()}`,
+    {
+      headers: { Accept: "application/json" },
+      cache: false,
+    },
+  );
+
+  const rounds = Array.isArray(payload?.data) ? payload.data : [];
+  return rounds.map((round) => ({
+    id: round.round_id,
+    sectionId: round.section_id,
+    status: round.status,
+    title: round.title,
+    dueAt: round.due_at,
+    startedAt: round.created_at,
+  }));
+}
+
+export async function getPeerEvaluationRoundSubmissions(roundId) {
+  if (!roundId) {
+    return [];
+  }
+
+  const payload = await fetchJson(
+    `${PEER_EVAL_URL}/rounds/${roundId}/submissions`,
+    {
+      headers: { Accept: "application/json" },
+      cache: false,
+    },
+  );
+
+  const submissions = Array.isArray(payload?.data) ? payload.data : [];
+  return submissions.map((row) => ({
+    submissionId: row.submission_id,
+    roundId: row.round_id,
+    evaluatorId: Number(row.evaluator_id),
+    evaluateeId: Number(row.evaluatee_id),
+    rating: Number(row.rating),
+    justification: row.justification || "",
+    submittedAt: row.submitted_at,
+    teamId: row.team_id,
+  }));
+}
+
 /**
  * Check if a student has already submitted for a round.
  * Returns the submission data if found, null otherwise.
