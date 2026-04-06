@@ -35,6 +35,13 @@ services:
         paths:
           - /students
         strip_path: true
+        plugins:
+          - name: proxy-cache
+            config:
+              cache_ttl: 300
+              strategy: memory
+              request_method:
+                - GET
 
   - name: course-service
     url: https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course
@@ -43,6 +50,13 @@ services:
         paths:
           - /courses
         strip_path: true
+        plugins:
+          - name: proxy-cache
+            config:
+              cache_ttl: 300
+              strategy: memory
+              request_method:
+                - GET
 
   - name: section-service
     url: http://section-service:3018
@@ -51,6 +65,13 @@ services:
         paths:
           - /section
         strip_path: false
+        plugins:
+          - name: proxy-cache
+            config:
+              cache_ttl: 300
+              strategy: memory
+              request_method:
+                - GET
 
   - name: skill-service
     url: http://skill-service:3002
@@ -83,6 +104,13 @@ services:
         paths:
           - /enrollment
         strip_path: false
+        plugins:
+          - name: proxy-cache
+            config:
+              cache_ttl: 300
+              strategy: memory
+              request_method:
+                - GET
 
   - name: reputation-service
     url: http://reputation-service:3006

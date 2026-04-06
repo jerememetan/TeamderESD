@@ -8,6 +8,9 @@ API gateway
 - Kong admin API: http://localhost:8001
 - Frontend/browser traffic should use Kong routes (for example `http://localhost:8000/team-formation`).
 - CORS is now centralized at Kong; per-service Flask CORS middleware is removed.
+- Kong caches GET responses for `students`, `courses`, `section`, and `enrollment` routes with the built-in `proxy-cache` plugin and a 5-minute TTL.
+- Cache behavior is read-only: POST, PUT, PATCH, and DELETE requests are not cached.
+- Query-string GETs for section and enrollment remain route-scoped through Kong and are cached as read requests.
 
 Atomic services
 

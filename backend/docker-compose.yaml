@@ -508,6 +508,7 @@ services:
     restart: unless-stopped
     environment:
       KONG_DATABASE: "off"
+      KONG_PLUGINS: bundled,proxy-cache
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
