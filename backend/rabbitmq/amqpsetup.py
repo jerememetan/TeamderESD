@@ -11,6 +11,8 @@ EXCHANGE_TYPE = "topic"
 EMAIL_QUEUE = "notification.email.queue"
 SMS_QUEUE = "notification.sms.queue"
 
+DEAD_LETTER_ROUTING_KEY_SUFFIX = ".error"
+
 EMAIL_ROUTING_KEY = "notification.email"
 SMS_ROUTING_KEY = "notification.sms"
 
@@ -60,8 +62,25 @@ def setup_topology(channel: pika.adapters.blocking_connection.BlockingChannel) -
         durable=True,
     )
 
-    channel.queue_declare(queue=EMAIL_QUEUE, durable=True)
-    channel.queue_declare(queue=SMS_QUEUE, durable=True)
+    email_dl_routing_key = f"{EMAIL_ROUTING_KEY}{DEAD_LETTER_ROUTING_KEY_SUFFIX}"
+    sms_dl_routing_key = f"{SMS_ROUTING_KEY}{DEAD_LETTER_ROUTING_KEY_SUFFIX}"
+
+    channel.queue_declare(
+        queue=EMAIL_QUEUE,
+        durable=True,
+        arguments={
+            "x-dead-letter-exchange": EXCHANGE_NAME,
+            "x-dead-letter-routing-key": email_dl_routing_key,
+        },
+    )
+    channel.queue_declare(
+        queue=SMS_QUEUE,
+        durable=True,
+        arguments={
+            "x-dead-letter-exchange": EXCHANGE_NAME,
+            "x-dead-letter-routing-key": sms_dl_routing_key,
+        },
+    )
 
     channel.queue_bind(
         queue=EMAIL_QUEUE,
@@ -82,10 +101,14 @@ def main() -> None:
     setup_topology(channel)
     connection.close()
 
+    email_dl_routing_key = f"{EMAIL_ROUTING_KEY}{DEAD_LETTER_ROUTING_KEY_SUFFIX}"
+    sms_dl_routing_key = f"{SMS_ROUTING_KEY}{DEAD_LETTER_ROUTING_KEY_SUFFIX}"
+
     print("RabbitMQ topology setup completed successfully.")
     print(f"Exchange: {EXCHANGE_NAME}")
     print(f"Queues: {EMAIL_QUEUE}, {SMS_QUEUE}")
     print(f"Bindings: {EMAIL_ROUTING_KEY}, {SMS_ROUTING_KEY}")
+    print(f"Dead-letter bindings: {email_dl_routing_key}, {sms_dl_routing_key}")
 
 
 if __name__ == "__main__":
