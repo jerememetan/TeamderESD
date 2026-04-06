@@ -67,3 +67,49 @@ export async function fetchTeamsBySections(sectionIds = []) {
     return acc;
   }, {});
 }
+
+export async function saveTeamsForSection({ sectionId, teams }) {
+  if (!sectionId) {
+    throw new Error("sectionId is required to save teams");
+  }
+
+  if (!Array.isArray(teams) || teams.length === 0) {
+    throw new Error("At least one team is required to save teams");
+  }
+
+  const payloadTeams = teams.map((team) => {
+    const teamId = String(team?.id || "").trim();
+    if (!teamId) {
+      throw new Error("Each team must include an id");
+    }
+
+    const members = Array.isArray(team?.members) ? team.members : [];
+    const students = members.map((member) => {
+      const parsedStudentId = Number(member?.id);
+      if (!Number.isInteger(parsedStudentId)) {
+        throw new Error("Each team member must include a valid numeric id");
+      }
+      return { student_id: parsedStudentId };
+    });
+
+    return {
+      team_id: teamId,
+      students,
+    };
+  });
+
+  const payload = await fetchJson(TEAM_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    cache: false,
+    body: JSON.stringify({
+      section_id: sectionId,
+      teams: payloadTeams,
+    }),
+  });
+
+  return payload?.data ?? payload;
+}

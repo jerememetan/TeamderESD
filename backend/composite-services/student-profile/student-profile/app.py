@@ -548,6 +548,7 @@ def get_student_profile():
 
     students = []
     for sid in student_ids:
+        base_profile = profiles_by_student_id.get(sid, {})
         details = details_by_student_id.get(
             sid,
             {
@@ -561,7 +562,7 @@ def get_student_profile():
         students.append(
             {
                 "student_id": sid,
-                "profile": details,
+                "profile": compose_profile(base_profile, details),
             }
         )
 

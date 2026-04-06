@@ -7,7 +7,10 @@ import {
   fetchAllStudents,
 } from "../../../../services/studentService";
 import { generateTeamsForSection } from "../../../../services/teamFormationService";
-import { fetchTeamsBySection } from "../../../../services/teamService";
+import {
+  fetchTeamsBySection,
+  saveTeamsForSection,
+} from "../../../../services/teamService";
 import {
   confirmSectionSwaps,
   decideSwapReviewRequest,
@@ -17,6 +20,26 @@ import {
   mapBackendTeamsToViewModel,
   swapMembersAcrossTeams,
 } from "./teamLogic";
+
+function buildTeamAssignmentSignature(teams) {
+  if (!Array.isArray(teams) || teams.length === 0) {
+    return "";
+  }
+
+  return teams
+    .map((team) => {
+      const teamId = String(team?.id || "");
+      const memberIds = Array.isArray(team?.members)
+        ? team.members
+            .map((member) => String(member?.id || ""))
+            .filter(Boolean)
+            .sort()
+        : [];
+      return `${teamId}:${memberIds.join(",")}`;
+    })
+    .sort()
+    .join("|");
+}
 
 export function useTeamsPage(courseId, backendSectionId) {
   const [isCourseLoading, setIsCourseLoading] = useState(true);
@@ -30,6 +53,7 @@ export function useTeamsPage(courseId, backendSectionId) {
   const [isRosterLoading, setIsRosterLoading] = useState(true);
   const [isTeamsLoading, setIsTeamsLoading] = useState(true);
   const [isGeneratingTeams, setIsGeneratingTeams] = useState(false);
+  const [isSavingTeams, setIsSavingTeams] = useState(false);
   const [isSwapRequestsLoading, setIsSwapRequestsLoading] = useState(false);
   const [isSwapDecisionUpdating, setIsSwapDecisionUpdating] = useState(false);
   const [isConfirmingSwaps, setIsConfirmingSwaps] = useState(false);
@@ -232,6 +256,21 @@ export function useTeamsPage(courseId, backendSectionId) {
 
   const teamDataSource = backendVisibleTeams.length ? "backend" : "mock";
 
+  const backendTeamSignature = useMemo(
+    () => buildTeamAssignmentSignature(backendVisibleTeams),
+    [backendVisibleTeams],
+  );
+
+  const editableTeamSignature = useMemo(
+    () => buildTeamAssignmentSignature(editableTeams),
+    [editableTeams],
+  );
+
+  const hasLocalTeamEdits =
+    backendTeamSignature.length > 0 &&
+    editableTeamSignature.length > 0 &&
+    backendTeamSignature !== editableTeamSignature;
+
   useEffect(() => {
     setEditableTeams(backendVisibleTeams);
     setSelectedSwapMember(null);
@@ -288,6 +327,13 @@ export function useTeamsPage(courseId, backendSectionId) {
     !isSectionFinalized &&
     !hasPendingSwapRequests &&
     !isSwapRequestsLoading;
+
+  const canSaveManualSwaps =
+    Boolean(backendSectionId) &&
+    teamDataSource === "backend" &&
+    !isSectionFinalized &&
+    hasLocalTeamEdits &&
+    !isSavingTeams;
 
   const handleApprove = async (requestId) => {
     setIsSwapDecisionUpdating(true);
@@ -404,15 +450,62 @@ export function useTeamsPage(courseId, backendSectionId) {
       const failedCount = Number(
         result?.failed_count ?? result?.failedCount ?? 0,
       );
-      setTeamMessage(
-        `Confirmed swaps. Executed: ${Number.isFinite(executedCount) ? executedCount : 0}, Failed: ${Number.isFinite(failedCount) ? failedCount : 0}.`,
+      const approvedCount = Number(
+        result?.approved_request_count ?? result?.approvedRequestCount ?? 0,
       );
+      const safeExecutedCount = Number.isFinite(executedCount)
+        ? executedCount
+        : 0;
+      const safeFailedCount = Number.isFinite(failedCount) ? failedCount : 0;
+      const safeApprovedCount = Number.isFinite(approvedCount)
+        ? approvedCount
+        : 0;
+
+      if (
+        safeApprovedCount > 0 &&
+        safeExecutedCount === 0 &&
+        safeFailedCount === 0
+      ) {
+        setTeamMessage(
+          `Execute approved swaps completed with an unexpected summary (Approved: ${safeApprovedCount}, Executed: 0, Failed: 0). Refresh swap requests to verify statuses.`,
+        );
+      } else {
+        setTeamMessage(
+          `Execute approved swaps completed. Approved: ${safeApprovedCount}, Executed: ${safeExecutedCount}, Failed: ${safeFailedCount}.`,
+        );
+      }
     } catch (error) {
       setTeamError(
         error?.message || "Unable to confirm swaps for this section.",
       );
     } finally {
       setIsConfirmingSwaps(false);
+    }
+  };
+
+  const handleSaveTeamsToDb = async () => {
+    if (!canSaveManualSwaps) {
+      return;
+    }
+
+    setIsSavingTeams(true);
+    setTeamError("");
+
+    try {
+      await saveTeamsForSection({
+        sectionId: backendSectionId,
+        teams: editableTeams,
+      });
+
+      const refreshedTeams = await fetchTeamsBySection(backendSectionId);
+      setBackendTeams(refreshedTeams);
+      setSwapMode(false);
+      setSelectedSwapMember(null);
+      setTeamMessage("Manual swaps were saved to the team database.");
+    } catch (error) {
+      setTeamError(error?.message || "Unable to save manual swaps.");
+    } finally {
+      setIsSavingTeams(false);
     }
   };
 
@@ -463,7 +556,7 @@ export function useTeamsPage(courseId, backendSectionId) {
       }),
     );
     setTeamMessage(
-      `Swap completed: ${selectedSwapMember.member.name} and ${member.name}.`,
+      `Preview swap ready: ${selectedSwapMember.member.name} and ${member.name}. Save to DB to persist this change.`,
     );
     setSelectedSwapMember(null);
   };
@@ -492,15 +585,19 @@ export function useTeamsPage(courseId, backendSectionId) {
     isSwapDecisionUpdating,
     isConfirmingSwaps,
     isGeneratingTeams,
+    isSavingTeams,
     pendingSwapCount,
     approvedSwapCount,
     hasPendingSwapRequests,
     canConfirmSwaps,
+    canSaveManualSwaps,
+    hasLocalTeamEdits,
     setSelectedTeamId,
     setSelectedRequest,
     handleApprove,
     handleReject,
     handleConfirmSwaps,
+    handleSaveTeamsToDb,
     handleGenerateTeams,
     handleToggleSwapMode,
     handleCancelSelection,

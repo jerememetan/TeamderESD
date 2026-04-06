@@ -41,15 +41,19 @@ function Teams() {
     isSwapDecisionUpdating,
     isConfirmingSwaps,
     isGeneratingTeams,
+    isSavingTeams,
     pendingSwapCount,
     approvedSwapCount,
     hasPendingSwapRequests,
     canConfirmSwaps,
+    canSaveManualSwaps,
+    hasLocalTeamEdits,
     setSelectedTeamId,
     setSelectedRequest,
     handleApprove,
     handleReject,
     handleConfirmSwaps,
+    handleSaveTeamsToDb,
     handleGenerateTeams,
     handleToggleSwapMode,
     handleCancelSelection,
@@ -154,7 +158,7 @@ function Teams() {
               : visibleSwapRequests.filter(
                   (request) => request.status === "pending",
                 ).length}{" "}
-            pending interventions
+            pending swap requests
           </SystemTag>
         </div>
       </section>
@@ -222,20 +226,32 @@ function Teams() {
               >
                 <RefreshCw className={styles.actionIcon} />{" "}
                 {isGeneratingTeams
-                  ? "Generating..."
+                  ? "Forming..."
                   : backendVisibleTeams.length
-                    ? "Regenerate teams"
-                    : "Generate teams"}
+                    ? "Re-form teams"
+                    : "Form teams"}
               </Button>
               <Button
                 onClick={handleToggleSwapMode}
                 variant={swapMode ? "warning" : "outline"}
                 size="sm"
               >
-                {swapMode ? "Swap mode on" : "Swap mode"}
+                {swapMode ? "Exit manual swap mode" : "Manual swap mode"}
+              </Button>
+              <Button
+                onClick={handleSaveTeamsToDb}
+                variant="success"
+                size="sm"
+                disabled={!canSaveManualSwaps}
+              >
+                {isSavingTeams
+                  ? "Saving..."
+                  : hasLocalTeamEdits
+                    ? "Save manual swaps to DB"
+                    : "No manual swaps to save"}
               </Button>
               {hasPendingSwapRequests ? (
-                <SystemTag hazard>Pending approval</SystemTag>
+                <SystemTag hazard>Review pending requests first</SystemTag>
               ) : (
                 <Button
                   onClick={handleConfirmSwaps}
@@ -244,7 +260,9 @@ function Teams() {
                   disabled={!canConfirmSwaps || isConfirmingSwaps}
                 >
                   <CheckCircle className={styles.actionIcon} />
-                  {isConfirmingSwaps ? "Confirming..." : "Confirmed Swap"}
+                  {isConfirmingSwaps
+                    ? "Executing..."
+                    : "Execute approved swaps"}
                 </Button>
               )}
               {swapMode && selectedSwapMember ? (
@@ -253,28 +271,18 @@ function Teams() {
                   variant="outline"
                   size="sm"
                 >
-                  Cancel selection
+                  Clear swap selection
                 </Button>
               ) : null}
             </div>
           }
         >
-          <p className={styles.sourceNote}>
-            {teamDataSource === "backend"
-              ? "Showing backend teams persisted by the team service."
-              : "Showing fallback mock teams until backend teams are generated for this section."}
-          </p>
+
           <p className={styles.sourceNote}>
             {hasPendingSwapRequests
               ? `Pending approval: ${pendingSwapCount} request(s) still need instructor decision before confirmation.`
               : `Ready to confirm: ${approvedSwapCount} approved request(s), no pending approvals.`}
           </p>
-          {swapMode ? (
-            <p className={styles.sourceNote}>
-              Swap mode is enabled. Pick one student, then pick a student from
-              another team to exchange them.
-            </p>
-          ) : null}
           <div className={styles.teamList}>
             {isTeamsLoading && !visibleTeams.length ? (
               <p className={styles.sourceNote}>
@@ -478,8 +486,8 @@ function Teams() {
                             }
                           >
                             {hasPendingRequest
-                              ? "See swap request"
-                              : "See approved request"}
+                              ? "Review swap request"
+                              : "View approved swap"}
                           </Button>
                         ) : null}
                       </div>
