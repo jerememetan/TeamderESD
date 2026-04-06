@@ -63,6 +63,10 @@ AMQP_RETRY_WAIT_SECONDS = float(os.getenv("AMQP_RETRY_WAIT_SECONDS", "1.5"))
 CONSUMER_CONNECT_RETRY_SECONDS = float(os.getenv("NOTIFICATION_CONSUMER_CONNECT_RETRY_SECONDS", "3"))
 CONSUMER_PREFETCH_COUNT = int(os.getenv("NOTIFICATION_CONSUMER_PREFETCH", "5"))
 CONSUMER_ENABLED = os.getenv("NOTIFICATION_CONSUMER_ENABLED", "true").lower() == "true"
+CONSUMER_DEAD_LETTER_EXCHANGE = os.getenv("NOTIFICATION_CONSUMER_DEAD_LETTER_EXCHANGE", EXCHANGE_NAME)
+CONSUMER_DEAD_LETTER_ROUTING_KEY = os.getenv(
+    "NOTIFICATION_CONSUMER_DEAD_LETTER_ROUTING_KEY", f"{PUBLISH_ROUTING_KEY}.error"
+)
 
 SMTP_HOST = os.getenv("GMAIL_SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("GMAIL_SMTP_PORT", "587"))
@@ -516,7 +520,14 @@ def _consume_loop() -> None:
                 exchange_type=EXCHANGE_TYPE,
                 durable=True,
             )
-            channel.queue_declare(queue=CONSUMER_QUEUE, durable=True)
+            channel.queue_declare(
+                queue=CONSUMER_QUEUE,
+                durable=True,
+                arguments={
+                    "x-dead-letter-exchange": CONSUMER_DEAD_LETTER_EXCHANGE,
+                    "x-dead-letter-routing-key": CONSUMER_DEAD_LETTER_ROUTING_KEY,
+                },
+            )
             for routing_key in CONSUMER_ROUTING_KEYS:
                 channel.queue_bind(
                     exchange=EXCHANGE_NAME,

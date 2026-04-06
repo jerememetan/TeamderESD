@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 import threading
@@ -74,6 +75,62 @@ def _safe_json_loads(body: bytes) -> Tuple[Optional[Dict[str, Any]], Optional[st
     return parsed, None
 
 
+def _safe_utf8_preview(body: bytes, max_chars: int = 2000) -> Optional[str]:
+    try:
+        decoded = body.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+    if len(decoded) <= max_chars:
+        return decoded
+    return decoded[:max_chars] + "..."
+
+
+def _headers_dict(properties) -> Dict[str, Any]:
+    headers = getattr(properties, "headers", None)
+    return headers if isinstance(headers, dict) else {}
+
+
+def _is_dead_letter(properties) -> bool:
+    headers = _headers_dict(properties)
+    return "x-death" in headers or "x-first-death-reason" in headers
+
+
+def _extract_dead_letter_context(method, properties, body: bytes, parse_error: Optional[str]) -> Dict[str, Any]:
+    headers = _headers_dict(properties)
+    payload_preview = _safe_utf8_preview(body)
+    payload_base64 = None
+    if payload_preview is None:
+        payload_base64 = base64.b64encode(body[:1024]).decode("ascii")
+
+    return {
+        "dead_letter": True,
+        "delivery_tag": method.delivery_tag,
+        "routing_key": method.routing_key,
+        "exchange": method.exchange,
+        "consumer_queue": method.routing_key,
+        "parse_error": parse_error,
+        "headers": headers,
+        "payload_utf8_preview": payload_preview,
+        "payload_base64_preview": payload_base64,
+    }
+
+
+def _store_dead_letter_message(method, properties, body: bytes, parse_error: Optional[str], parsed_message: Any) -> None:
+    create_error_log(
+        source_service=method.routing_key,
+        routing_key=method.routing_key,
+        error_code="RABBITMQ_DEAD_LETTER",
+        error_message="Dead-lettered message routed from RabbitMQ queue.",
+        correlation_id=None,
+        context_json={
+            "dead_letter_details": _extract_dead_letter_context(method, properties, body, parse_error),
+            "parsed_payload": parsed_message if isinstance(parsed_message, (dict, list)) else None,
+        },
+        status="OPEN",
+    )
+
+
 def _derive_source_service(message: Dict[str, Any], routing_key: str) -> str:
     explicit = message.get("source_service")
     if isinstance(explicit, str) and explicit.strip():
@@ -136,11 +193,18 @@ def _store_error_message(message: Dict[str, Any], routing_key: str) -> bool:
 def _handle_message(channel, method, properties, body) -> None:
     parsed, parse_error = _safe_json_loads(body)
     if parse_error:
-        channel.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
+        if _is_dead_letter(properties):
+            _store_dead_letter_message(method, properties, body, parse_error, None)
+            channel.basic_ack(delivery_tag=method.delivery_tag)
+        else:
+            channel.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
         return
 
     stored = _store_error_message(parsed, method.routing_key)
     if stored:
+        channel.basic_ack(delivery_tag=method.delivery_tag)
+    elif _is_dead_letter(properties):
+        _store_dead_letter_message(method, properties, body, None, parsed)
         channel.basic_ack(delivery_tag=method.delivery_tag)
     else:
         channel.basic_reject(delivery_tag=method.delivery_tag, requeue=False)

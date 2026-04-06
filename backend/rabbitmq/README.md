@@ -41,9 +41,14 @@ The script creates:
 - Durable queues:
   - `notification.email.queue`
   - `notification.sms.queue`
+- Dead-letter configuration on notification queues:
+  - `x-dead-letter-exchange=notification.topic`
+  - `x-dead-letter-routing-key=notification.email.error` (for `notification.email.queue`)
+  - `x-dead-letter-routing-key=notification.sms.error` (for `notification.sms.queue`)
 - Bindings:
   - `notification.email.queue` bound with routing key `notification.email`
   - `notification.sms.queue` bound with routing key `notification.sms`
+  - Dead-letter messages are routed with `*.error` keys and consumed by `error-service`.
 
 ## 4. Verify in Management UI
 
@@ -56,3 +61,6 @@ The script creates:
 5. Open each queue and verify bindings include:
    - `notification.email`
    - `notification.sms`
+6. Open each queue and verify **Arguments** include DLX settings:
+  - `x-dead-letter-exchange: notification.topic`
+  - `x-dead-letter-routing-key: notification.email.error` or `notification.sms.error`
