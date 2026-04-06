@@ -3,6 +3,7 @@ from models.peer_eval_model import db, PeerEvalRound, PeerEvalSubmission
 from schemas.peer_eval_schema import RoundCreateSchema, SubmissionCreateSchema
 from marshmallow import ValidationError
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 peer_eval_bp = Blueprint("peer_eval", __name__)
 
@@ -121,19 +122,25 @@ def submit_evaluations(round_id):
         }), 409
 
     created = []
-    for entry in entries:
-        submission = PeerEvalSubmission(
-            round_id=round_id,
-            evaluator_id=evaluator_id,
-            evaluatee_id=entry["evaluatee_id"],
-            team_id=team_id,
-            rating=entry["rating"],
-            justification=entry.get("justification", ""),
-        )
-        db.session.add(submission)
-        created.append(submission)
+    try:
+        for entry in entries:
+            submission = PeerEvalSubmission(
+                round_id=str(round_id),
+                evaluator_id=evaluator_id,
+                evaluatee_id=entry["evaluatee_id"],
+                team_id=str(team_id),
+                rating=entry["rating"],
+                justification=entry.get("justification", ""),
+            )
+            db.session.add(submission)
+            # Flush each row to avoid insertmanyvalues UUID sentinel mismatch.
+            db.session.flush()
+            created.append(submission)
 
-    db.session.commit()
+        db.session.commit()
+    except SQLAlchemyError as error:
+        db.session.rollback()
+        return jsonify({"code": 500, "message": f"failed to save peer evaluations: {str(error)}"}), 500
 
     return jsonify({
         "code": 201,

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { fetchStudentForms } from "../../../../services/studentFormService";
 import { fetchTeamsBySections } from "../../../../services/teamService";
-import { getActivePeerEvaluationRoundsBySections } from "../../../../services/peerEvaluationService";
+import {
+  getActivePeerEvaluationRoundsBySections,
+  getPeerEvaluationSubmission,
+} from "../../../../services/peerEvaluationService";
 import { fetchAllEnrollments } from "../../../../services/enrollmentService";
 import { loadAssignmentsForStudent } from "../../logic/studentAssignmentLogic";
 function getFriendlyErrorMessage(error, fallbackMessage) {
@@ -121,12 +124,40 @@ export async function loadDashboardSummary(studentProfile) {
     Array.isArray(roundsBySection[sectionId]) ? roundsBySection[sectionId] : [],
   );
 
+  const submissionChecks = await Promise.all(
+    activeRounds.map(async (round) => {
+      const roundId = round?.id;
+      if (!roundId) {
+        return { roundId: null, hasSubmitted: false };
+      }
+
+      const submission = await getPeerEvaluationSubmission(
+        roundId,
+        backendStudentId,
+      );
+      return {
+        roundId,
+        hasSubmitted: Boolean(submission),
+      };
+    }),
+  );
+
+  const submittedRoundIds = new Set(
+    submissionChecks
+      .filter((check) => check.hasSubmitted && check.roundId)
+      .map((check) => check.roundId),
+  );
+
+  const pendingRounds = activeRounds.filter(
+    (round) => round?.id && !submittedRoundIds.has(round.id),
+  );
+
   return {
     teamCount,
     formCount: unsubmittedForms.length,
-    peerEvalCount: activeRounds.length,
+    peerEvalCount: pendingRounds.length,
     availableForms: unsubmittedForms,
-    nextPeerRound: activeRounds[0] || null,
+    nextPeerRound: pendingRounds[0] || null,
   };
 }
 
