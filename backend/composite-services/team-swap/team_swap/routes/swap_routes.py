@@ -15,7 +15,11 @@ optimize_schema = OptimizeRequestSchema()
 REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "10"))
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team").rstrip("/")
 SWAP_REQUEST_URL = os.getenv("SWAP_REQUEST_URL", "http://localhost:3011/swap-request").rstrip("/")
+SECTION_URL = os.getenv("SECTION_URL", "http://localhost:3018/section").rstrip("/")
 FORMATION_CONFIG_URL = os.getenv("FORMATION_CONFIG_URL", "http://localhost:4002/formation-config").rstrip("/")
+
+REQUEST_STATUS_EXECUTED = "EXECUTED"
+REQUEST_STATUS_FAILED = "FAILED"
 
 
 def _safe_json(response):
@@ -97,6 +101,20 @@ def _normalize_approved_ids(values):
     return normalized
 
 
+def _status_from_value(value):
+    text = str(value or "").strip().upper()
+    return text
+
+
+def _int_or_none(value):
+    try:
+        if value is None or value == "":
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _student_team_map(teams_by_id):
     mapping = {}
     if not isinstance(teams_by_id, dict):
@@ -125,17 +143,54 @@ def _validate_execute_invariants(original_teams, updated_teams, approved_request
 
     return True, None
 
-@swap_bp.route("/execute", methods=["POST"])
-def execute_swaps_composite():
-    payload = request.get_json() or {}
 
-    try:
-        section_id = str(_normalize_uuid(payload.get("section_id"), "section_id"))
-    except ValueError as error:
-        return jsonify({"code": 400, "message": str(error)}), 400
+def _build_new_team_roster(section_id, teams_by_id):
+    return {
+        "section_id": section_id,
+        "teams": [
+            {
+                "team_id": team_id,
+                "students": [{"student_id": sid} for sid in students],
+            }
+            for team_id, students in teams_by_id.items()
+        ],
+    }
 
-    approved_id_filter = _normalize_approved_ids(payload.get("approved_request_ids"))
 
+def _fetch_section_row(section_id):
+    payload, error = _http_json(
+        "GET",
+        f"{SECTION_URL}/{section_id}",
+        label="section service",
+    )
+    if error:
+        return None, error
+
+    row = _extract_data(payload)
+    if not isinstance(row, dict):
+        return None, {"status": 502, "message": "section service returned invalid payload"}
+
+    return row, None
+
+
+def _update_section_stage(section_id, stage):
+    payload, error = _http_json(
+        "PUT",
+        f"{SECTION_URL}/{section_id}",
+        label="section service update",
+        payload={"stage": stage},
+    )
+    if error:
+        return None, error
+
+    row = _extract_data(payload)
+    if not isinstance(row, dict):
+        return None, {"status": 502, "message": "section service update returned invalid payload"}
+
+    return row, None
+
+
+def _fetch_section_teams(section_id):
     team_payload, team_error = _http_json(
         "GET",
         TEAM_URL,
@@ -143,12 +198,12 @@ def execute_swaps_composite():
         params={"section_id": section_id},
     )
     if team_error:
-        return jsonify({"code": team_error.get("status", 502), "message": team_error.get("message")}), team_error.get("status", 502)
+        return None, None, team_error
 
     teams_data = _extract_data(team_payload)
     teams_list = teams_data.get("teams") if isinstance(teams_data, dict) else None
     if not isinstance(teams_list, list):
-        return jsonify({"code": 502, "message": "team service returned invalid payload"}), 502
+        return None, None, {"status": 502, "message": "team service returned invalid payload"}
 
     current_teams = {}
     for team in teams_list:
@@ -164,16 +219,20 @@ def execute_swaps_composite():
                 sid = student.get("student_id")
             else:
                 sid = student
-            try:
-                student_ids.append(int(sid))
-            except (TypeError, ValueError):
+            sid_int = _int_or_none(sid)
+            if sid_int is None:
                 continue
+            student_ids.append(sid_int)
         current_teams[team_id] = student_ids
 
     section_team_ids = set(current_teams.keys())
     if not section_team_ids:
-        return jsonify({"code": 400, "message": "no teams found for section"}), 400
+        return None, None, {"status": 400, "message": "no teams found for section"}
 
+    return current_teams, section_team_ids, None
+
+
+def _fetch_approved_requests(section_team_ids, approved_id_filter=None):
     request_payload, request_error = _http_json(
         "GET",
         SWAP_REQUEST_URL,
@@ -181,7 +240,7 @@ def execute_swaps_composite():
         params={"status": "APPROVED"},
     )
     if request_error:
-        return jsonify({"code": request_error.get("status", 502), "message": request_error.get("message")}), request_error.get("status", 502)
+        return None, request_error
 
     request_rows = _extract_data(request_payload)
     if isinstance(request_rows, dict):
@@ -206,53 +265,40 @@ def execute_swaps_composite():
         if current_team_text not in section_team_ids:
             continue
 
-        try:
-            approved_requests.append(
-                {
-                    "swap_request_id": request_id_text,
-                    "student_id": int(student_id),
-                    "current_team": current_team_text,
-                }
-            )
-        except (TypeError, ValueError):
+        student_id_int = _int_or_none(student_id)
+        if student_id_int is None:
             continue
 
-    formation_config_data = None
+        approved_requests.append(
+            {
+                "swap_request_id": request_id_text,
+                "student_id": student_id_int,
+                "current_team": current_team_text,
+            }
+        )
+
+    return approved_requests, None
+
+
+def _fetch_formation_config(section_id):
     formation_payload, formation_error = _http_json(
         "GET",
         FORMATION_CONFIG_URL,
         label="formation-config service",
         params={"section_id": section_id},
     )
-    if not formation_error:
-        formation_config_data = _extract_data(formation_payload)
+    if formation_error:
+        return None
+    return _extract_data(formation_payload)
 
+
+def _run_swap_execution(current_teams, approved_requests):
     if not approved_requests:
-        new_team_roster = {
-            "section_id": section_id,
-            "teams": [
-                {
-                    "team_id": team_id,
-                    "students": [{"student_id": sid} for sid in students],
-                }
-                for team_id, students in current_teams.items()
-            ],
-        }
-        return (
-            jsonify(
-                {
-                    "code": 200,
-                    "message": "No approved requests to execute",
-                    "data": {
-                        "new_team_roster": new_team_roster,
-                        "per_request_result": [],
-                        "num_executed": 0,
-                        "formation_config": formation_config_data,
-                    },
-                }
-            ),
-            200,
-        )
+        return {
+            "new_teams": {team_id: list(students) for team_id, students in current_teams.items()},
+            "per_request_result": [],
+            "num_executed": 0,
+        }, None
 
     original_teams = {team_id: list(students) for team_id, students in current_teams.items()}
     new_teams = {team_id: list(students) for team_id, students in current_teams.items()}
@@ -267,7 +313,7 @@ def execute_swaps_composite():
                 {
                     "swap_request_id": req["swap_request_id"],
                     "student_id": student_id,
-                    "status": "FAILED",
+                    "status": REQUEST_STATUS_FAILED,
                     "reason": "Student is no longer in current team",
                 }
             )
@@ -312,7 +358,7 @@ def execute_swaps_composite():
                 {
                     "swap_request_id": req["swap_request_id"],
                     "student_id": req["student_id"],
-                    "status": "EXECUTED",
+                    "status": REQUEST_STATUS_EXECUTED,
                     "reason": None,
                 }
             )
@@ -321,7 +367,7 @@ def execute_swaps_composite():
                 {
                     "swap_request_id": req["swap_request_id"],
                     "student_id": req["student_id"],
-                    "status": "FAILED",
+                    "status": REQUEST_STATUS_FAILED,
                     "reason": "No compatible approved request from a different team",
                 }
             )
@@ -332,27 +378,19 @@ def execute_swaps_composite():
         valid_requests,
     )
     if not invariants_ok:
-        return (
-            jsonify(
-                {
-                    "code": 409,
-                    "message": f"swap invariants violated: {invariants_error}",
-                }
-            ),
-            409,
-        )
+        return None, {
+            "status": 409,
+            "message": f"swap invariants violated: {invariants_error}",
+        }
 
-    new_team_roster = {
-        "section_id": section_id,
-        "teams": [
-            {
-                "team_id": team_id,
-                "students": [{"student_id": sid} for sid in students],
-            }
-            for team_id, students in new_teams.items()
-        ],
-    }
+    return {
+        "new_teams": new_teams,
+        "per_request_result": per_request_result,
+        "num_executed": len(executed_ids),
+    }, None
 
+
+def _persist_team_roster(section_id, new_team_roster):
     persist_payload = {
         "section_id": section_id,
         "teams": new_team_roster["teams"],
@@ -364,19 +402,196 @@ def execute_swaps_composite():
         payload=persist_payload,
     )
     if persist_error:
-        return jsonify({"code": persist_error.get("status", 502), "message": persist_error.get("message")}), persist_error.get("status", 502)
+        return None, persist_error
+
+    return _extract_data(persist_response), None
+
+
+def _execute_with_preloaded_requests(section_id, current_teams, approved_requests, formation_config_data):
+    execution_state, execution_error = _run_swap_execution(current_teams, approved_requests)
+    if execution_error:
+        return None, execution_error
+
+    new_team_roster = _build_new_team_roster(section_id, execution_state["new_teams"])
+    payload = {
+        "new_team_roster": new_team_roster,
+        "per_request_result": execution_state["per_request_result"],
+        "num_executed": execution_state["num_executed"],
+        "formation_config": formation_config_data,
+    }
+
+    if approved_requests:
+        team_update_response, persist_error = _persist_team_roster(section_id, new_team_roster)
+        if persist_error:
+            return None, persist_error
+        payload["team_update_response"] = team_update_response
+
+    return payload, None
+
+
+def _update_swap_request_statuses(request_results):
+    update_errors = []
+    for result in request_results:
+        if not isinstance(result, dict):
+            continue
+
+        swap_request_id = result.get("swap_request_id")
+        status = _status_from_value(result.get("status"))
+        if swap_request_id is None or status not in {REQUEST_STATUS_EXECUTED, REQUEST_STATUS_FAILED}:
+            continue
+
+        _, status_error = _http_json(
+            "PATCH",
+            f"{SWAP_REQUEST_URL}/{swap_request_id}/status",
+            label="swap-request status update",
+            payload={"status": status},
+        )
+        if status_error:
+            update_errors.append({"swap_request_id": str(swap_request_id), "error": status_error})
+
+    return update_errors
+
+@swap_bp.route("/execute", methods=["POST"])
+def execute_swaps_composite():
+    payload = request.get_json() or {}
+
+    try:
+        section_id = str(_normalize_uuid(payload.get("section_id"), "section_id"))
+    except ValueError as error:
+        return jsonify({"code": 400, "message": str(error)}), 400
+
+    approved_id_filter = _normalize_approved_ids(payload.get("approved_request_ids"))
+
+    current_teams, section_team_ids, team_error = _fetch_section_teams(section_id)
+    if team_error:
+        return jsonify({"code": team_error.get("status", 502), "message": team_error.get("message")}), team_error.get("status", 502)
+
+    approved_requests, request_error = _fetch_approved_requests(section_team_ids, approved_id_filter)
+    if request_error:
+        return jsonify({"code": request_error.get("status", 502), "message": request_error.get("message")}), request_error.get("status", 502)
+
+    formation_config_data = _fetch_formation_config(section_id)
+    execute_data, execute_error = _execute_with_preloaded_requests(
+        section_id,
+        current_teams,
+        approved_requests,
+        formation_config_data,
+    )
+    if execute_error:
+        return jsonify({"code": execute_error.get("status", 502), "message": execute_error.get("message")}), execute_error.get("status", 502)
+
+    if not approved_requests:
+        return (
+            jsonify(
+                {
+                    "code": 200,
+                    "message": "No approved requests to execute",
+                    "data": execute_data,
+                }
+            ),
+            200,
+        )
 
     return (
         jsonify(
             {
                 "code": 200,
                 "message": "Swap execution completed",
+                "data": execute_data,
+            }
+        ),
+        200,
+    )
+
+
+@swap_bp.route("/sections/<uuid:section_id>/confirm", methods=["POST"])
+def confirm_section_swaps(section_id):
+    section_id_text = str(section_id)
+
+    section_row, section_error = _fetch_section_row(section_id_text)
+    if section_error:
+        return jsonify({"code": section_error.get("status", 502), "message": section_error.get("message")}), section_error.get("status", 502)
+
+    stage = str(section_row.get("stage") or "").strip().lower()
+    if stage != "formed":
+        return jsonify({"code": 409, "message": "section must be in formed stage to confirm swaps", "data": {"stage": stage}}), 409
+
+    current_teams, section_team_ids, team_error = _fetch_section_teams(section_id_text)
+    if team_error:
+        return jsonify({"code": team_error.get("status", 502), "message": team_error.get("message")}), team_error.get("status", 502)
+
+    approved_requests, request_error = _fetch_approved_requests(section_team_ids)
+    if request_error:
+        return jsonify({"code": request_error.get("status", 502), "message": request_error.get("message")}), request_error.get("status", 502)
+
+    if not approved_requests:
+        updated_section, update_error = _update_section_stage(section_id_text, "confirmed")
+        if update_error:
+            return jsonify({"code": update_error.get("status", 502), "message": update_error.get("message")}), update_error.get("status", 502)
+
+        return jsonify({
+            "code": 200,
+            "data": {
+                "section": updated_section,
+                "approved_request_count": 0,
+                "executed_count": 0,
+                "failed_count": 0,
+                "message": "No approved requests; section confirmed",
+            },
+        }), 200
+
+    formation_config_data = _fetch_formation_config(section_id_text)
+    execute_data, execute_error = _execute_with_preloaded_requests(
+        section_id_text,
+        current_teams,
+        approved_requests,
+        formation_config_data,
+    )
+    if execute_error:
+        return jsonify({"code": execute_error.get("status", 502), "message": execute_error.get("message")}), execute_error.get("status", 502)
+
+    request_results = execute_data.get("per_request_result")
+    if not isinstance(request_results, list):
+        request_results = []
+
+    update_errors = _update_swap_request_statuses(request_results)
+    if update_errors:
+        return (
+            jsonify(
+                {
+                    "code": 502,
+                    "message": "failed to apply one or more swap request status updates",
+                    "data": {"errors": update_errors},
+                }
+            ),
+            502,
+        )
+
+    updated_section, update_error = _update_section_stage(section_id_text, "confirmed")
+    if update_error:
+        return jsonify({"code": update_error.get("status", 502), "message": update_error.get("message")}), update_error.get("status", 502)
+
+    executed_count = 0
+    failed_count = 0
+    for result in request_results:
+        if not isinstance(result, dict):
+            continue
+        status = _status_from_value(result.get("status"))
+        if status == REQUEST_STATUS_EXECUTED:
+            executed_count += 1
+        elif status == REQUEST_STATUS_FAILED:
+            failed_count += 1
+
+    return (
+        jsonify(
+            {
+                "code": 200,
                 "data": {
-                    "new_team_roster": new_team_roster,
-                    "team_update_response": _extract_data(persist_response),
-                    "per_request_result": per_request_result,
-                    "num_executed": len(executed_ids),
-                    "formation_config": formation_config_data,
+                    "section": updated_section,
+                    "approved_request_count": len(approved_requests),
+                    "executed_count": executed_count,
+                    "failed_count": failed_count,
+                    "execution": execute_data,
                 },
             }
         ),

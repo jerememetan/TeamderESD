@@ -603,9 +603,30 @@ This service aggregates instructor dashboard metrics.
 
 ---
 
+# Team Swap Composite Service
+
+This service owns swap execution and section confirm execution for instructor team-swap finalization.
+
+## Base URL
+
+- Default: `/team-swap` (port: 3013)
+
+## Endpoints
+
+- `POST /team-swap/execute`
+- `POST /team-swap/sections/{section_id}/confirm`
+
+## Response Structure
+
+- Success responses use a top-level envelope with `code` and `data`.
+- Validation and downstream failures return `4xx/5xx` with `code` and `message`.
+
+---
+
 # Swap Orchestrator Composite Service
 
-This service owns staged swap request orchestration flows (`submission`, `review`, `decision`, and `confirm`) and student-facing team retrieval.
+This service owns staged swap request orchestration flows (`submission`, `review`, and `decision`) and student-facing team retrieval.
+The confirm endpoint remains temporarily as a deprecated proxy that forwards to team-swap for one release window.
 
 ## Base URL
 
@@ -616,7 +637,7 @@ This service owns staged swap request orchestration flows (`submission`, `review
 - `POST /swap-orchestrator/submission/requests`
 - `GET /swap-orchestrator/review/requests`
 - `PATCH /swap-orchestrator/review/requests/{swap_request_id}/decision`
-- `POST /swap-orchestrator/sections/{section_id}/confirm`
+- `POST /swap-orchestrator/sections/{section_id}/confirm` (deprecated proxy to team-swap)
 - `GET /swap-orchestrator/student-team`
 - `GET /health`
 
