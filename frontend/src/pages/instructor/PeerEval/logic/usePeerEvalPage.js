@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchCourseByCode } from "../../../../services/courseService";
+import { fetchEnrollmentsBySectionId } from "../../../../services/enrollmentService";
 import { getSectionById } from "../../../../services/sectionService";
 import { fetchTeamsBySection } from "../../../../services/teamService";
-import { fetchStudentProfile } from "../../../../services/studentProfileService";
+import {
+  buildSectionRoster,
+  fetchAllStudents,
+} from "../../../../services/studentService";
 import {
   getPeerEvaluationRoundForSection,
   getPeerEvaluationRound,
@@ -58,7 +62,11 @@ export function usePeerEvalPage(courseId, sectionId) {
         // Load students
         if (sectionId) {
           try {
-            const sectionStudents = await fetchStudentProfile(sectionId);
+            const [enrollments, allStudents] = await Promise.all([
+              fetchEnrollmentsBySectionId(sectionId),
+              fetchAllStudents(),
+            ]);
+            const sectionStudents = buildSectionRoster(enrollments, allStudents);
             if (isMounted) setStudents(sectionStudents || []);
           } catch {
             if (isMounted) setStudents([]);
