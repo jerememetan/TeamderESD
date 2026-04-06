@@ -510,7 +510,7 @@ Content-Type: application/json
 
 # Peer Eval Notification Composite Service
 
-This service owns peer evaluation initiation and close orchestration flows for instructors.
+This service owns peer evaluation initiation orchestration flow for instructors.
 
 ## Base URL
 
@@ -548,7 +548,23 @@ Creates a peer evaluation round and publishes batch notification messages for st
 }
 ```
 
-## POST /peer-eval-notifications/close
+## Behavior Notes
+
+- Uses shared RabbitMQ notification exchange publishing with a batch event (`PeerEvalInitiatedBatch`).
+- Uses shared error publisher conventions for downstream failures.
+- Keeps response envelopes compatible with existing instructor frontend initiate flow.
+
+---
+
+# Peer Eval Close Composite Service
+
+This service owns peer evaluation close orchestration flow for instructors.
+
+## Base URL
+
+- Default: `/peer-eval-close` (port: 4009)
+
+## POST /peer-eval-close
 
 Closes an active peer evaluation round and pushes computed deltas into the reputation service.
 
@@ -569,6 +585,14 @@ Closes an active peer evaluation round and pushes computed deltas into the reput
     "reputation_update_results": {
       "updated": 10,
       "failed": 0
+    },
+    "section_update": {
+      "attempted": true,
+      "updated": true,
+      "section_id": "...",
+      "from_stage": "confirmed",
+      "to_stage": "completed",
+      "message": "section stage updated to completed"
     }
   }
 }
@@ -576,9 +600,8 @@ Closes an active peer evaluation round and pushes computed deltas into the reput
 
 ## Behavior Notes
 
-- Uses shared RabbitMQ notification exchange publishing with a batch event (`PeerEvalInitiatedBatch`).
 - Uses shared error publisher conventions for downstream failures.
-- Keeps response envelopes compatible with existing instructor frontend flows.
+- Preserves existing close response envelope and downstream update behavior.
 
 ---
 

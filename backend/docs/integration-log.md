@@ -292,3 +292,25 @@ Align swap runtime behavior 100% with approved flow diagrams, especially appeal/
 - `backend/scripts/check_architecture_guardrails.ps1` now verifies:
   - no-appeal guard exists for `confirmed`/`completed`
   - confirm flow contains formed-only stage guard
+
+## 2026-04-07 :: Step 15 :: Peer evaluation close ownership split
+
+### Goal
+
+Move peer evaluation close orchestration into its own composite microservice while preserving endpoint behavior.
+
+### Work completed
+
+- Added dedicated close orchestrator service:
+  - `backend/composite-services/peer-eval-close`
+- Moved close flow ownership from `peer-eval-notification` to `peer-eval-close`.
+- Updated compose and gateway routing:
+  - `backend/docker-compose.yaml`
+  - `backend/kong/kong.yml`
+- Updated swagger index registrations:
+  - `backend/docs/swagger-index/app.py`
+
+### Frontend impact
+
+- No UI behavior changes.
+- Close action now calls the dedicated backend route through service-layer endpoint retargeting.

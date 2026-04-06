@@ -233,6 +233,14 @@ services:
           - /peer-eval-notifications
         strip_path: false
 
+  - name: peer-eval-close-service
+    url: http://peer-eval-close-service:4009
+    routes:
+      - name: peer-eval-close-service-route
+        paths:
+          - /peer-eval-close
+        strip_path: false
+
   - name: formation-notification-service
     url: http://formation-notification-service:4004
     routes:

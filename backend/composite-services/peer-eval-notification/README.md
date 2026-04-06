@@ -1,6 +1,6 @@
 # Peer Eval Notification Composite Service
 
-This service owns instructor peer evaluation orchestration flows that were previously in dashboard-orchestrator.
+This service owns instructor peer evaluation initiation orchestration that was previously in dashboard-orchestrator.
 
 ## Base URL
 
@@ -41,32 +41,6 @@ Creates a peer evaluation round and dispatches notification messages through Rab
 ### Conflict (409)
 Pass-through from peer-evaluation when an active round already exists.
 
-## POST /peer-eval-notifications/close
-
-Closes a peer evaluation round and applies reputation deltas.
-
-### Request
-```json
-{
-  "round_id": "b7da7d23-38b2-4d38-87f7-358ff1ca9f13"
-}
-```
-
-### Success (200)
-```json
-{
-  "code": 200,
-  "data": {
-    "round": {},
-    "reputation_deltas": [],
-    "reputation_update_results": {
-      "updated": 10,
-      "failed": 0
-    }
-  }
-}
-```
-
 ## GET /peer-eval-notifications/health
 
 Returns service health.
@@ -75,4 +49,4 @@ Returns service health.
 
 - Uses RabbitMQ batch publishing for initiate notifications (`PeerEvalInitiatedBatch`).
 - Uses shared `error_publisher` to publish downstream failures.
-- Maintains frontend-compatible response shape for instructor initiate/close flows.
+- Maintains frontend-compatible response shape for instructor initiate flow.

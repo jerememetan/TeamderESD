@@ -64,7 +64,8 @@ COMPOSITE_SERVICES: List[ServiceDoc] = [
     ServiceDoc("swap-orchestrator-service", "composite", "http://localhost:4005", "/swap-orchestrator", ["/swap-orchestrator/submission/requests", "/swap-orchestrator/review/requests", "/swap-orchestrator/review/requests/{swap_request_id}/decision", "/swap-orchestrator/sections/{section_id}/confirm", "/swap-orchestrator/student-team", "/health"]),
     ServiceDoc("student-form-submission-service", "composite", "http://localhost:4006", "/student-form-submission", ["/student-form-submission/submit"]),
     ServiceDoc("student-form-graphql-gateway", "composite", "http://localhost:4007", "/graphql", ["/graphql", "/health"], swagger_available=False),
-    ServiceDoc("peer-eval-notification-service", "composite", "http://localhost:4008", "/peer-eval-notifications", ["/peer-eval-notifications/health", "/peer-eval-notifications/initiate", "/peer-eval-notifications/close"]),
+    ServiceDoc("peer-eval-notification-service", "composite", "http://localhost:4008", "/peer-eval-notifications", ["/peer-eval-notifications/health", "/peer-eval-notifications/initiate"]),
+    ServiceDoc("peer-eval-close-service", "composite", "http://localhost:4009", "/peer-eval-close", ["/peer-eval-close", "/peer-eval-close/health"]),
 ]
 
 

@@ -8,15 +8,6 @@ class PeerEvalInitiateRequestSchema(Schema):
     eval_link = fields.Str(required=False)
 
 
-class PeerEvalCloseRequestSchema(Schema):
-    round_id = fields.Str(required=True)
-
-
 class PeerEvalInitiateResponseSchema(Schema):
-    code = fields.Int()
-    data = fields.Dict()
-
-
-class PeerEvalCloseResponseSchema(Schema):
     code = fields.Int()
     data = fields.Dict()

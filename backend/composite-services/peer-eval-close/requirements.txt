@@ -1,0 +1,8 @@
+flask
+requests
+python-dotenv
+pika
+marshmallow
+
+flask-openapi3
+pydantic

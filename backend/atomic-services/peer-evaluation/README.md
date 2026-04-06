@@ -75,12 +75,12 @@ Delta formula: `round((avg_rating - 3.0) * 10)`
 - Rating 5.0 = max positive (delta +20)
 - Rating 1.0 = max negative (delta -20)
 
-## Peer Eval Notification Composite Integration
+## Composite Integration
 
-Instructor orchestration now lives in the peer-eval-notification composite service:
+Instructor orchestration is split across dedicated composite services:
 
 ### POST /peer-eval-notifications/initiate
 Creates a round through this atomic service, resolves roster emails, and publishes notification batch messages.
 
-### POST /peer-eval-notifications/close
+### POST /peer-eval-close
 Closes a round through this atomic service and pushes reputation deltas to Reputation Service.

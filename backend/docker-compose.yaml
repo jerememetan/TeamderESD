@@ -374,13 +374,37 @@ services:
       TEAM_URL: "http://team-service:3007/team"
       STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
       PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
-      REPUTATION_URL: "http://reputation-service:3006/reputation"
-      SECTION_URL: "http://section-service:3018/section"
       FRONTEND_PEER_EVAL_URL: "http://localhost:5173/student/peer-evaluation"
     depends_on:
       - team-service
       - peer-evaluation-service
+      - rabbitmq
+
+  peer-eval-close-service:
+    build:
+      context: ./composite-services/peer-eval-close
+    container_name: teamder-peer-eval-close-service
+    ports:
+      - "4009:4009"
+    environment:
+      ENABLE_SWAGGER: "true"
+      PORT: 4009
+      REQUEST_TIMEOUT: 8
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
+      PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
+      REPUTATION_URL: "http://reputation-service:3006/reputation"
+      SECTION_URL: "http://section-service:3018/section"
+    depends_on:
+      - peer-evaluation-service
       - reputation-service
+      - section-service
       - rabbitmq
 
   formation-notification-service:

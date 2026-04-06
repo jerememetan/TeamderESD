@@ -42,7 +42,8 @@ Composite services
 - formation-notification-service: http://localhost:4004 - /formation-notifications (POST), /health (GET)
 - swap-orchestrator-service: http://localhost:4005 - /swap-orchestrator/submission/requests (POST), /swap-orchestrator/review/requests (GET), /swap-orchestrator/review/requests/{swap_request_id}/decision (PATCH), /swap-orchestrator/sections/{section_id}/confirm (POST, deprecated proxy to team-swap), /swap-orchestrator/student-team (GET), /health (GET)
 - student-form-submission-service: http://localhost:4006 - /student-form-submission/submit (POST)
-- peer-eval-notification-service: http://localhost:4008 - /peer-eval-notifications/health (GET), /peer-eval-notifications/initiate (POST), /peer-eval-notifications/close (POST)
+- peer-eval-notification-service: http://localhost:4008 - /peer-eval-notifications/health (GET), /peer-eval-notifications/initiate (POST)
+- peer-eval-close-service: http://localhost:4009 - /peer-eval-close (POST), /peer-eval-close/health (GET)
 
 Shared error logging
 

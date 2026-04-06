@@ -7,6 +7,10 @@ const PEER_EVAL_NOTIFICATION_URL =
   import.meta.env.VITE_PEER_EVAL_NOTIFICATION_URL ??
   "http://localhost:8000/peer-eval-notifications";
 
+const PEER_EVAL_CLOSE_URL =
+  import.meta.env.VITE_PEER_EVAL_CLOSE_URL ??
+  "http://localhost:8000/peer-eval-close";
+
 /**
  * Get a peer evaluation round by ID.
  */
@@ -269,10 +273,10 @@ export async function startPeerEvaluationRound({ sectionId, title, dueAt }) {
 }
 
 /**
- * Instructor closes a peer evaluation round via peer-eval-notification.
+ * Instructor closes a peer evaluation round via peer-eval-close.
  */
 export async function closePeerEvaluationRound(roundId) {
-  const payload = await fetchJson(`${PEER_EVAL_NOTIFICATION_URL}/close`, {
+  const payload = await fetchJson(`${PEER_EVAL_CLOSE_URL}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
