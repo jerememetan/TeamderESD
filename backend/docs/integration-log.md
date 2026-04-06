@@ -172,138 +172,17 @@ Use backend team memberships and live roster data in the student dashboard and M
 - real student/session identity mapping
 - then swap-request workflow on top of backend teams
 
-## Final Frontend Cleanup Note
-
-Before final delivery, remove or soften temporary integration diagnostics from user-facing UI, including labels such as:
-
-- Backend assignments loaded
-- Mock assignments active
-- Backend team membership loaded
-- From backend team
-- other backend/mock source indicators used only for testing and transition
-
-Replace them with normal user-facing copy once backend integration is fully complete and fallback/testing states are no longer needed.
-
-## 2026-03-24 :: Step 5 :: Mock peer evaluation flow
-
-### Goal
-
-Add an end-of-project peer evaluation experience to the frontend before the backend reputation workflow is integrated.
-
-### Frontend scope
-
-- Page: rontend/src/pages/instructor/Teams.jsx
-- Page: rontend/src/pages/student/StudentDashboard.jsx
-- Page: rontend/src/pages/student/PeerEvaluationForm.jsx
-- Service layer: rontend/src/services/peerEvaluationService.js
-- Mock seed data/types: rontend/src/data/mockData.ts, rontend/src/types/index.ts
-
-### Behavior
-
-- Instructors can start a peer evaluation round for a specific course group from the group teams page
-- Students see pending peer evaluation work on their dashboard
-- Students can rate every teammate and themselves from 1 to 5 and give a short written justification for each rating
-- Submissions create a private reputation signal in the mock service, but that value is intentionally not shown in the student UI
-
-### Current limitations
-
-- This slice is frontend-only and in-memory for now; refreshing clears the round/submission state
-- Instructor initiation currently lives on the group teams page rather than a dedicated course matrix control
-- Reputation impact is stored only as a mock private signal until the real backend reputation flow is integrated
-
-### Next likely backend slice
-
-- swap-request workflow on top of backend teams
-- later reputation / peer evaluation persistence if those services are added
-
 ## Student-form backend bug note
 
-- The new student-form-service currently depends on a separate student_form schema with orm_template, orm_submission, and orm_link tables.
+- The new student-form-service currently depends on a separate student_form schema with form_template, form_submission, and form_link tables.
 - In the current Supabase setup, only student_form_data.form_data exists, so requests into student-form-service fail at runtime.
-- This affects publish-form flow through ormation-notification and can also produce repeated backend errors whenever composite services query student-form endpoints.
+- This affects publish-form flow through formation-notification and can also produce repeated backend errors whenever composite services query student-form endpoints.
 - Treat this as an open backend provisioning bug until the student_form schema/tables are created or the service is remapped.
 
-## Superseded Note (2026-04-05)
+## Historical note
 
-- Steps 6 to 8 below describe the older cycle-based swap-orchestrator contract.
-- Current active contract is documented in Step 9 (`submission/review/decision/confirm/student-team`).
-
-## 2026-04-04 :: Step 6 :: Processed swap requests -> swap-orchestrator
-
-### Goal
-
-Move instructor-facing swap request shaping out of the atomic swap-request service and into swap-orchestrator so frontend consumers can use a processed contract with complete display values.
-
-### Backend scope
-
-- Composite: `swap-orchestrator`
-- New endpoint: `GET /swap-orchestrator/cycles/:cycle_id/requests/processed`
-
-### Contract
-
-- Response envelope remains `{ code, data }`.
-- `data.requests` returns processed rows with keys:
-  - `id`, `courseId`, `courseName`, `studentId`, `studentName`, `currentTeamId`, `currentTeamName`, `groupId`, `reason`, `status`, `createdAt`
-- `status` is normalized to lowercase.
-
-### Enrichment behavior
-
-- Base records come from cycle request mappings + atomic swap-request reads.
-- Student names are enriched through student-service bulk lookup.
-- Team names are enriched through section team lookup (`Team <team_number>`).
-- Course name is resolved through course-service where possible.
-- Deterministic fallbacks are used so display fields are never null.
-
-### Compatibility
-
-- Existing `GET /swap-orchestrator/cycles/:cycle_id/requests` remains unchanged.
-- Atomic `swap-request` endpoints remain storage-focused and unchanged.
-
-## 2026-04-05 :: Step 7 :: Cycle list filter options
-
-### Goal
-
-Support four cycle retrieval modes on one endpoint so frontend and teammate tooling can reuse a single route.
-
-### Endpoint
-
-- `GET /swap-orchestrator/cycles`
-
-### Query options
-
-- No query params: returns all cycles.
-- `section_id=<uuid>`: returns cycles for one section.
-- `course_id=<int>`: returns cycles for one course.
-- `section_id=<uuid>&course_id=<int>`: returns cycles matching both filters.
-
-### Notes
-
-- Invalid `section_id` values return `400` with UUID validation messaging.
-- Invalid `course_id` values return `400` when not parseable as integer.
-- Course filtering now uses direct integer matching (`course_id` is treated as integer end-to-end in swap-orchestrator and team-swap payload validation).
-- Empty matches return `200` with an empty `data.cycles` list.
-
-## 2026-04-05 :: Step 8 :: Swap-orchestrator Swagger enhancement
-
-### Goal
-
-Expose missing query parameters and typed request bodies in Swagger UI for swap-orchestrator routes.
-
-### Scope
-
-- Enhanced `swagger_helper.py` for swap-orchestrator with operation-level OpenAPI hints.
-- Added explicit query parameter docs for:
-  - `GET /swap-orchestrator/cycles` (`section_id`, `course_id`)
-  - `GET /swap-orchestrator/cycles/{cycle_id}/requests/processed` (`status`)
-  - `GET /swap-orchestrator/student-team` (`section_id`, `student_id`)
-- Added typed request body schemas for key write endpoints:
-  - `POST /swap-orchestrator/cycles`
-  - `POST /swap-orchestrator/cycles/{cycle_id}/requests`
-  - `PATCH /swap-orchestrator/cycles/{cycle_id}/requests/{swap_request_id}/decision`
-
-### Result
-
-- Swagger UI now displays the missing query options and clearer request payload contracts for frontend and teammate testing.
+- Detailed cycle-era swap orchestration notes (Steps 6 to 8) were removed from this active log during endgame cleanup.
+- Current runtime swap contract is Step 9 onward (`submission/review/decision/confirm/student-team`).
 
 ## 2026-04-05 :: Step 9 :: Swap constraints decommission + cycle-free swap routing
 

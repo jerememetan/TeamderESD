@@ -139,10 +139,6 @@ def optimize_swaps():
     except Exception as e:
         return jsonify({"code": 400, "message": f"Invalid payload: {str(e)}"}), 400
 
-    section_id = data["section_id"]
-    course_id = data["course_id"]
-    module_id = data["module_id"]
-    class_id = data["class_id"]
     teams_list = data["teams"]
     students_list = data["students"]
     approved_requests = data["approved_swap_requests"]

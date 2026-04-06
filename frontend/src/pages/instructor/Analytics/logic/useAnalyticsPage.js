@@ -87,7 +87,6 @@ async function fetchSectionDashboardAnalytics(sectionId) {
     teamAnalytics: Array.isArray(data?.team_analytics)
       ? data.team_analytics
       : [],
-    weightRecommendations: data?.weight_recommendations ?? null,
   };
 }
 
@@ -98,7 +97,6 @@ export function useAnalyticsPage(courseId, groupId) {
   const [backendStudents, setBackendStudents] = useState([]);
   const [sectionAnalytics, setSectionAnalytics] = useState(null);
   const [teamAnalytics, setTeamAnalytics] = useState([]);
-  const [weightRecommendations, setWeightRecommendations] = useState(null);
   const [reputationDeltaReport, setReputationDeltaReport] = useState({
     round: null,
     deltas: [],
@@ -130,7 +128,6 @@ export function useAnalyticsPage(courseId, groupId) {
         setBackendStudents([]);
         setSectionAnalytics(null);
         setTeamAnalytics([]);
-        setWeightRecommendations(null);
         setRosterError("Missing group ID");
         setIsLoadingRoster(false);
         return;
@@ -162,7 +159,6 @@ export function useAnalyticsPage(courseId, groupId) {
           : Promise.resolve({
               sectionAnalytics: null,
               teamAnalytics: [],
-              weightRecommendations: null,
             }),
         rosterSectionId
           ? getPeerEvaluationRoundsForSection(rosterSectionId, {
@@ -218,11 +214,6 @@ export function useAnalyticsPage(courseId, groupId) {
           ? analyticsResult.value.teamAnalytics
           : [],
       );
-      setWeightRecommendations(
-        analyticsResult.status === "fulfilled"
-          ? (analyticsResult.value?.weightRecommendations ?? null)
-          : null,
-      );
       setReputationDeltaReport(
         reputationDeltaResult.status === "fulfilled" &&
           reputationDeltaResult.value
@@ -273,7 +264,6 @@ export function useAnalyticsPage(courseId, groupId) {
     backendStudents,
     sectionAnalytics,
     teamAnalytics,
-    weightRecommendations,
     reputationDeltaReport,
     isLoadingRoster,
     rosterError,
