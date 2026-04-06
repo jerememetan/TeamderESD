@@ -1,10 +1,5 @@
 ﻿flask
 requests
 python-dotenv
-flask_sqlalchemy
-sqlalchemy
-psycopg2-binary
-pika
-flask-openapi3
 pydantic
 

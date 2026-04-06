@@ -79,13 +79,6 @@ export function buildSiblingGroupSummaryData(Name, studentCount, TeamCount) {
   };
 }
 
-export function buildTeamScoresData(teams = []) {
-  return (Array.isArray(teams) ? teams : []).map((team) => ({
-    name: team.name,
-    score: toNumber(team.score, 55),
-  }));
-}
-
 function teamLabel(teamAnalytics = {}, fallbackIndex = 0) {
   const numericTeamNumber = toNumber(teamAnalytics?.team_number, 0);
   return numericTeamNumber

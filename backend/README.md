@@ -1,6 +1,6 @@
 # Teamder Backend
 
-This file lists the local HTTP endpoints for the atomic and composite microservices (localhost).
+This file lists the HTTP endpoints used during local development for atomic and composite microservices.
 
 API gateway
 
