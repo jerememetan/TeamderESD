@@ -13,6 +13,7 @@ from swagger_helper import register_swagger
 from flask import Flask
 from dotenv import load_dotenv
 import os
+from sqlalchemy import text
 from .models.topic_preference_model import db
 
 def create_app():
@@ -25,6 +26,13 @@ def create_app():
     db.init_app(app)
     from .models.topic_preference_model import TopicPreference
     from .routes.topic_preference_routes import topic_preference_bp
+
+    with app.app_context():
+        # Keep local/dev resilient after database wipes.
+        db.session.execute(text("CREATE SCHEMA IF NOT EXISTS student_topic_preference"))
+        db.session.commit()
+        db.create_all()
+
     app.register_blueprint(topic_preference_bp, url_prefix="/topic-preference")
     register_swagger(app, 'student-topic-preference-service')
     return app
