@@ -389,6 +389,7 @@ services:
       STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
       PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
       REPUTATION_URL: "http://reputation-service:3006/reputation"
+      SECTION_URL: "http://section-service:3018/section"
       FRONTEND_PEER_EVAL_URL: "http://localhost:5173/student/peer-evaluation"
     depends_on:
       - team-service
