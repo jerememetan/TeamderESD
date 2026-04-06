@@ -2,7 +2,7 @@ import os
 import time
 
 import pika
-from pika.exceptions import AMQPConnectionError
+from pika.exceptions import AMQPConnectionError, ChannelClosedByBroker
 
 
 EXCHANGE_NAME = "notification.topic"
@@ -65,18 +65,47 @@ def setup_topology(channel: pika.adapters.blocking_connection.BlockingChannel) -
     email_dl_routing_key = f"{EMAIL_ROUTING_KEY}{DEAD_LETTER_ROUTING_KEY_SUFFIX}"
     sms_dl_routing_key = f"{SMS_ROUTING_KEY}{DEAD_LETTER_ROUTING_KEY_SUFFIX}"
 
-    channel.queue_declare(
-        queue=EMAIL_QUEUE,
-        durable=True,
-        arguments={
+    def declare_queue_with_reconcile(
+        active_channel: pika.adapters.blocking_connection.BlockingChannel,
+        queue_name: str,
+        queue_arguments: dict,
+    ) -> pika.adapters.blocking_connection.BlockingChannel:
+        try:
+            active_channel.queue_declare(
+                queue=queue_name,
+                durable=True,
+                arguments=queue_arguments,
+            )
+            return active_channel
+        except ChannelClosedByBroker as exc:
+            # Local dev safeguard: queue existed with different args from an earlier topology version.
+            if "inequivalent arg" not in str(exc).lower():
+                raise
+
+            print(
+                f"Queue '{queue_name}' has mismatched arguments; recreating it to match current topology..."
+            )
+            reconciled_channel = active_channel.connection.channel()
+            reconciled_channel.queue_delete(queue=queue_name)
+            reconciled_channel.queue_declare(
+                queue=queue_name,
+                durable=True,
+                arguments=queue_arguments,
+            )
+            return reconciled_channel
+
+    channel = declare_queue_with_reconcile(
+        channel,
+        EMAIL_QUEUE,
+        {
             "x-dead-letter-exchange": EXCHANGE_NAME,
             "x-dead-letter-routing-key": email_dl_routing_key,
         },
     )
-    channel.queue_declare(
-        queue=SMS_QUEUE,
-        durable=True,
-        arguments={
+    channel = declare_queue_with_reconcile(
+        channel,
+        SMS_QUEUE,
+        {
             "x-dead-letter-exchange": EXCHANGE_NAME,
             "x-dead-letter-routing-key": sms_dl_routing_key,
         },

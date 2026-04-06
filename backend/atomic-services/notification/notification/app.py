@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pika
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
-from pika.exceptions import AMQPConnectionError
+from pika.exceptions import AMQPConnectionError, ChannelClosedByBroker
 from marshmallow import Schema, fields
 
 load_dotenv()
@@ -520,14 +520,40 @@ def _consume_loop() -> None:
                 exchange_type=EXCHANGE_TYPE,
                 durable=True,
             )
-            channel.queue_declare(
-                queue=CONSUMER_QUEUE,
-                durable=True,
-                arguments={
-                    "x-dead-letter-exchange": CONSUMER_DEAD_LETTER_EXCHANGE,
-                    "x-dead-letter-routing-key": CONSUMER_DEAD_LETTER_ROUTING_KEY,
-                },
-            )
+
+            queue_arguments = {
+                "x-dead-letter-exchange": CONSUMER_DEAD_LETTER_EXCHANGE,
+                "x-dead-letter-routing-key": CONSUMER_DEAD_LETTER_ROUTING_KEY,
+            }
+
+            try:
+                channel.queue_declare(
+                    queue=CONSUMER_QUEUE,
+                    durable=True,
+                    arguments=queue_arguments,
+                )
+            except ChannelClosedByBroker as exc:
+                # Local dev safeguard for queues created without dead-letter arguments.
+                if "inequivalent arg" not in str(exc).lower():
+                    raise
+
+                logger.warning(
+                    "Queue declaration mismatch for %s; recreating queue with dead-letter arguments.",
+                    CONSUMER_QUEUE,
+                )
+                channel = connection.channel()
+                channel.exchange_declare(
+                    exchange=EXCHANGE_NAME,
+                    exchange_type=EXCHANGE_TYPE,
+                    durable=True,
+                )
+                channel.queue_delete(queue=CONSUMER_QUEUE)
+                channel.queue_declare(
+                    queue=CONSUMER_QUEUE,
+                    durable=True,
+                    arguments=queue_arguments,
+                )
+
             for routing_key in CONSUMER_ROUTING_KEYS:
                 channel.queue_bind(
                     exchange=EXCHANGE_NAME,
