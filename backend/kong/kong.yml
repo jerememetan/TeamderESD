@@ -65,13 +65,6 @@ services:
         paths:
           - /section
         strip_path: false
-        plugins:
-          - name: proxy-cache
-            config:
-              cache_ttl: 300
-              strategy: memory
-              request_method:
-                - GET
 
   - name: skill-service
     url: http://skill-service:3002
