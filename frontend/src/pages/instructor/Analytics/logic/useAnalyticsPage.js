@@ -33,6 +33,7 @@ async function fetchSectionDashboardAnalytics(sectionId) {
   return {
     sectionAnalytics: data?.section_analytics ?? null,
     teamAnalytics: Array.isArray(data?.team_analytics) ? data.team_analytics : [],
+    weightRecommendations: data?.weight_recommendations ?? null,
   };
 }
 
@@ -43,6 +44,7 @@ export function useAnalyticsPage(courseId, groupId) {
   const [backendStudents, setBackendStudents] = useState([]);
   const [sectionAnalytics, setSectionAnalytics] = useState(null);
   const [teamAnalytics, setTeamAnalytics] = useState([]);
+  const [weightRecommendations, setWeightRecommendations] = useState(null);
   const [isLoadingRoster, setIsLoadingRoster] = useState(true);
   const [rosterError, setRosterError] = useState("");
 
@@ -70,6 +72,7 @@ export function useAnalyticsPage(courseId, groupId) {
         setBackendStudents([]);
         setSectionAnalytics(null);
         setTeamAnalytics([]);
+        setWeightRecommendations(null);
         setRosterError("Missing group ID");
         setIsLoadingRoster(false);
         return;
@@ -92,7 +95,11 @@ export function useAnalyticsPage(courseId, groupId) {
             : Promise.resolve([]),
           rosterSectionId
             ? fetchSectionDashboardAnalytics(rosterSectionId)
-            : Promise.resolve({ sectionAnalytics: null, teamAnalytics: [] }),
+            : Promise.resolve({
+                sectionAnalytics: null,
+                teamAnalytics: [],
+                weightRecommendations: null,
+              }),
         ]);
 
       if (!isMounted) {
@@ -129,6 +136,11 @@ export function useAnalyticsPage(courseId, groupId) {
           Array.isArray(analyticsResult.value?.teamAnalytics)
           ? analyticsResult.value.teamAnalytics
           : [],
+      );
+      setWeightRecommendations(
+        analyticsResult.status === "fulfilled"
+          ? analyticsResult.value?.weightRecommendations ?? null
+          : null,
       );
 
       const errors = [];
@@ -168,6 +180,7 @@ export function useAnalyticsPage(courseId, groupId) {
     backendStudents,
     sectionAnalytics,
     teamAnalytics,
+    weightRecommendations,
     isLoadingRoster,
     rosterError,
   };

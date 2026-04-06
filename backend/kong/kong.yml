@@ -204,6 +204,14 @@ services:
           - /dashboard
         strip_path: false
 
+  - name: peer-eval-notification-service
+    url: http://peer-eval-notification-service:4008
+    routes:
+      - name: peer-eval-notification-service-route
+        paths:
+          - /peer-eval-notifications
+        strip_path: false
+
   - name: formation-notification-service
     url: http://formation-notification-service:4004
     routes:

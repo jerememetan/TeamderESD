@@ -776,4 +776,3 @@ if __name__ == "__main__":
     debug_enabled = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     _start_consumer_thread_if_enabled(debug_enabled=debug_enabled)
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3016")), debug=debug_enabled)
-

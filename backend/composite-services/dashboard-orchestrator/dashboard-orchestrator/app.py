@@ -11,6 +11,7 @@ for _candidate in _SWAGGER_PATH_CANDIDATES:
 
 from swagger_helper import register_swagger
 from analytics_engine import compute_section_metrics, compute_team_metrics
+from peer_eval_weight_analyzer import analyze_peer_eval_weight_recommendations
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -29,13 +30,15 @@ STUDENT_FORM_SUBMISSIONS_URL = os.getenv(
     "STUDENT_FORM_SUBMISSIONS_URL", "http://localhost:3015/student-form/submissions"
 )
 FORMATION_CONFIG_URL = os.getenv("FORMATION_CONFIG_URL", "http://localhost:4000/formation-config")
-COURSES_URL = os.getenv("COURSES_URL", "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/")
+COURSES_URL = os.getenv(
+    "COURSES_URL",
+    "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course",
+)
 # Prefer internal Docker service hostnames when running under compose
 SECTIONS_URL = os.getenv("SECTION_URL", "http://section-service:3018/section")
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://enrollment-service:3005/enrollment")
-REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 8))
 PEER_EVAL_URL = os.getenv("PEER_EVAL_URL", "http://localhost:3020/peer-eval")
-NOTIFICATION_URL = os.getenv("NOTIFICATION_URL", "http://localhost:3016/notification")
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 8))
 
 
 def _fetch(url, params=None, label="service"):
@@ -77,8 +80,68 @@ def _normalize_metrics_payload(section_id, team_metrics, section_metrics):
             "section_id": section_id,
             "team_analytics": team_metrics,
             "section_analytics": section_metrics,
+            "weight_recommendations": None,
         },
     }
+
+
+def _build_weight_recommendations(section_id, team_metrics, criteria):
+    rounds_payload, err = _fetch(
+        f"{PEER_EVAL_URL}/rounds",
+        params={"section_id": section_id, "status": "closed"},
+        label="peer evaluation service rounds",
+    )
+    if err:
+        return {
+            "has_peer_eval": False,
+            "message": "Peer evaluation analytics unavailable for this section.",
+            "criteria_recommendations": [],
+        }
+
+    rounds = rounds_payload.get("data", []) if isinstance(rounds_payload, dict) else []
+    if not rounds:
+        return {
+            "has_peer_eval": False,
+            "message": "No closed peer evaluation data available for this section yet.",
+            "criteria_recommendations": [],
+        }
+
+    latest_round = rounds[0]
+    round_id = latest_round.get("round_id")
+    if not round_id:
+        return {
+            "has_peer_eval": False,
+            "message": "Peer evaluation round metadata is incomplete.",
+            "criteria_recommendations": [],
+        }
+
+    submissions_payload, err = _fetch(
+        f"{PEER_EVAL_URL}/rounds/{round_id}/submissions",
+        label="peer evaluation service submissions",
+    )
+    if err:
+        return {
+            "has_peer_eval": False,
+            "message": "Peer evaluation submissions are not available right now.",
+            "criteria_recommendations": [],
+        }
+
+    submissions = submissions_payload.get("data", []) if isinstance(submissions_payload, dict) else []
+    if not submissions:
+        return {
+            "has_peer_eval": False,
+            "peer_eval_round_id": round_id,
+            "message": "Peer evaluation round exists, but no submissions were found.",
+            "criteria_recommendations": [],
+        }
+
+    recommendations = analyze_peer_eval_weight_recommendations(
+        team_metrics=team_metrics,
+        criteria=criteria,
+        submissions=submissions,
+    )
+    recommendations["peer_eval_round_id"] = round_id
+    return recommendations
 
 
 register_swagger(app, 'dashboard-orchestrator-service')
@@ -135,6 +198,11 @@ def get_dashboard():
                 "section_id": section_id,
                 "team_analytics": [],
                 "section_analytics": {},
+                "weight_recommendations": {
+                    "has_peer_eval": False,
+                    "message": "No teams found for this section.",
+                    "criteria_recommendations": [],
+                },
                 "message": "no teams found for this section"
             }
         }), 200

@@ -71,7 +71,7 @@ export function getGroupActions(courseCode, group, options = {}) {
         },
         {
           label: "Start peer evaluation",
-          to: `/instructor/courses/${courseCode}/groups/${group.id}/teams`,
+          to: `/instructor/courses/${courseCode}/groups/${group.id}/peer-eval`,
           variant: "outline",
         },
       ];

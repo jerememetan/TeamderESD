@@ -205,6 +205,7 @@ services:
       NOTIFICATION_CONSUMER_PREFETCH: ${NOTIFICATION_CONSUMER_PREFETCH:-5}
       NOTIFICATION_ERROR_EXCHANGE: ${NOTIFICATION_ERROR_EXCHANGE:-notification.topic}
       NOTIFICATION_ERROR_ROUTING_KEY: ${NOTIFICATION_ERROR_ROUTING_KEY:-notification.email.error}
+
     ports:
       - "3016:3016"
     depends_on:
@@ -352,8 +353,7 @@ services:
       STUDENT_FORM_SUBMISSIONS_URL: "http://student-form-service:3015/student-form/submissions"
       FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
       PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
-      NOTIFICATION_URL: "http://notification-service:3016/notification"
-      REPUTATION_URL: "http://reputation-service:3006/reputation"
+      COURSES_URL: "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course"
       REQUEST_TIMEOUT: 8
       PORT: 4003
     depends_on:
@@ -361,7 +361,41 @@ services:
       - student-profile-service
       - student-form-service
       - formation-config-service
+
+  peer-eval-notification-service:
+    build:
+      context: ./composite-services/peer-eval-notification
+    container_name: teamder-peer-eval-notification-service
+    ports:
+      - "4008:4008"
+    environment:
+      ENABLE_SWAGGER: "true"
+      PORT: 4008
+      REQUEST_TIMEOUT: 8
+      MAX_PARALLEL_WORKERS: 20
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      ERROR_EXCHANGE_NAME: ${ERROR_EXCHANGE_NAME:-notification.topic}
+      ERROR_EXCHANGE_TYPE: ${ERROR_EXCHANGE_TYPE:-topic}
+      ERROR_ROUTING_KEY_PREFIX: ${ERROR_ROUTING_KEY_PREFIX:-}
+      NOTIFICATION_EXCHANGE: "notification.topic"
+      NOTIFICATION_EXCHANGE_TYPE: "topic"
+      NOTIFICATION_ROUTING_KEY: "notification.email"
+      TEAM_URL: "http://team-service:3007/team"
+      STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
+      STUDENT_SERVICE_URL: "https://personal-0wtj3pne.outsystemscloud.com/Student/rest/Student/student"
+      PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
+      REPUTATION_URL: "http://reputation-service:3006/reputation"
+      FRONTEND_PEER_EVAL_URL: "http://localhost:5173/student/peer-evaluation"
+    depends_on:
+      - team-service
+      - student-profile-service
       - peer-evaluation-service
+      - reputation-service
+      - rabbitmq
 
   formation-notification-service:
     build:

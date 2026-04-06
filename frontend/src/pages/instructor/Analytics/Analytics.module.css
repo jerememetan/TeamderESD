@@ -180,11 +180,140 @@
   background: rgba(255, 107, 0, 0.08);
   color: #9a3c00;
 }
+
+.recommendationHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: var(--td-space-sm);
+}
+
+.recommendationHeader p {
+  margin: 0;
+  color: var(--td-color-text-muted);
+}
+
+.recommendationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--td-space-sm);
+}
+
+.recommendationCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid rgba(124, 145, 166, 0.45);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(240, 244, 248, 0.82);
+  padding: var(--td-space-sm);
+}
+
+.recommendationCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.recCriterion {
+  margin: 0;
+  font-weight: 700;
+  color: var(--td-color-text);
+}
+
+.recBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.recIncrease {
+  background: rgba(31, 138, 69, 0.15);
+  color: #1f8a45;
+}
+
+.recKeep {
+  background: rgba(170, 121, 0, 0.15);
+  color: #8b6400;
+}
+
+.recFlag {
+  background: rgba(197, 58, 47, 0.14);
+  color: #b3362e;
+}
+
+.recNeutral {
+  background: rgba(106, 119, 132, 0.14);
+  color: #6a7784;
+}
+
+.recMeta {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--td-color-text-muted);
+}
+
+.recReason {
+  margin: 0;
+  color: var(--td-color-text);
+  line-height: 1.5;
+}
+
+.recFooter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--td-color-text-muted);
+  font-size: 0.78rem;
+}
+
+.noPeerEvalWrap {
+  border: 1px solid rgba(124, 145, 166, 0.45);
+  border-radius: var(--td-radius-sharp);
+  background: rgba(240, 244, 248, 0.82);
+  padding: var(--td-space-sm);
+}
+
+.noPeerEvalSummary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--td-color-text);
+}
+
+.noPeerEvalBody {
+  margin: 10px 0;
+  color: var(--td-color-text-muted);
+}
+
+.peerEvalCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--td-color-primary);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.peerEvalCta:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 900px) {
   .statsGrid,
   .chartGrid {
     grid-template-columns: 1fr;
   }
+
+  .recommendationGrid {
+    grid-template-columns: 1fr;
+  }
+
   .kpiRow,
   .distributionGrid {
     grid-template-columns: 1fr;
