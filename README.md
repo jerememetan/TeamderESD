@@ -40,7 +40,7 @@ Useful routes:
 From the `backend` folder:
 
 ```bash
-docker compose up --build student-service
+docker compose up -d --build
 ```
 
 Backend student service runs at:
