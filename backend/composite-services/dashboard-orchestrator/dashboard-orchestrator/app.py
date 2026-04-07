@@ -25,9 +25,6 @@ CORS(app)
 # Upstream service URLs
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team")
 STUDENT_PROFILE_URL = os.getenv("STUDENT_PROFILE_URL", "http://localhost:4001/student-profile")
-STUDENT_FORM_SUBMISSIONS_URL = os.getenv(
-    "STUDENT_FORM_SUBMISSIONS_URL", "http://localhost:3015/student-form/submissions"
-)
 FORMATION_CONFIG_URL = os.getenv("FORMATION_CONFIG_URL", "http://localhost:4000/formation-config")
 COURSES_URL = os.getenv(
     "COURSES_URL",
@@ -381,12 +378,7 @@ def get_dashboard():
 
     students = profile_data.get("data", {}).get("students", []) if isinstance(profile_data, dict) else []
 
-    # 2b. Fetch student form submissions (optional)
-    _fetch(
-        STUDENT_FORM_SUBMISSIONS_URL,
-        params={"section_id": section_id},
-        label="student form service",
-    )
+    # 2b. (removed) student form submissions fetch was unused
 
     # 3. Fetch formation config (criteria + skills + topics)
     formation_config_data, err = _fetch(

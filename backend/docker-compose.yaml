@@ -336,7 +336,6 @@ services:
       ENABLE_SWAGGER: "true"
       TEAM_URL: "http://team-service:3007/team"
       STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
-      STUDENT_FORM_SUBMISSIONS_URL: "http://student-form-service:3015/student-form/submissions"
       FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
       PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
       COURSES_URL: "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course"
