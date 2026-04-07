@@ -7,34 +7,7 @@ import { fetchSwapReviewRequests } from "../../../../services/swapRequestService
 const DASHBOARD_URL =
   import.meta.env.VITE_DASHBOARD_URL ?? "http://localhost:8000/dashboard";
 
-// TODO(api-backend): Implement and keep stable primary dashboard orchestrator contract.
-// Endpoint: GET /dashboard
-// Expected envelope: { code, data }
-// Expected data object:
-// {
-//   totalCourses: number,
-//   totalGroups: number,
-//   totalStudents: number,
-//   pendingSwapRequests: number
-// }
 
-// TODO(api-backend): Keep atomic fallback contracts backward compatible while dashboard orchestrator is unstable.
-// Endpoint: GET /swap-request -> { code, data } where data may be nested as data.data
-// It can return either this:
-// {
-// "code": 200,
-// "data": [
-//   {
-//   "id": "sr_001",
-//   "status": "pending",
-//   "studentName": "Jereme Tan",
-//   "courseName": "Software Engineering",
-//   "currentTeamName": "Team Alpha",
-//   "reason": "Scheduling clash",
-//   "createdAt": "2026-04-05T09:12:33Z"
-//   }
-//   ]
-// }
 
 // Fallback summary object returned by this service must always match:
 // {
@@ -134,9 +107,6 @@ async function fetchDashboardFromAtomicServices() {
 
 export async function fetchDashboardCoursesWithEnrollments() {
   try {
-    // TODO(api-backend): Preferred orchestrator endpoint for dashboard summary.
-    // Primary endpoint: GET /dashboard
-    // Preferred source because backend orchestrator owns dashboard contract.
     const payload = await fetchJson(DASHBOARD_URL, {
       headers: { Accept: "application/json" },
       cache: true,
