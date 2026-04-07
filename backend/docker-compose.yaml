@@ -338,7 +338,6 @@ services:
       STUDENT_PROFILE_URL: "http://student-profile-service:4001/student-profile"
       FORMATION_CONFIG_URL: "http://formation-config-service:4000/formation-config"
       PEER_EVAL_URL: "http://peer-evaluation-service:3020/peer-eval"
-      COURSES_URL: "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course"
       REQUEST_TIMEOUT: 8
       PORT: 4003
     depends_on:

@@ -26,10 +26,6 @@ CORS(app)
 TEAM_URL = os.getenv("TEAM_URL", "http://localhost:3007/team")
 STUDENT_PROFILE_URL = os.getenv("STUDENT_PROFILE_URL", "http://localhost:4001/student-profile")
 FORMATION_CONFIG_URL = os.getenv("FORMATION_CONFIG_URL", "http://localhost:4000/formation-config")
-COURSES_URL = os.getenv(
-    "COURSES_URL",
-    "https://personal-0wtj3pne.outsystemscloud.com/Course/rest/Course/course",
-)
 # Prefer internal Docker service hostnames when running under compose
 SECTIONS_URL = os.getenv("SECTION_URL", "http://section-service:3018/section")
 ENROLLMENT_URL = os.getenv("ENROLLMENT_URL", "http://enrollment-service:3005/enrollment")
@@ -302,40 +298,9 @@ register_swagger(app, "dashboard-orchestrator-service")
 @app.route("/dashboard", methods=["GET"])
 def get_dashboard():
     section_id = request.args.get("section_id")
-    # If no section_id provided, return a global dashboard summary
+
     if not section_id:
-        # Fetch courses directly from OutSystems.
-        courses_data, err = _fetch(COURSES_URL, label="courses service")
-        if err or not courses_data:
-            return jsonify({"code": 502, "message": err or "failed to fetch courses"}), 502
-
-        sections_data, err = _fetch(SECTIONS_URL, label="sections service")
-        if err:
-            return jsonify({"code": 502, "message": err}), 502
-
-        enrollments_data, err = _fetch(ENROLLMENT_URL, label="enrollment service")
-        if err:
-            return jsonify({"code": 502, "message": err}), 502
-
-        courses = courses_data.get("data", {}).get("Courses", []) if isinstance(courses_data, dict) else []
-        sections = sections_data.get("data", []) if isinstance(sections_data, dict) else []
-        enrollments = enrollments_data.get("data", []) if isinstance(enrollments_data, dict) else []
-
-        total_courses = len(courses)
-        total_groups = len([s for s in sections if s.get("is_active") is True])
-        total_students = len(enrollments)
-
-        return jsonify(
-            {
-                "code": 200,
-                "data": {
-                    "totalCourses": total_courses,
-                    "totalGroups": total_groups,
-                    "totalStudents": total_students,
-                    "pendingSwapRequests": 0,
-                },
-            }
-        ), 200
+        return jsonify({"code": 400, "message": "section_id is required"}), 400
 
     # 1. Fetch teams
     team_data, err = _fetch(TEAM_URL, params={"section_id": section_id}, label="team service")
