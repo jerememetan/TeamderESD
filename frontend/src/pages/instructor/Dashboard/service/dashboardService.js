@@ -107,20 +107,6 @@ async function fetchDashboardFromAtomicServices() {
 
 export async function fetchDashboardCoursesWithEnrollments() {
   try {
-    const payload = await fetchJson(DASHBOARD_URL, {
-      headers: { Accept: "application/json" },
-      cache: true,
-      ttlMs: 30000,
-    });
-
-    if (payload && payload.data) {
-      return payload.data;
-    }
-  } catch {
-    // Fall back to atomic services when dashboard orchestrator is unavailable.
-  }
-
-  try {
     // Atomic fallback path keeps dashboard usable if orchestrator endpoint fails.
     return await fetchDashboardFromAtomicServices();
   } catch {
